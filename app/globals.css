@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+
+@keyframes float {
+  0%, 100% { transform: perspective(500px) rotateX(20deg) rotateY(-30deg) translateY(0px); }
+  50%       { transform: perspective(500px) rotateX(20deg) rotateY(-30deg) translateY(-10px); }
+}
+.model-float { animation: float 4s ease-in-out infinite; }
