@@ -1,5 +1,6 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 
 interface Order {
   id: string; createdAt: string; status: string
@@ -25,24 +26,27 @@ function formatDate(iso: string) {
 }
 
 export default function AdminPage() {
+  const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter] = useState("all")
   const [expanded, setExpanded] = useState<string | null>(null)
   const [trackingInputs, setTrackingInputs] = useState<Record<string, string>>({})
   const [lastRefresh, setLastRefresh] = useState("")
-  const [authed, setAuthed] = useState(false)
-  const [pw, setPw] = useState("")
-  const ADMIN_PW = "pb3dadmin"
 
-  const loadOrders = () => {
+  const handleLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" })
+    router.push("/admin/login")
+  }
+
+  const loadOrders = useCallback(() => {
     try {
       const raw = localStorage.getItem("pb3d_orders")
       if (raw) setOrders(JSON.parse(raw))
     } catch {}
     setLastRefresh(new Date().toLocaleTimeString("th-TH"))
-  }
+  }, [])
 
-  useEffect(() => { if (authed) { loadOrders(); const t = setInterval(loadOrders, 15000); return () => clearInterval(t) } }, [authed])
+  useEffect(() => { loadOrders(); const t = setInterval(loadOrders, 15000); return () => clearInterval(t) }, [loadOrders])
 
   const saveOrders = (updated: Order[]) => {
     setOrders(updated)
@@ -82,25 +86,6 @@ export default function AdminPage() {
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter)
   const pendingCount = counts["pending"] || 0
 
-  if (!authed) return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-      <div className="bg-[#1e1e2e] rounded-2xl p-8 w-80 shadow-2xl border border-white/10">
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-3">⚙️</div>
-          <h1 className="text-white font-black text-xl">Admin Login</h1>
-          <p className="text-gray-400 text-sm mt-1">PB3D Printing Hub</p>
-        </div>
-        <input type="password" value={pw} onChange={e=>setPw(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&pw===ADMIN_PW&&setAuthed(true)}
-          placeholder="รหัสผ่าน" className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-violet-400 mb-4"/>
-        <button onClick={()=>pw===ADMIN_PW?setAuthed(true):alert("รหัสผ่านไม่ถูกต้อง")}
-          className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition">
-          เข้าสู่ระบบ
-        </button>
-      </div>
-    </div>
-  )
-
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-[#1e1e2e] h-14 flex items-center justify-between px-6 sticky top-0 z-50">
@@ -113,6 +98,7 @@ export default function AdminPage() {
           <span className="text-gray-400 text-xs">อัปเดต {lastRefresh}</span>
           <button onClick={loadOrders} className="border border-gray-600 text-gray-300 px-3 py-1 rounded-lg text-xs hover:border-violet-400 transition">↻ รีเฟรช</button>
           <a href="/upload" className="border border-gray-600 text-gray-300 px-3 py-1 rounded-lg text-xs hover:border-violet-400 transition">หน้าสั่งซื้อ</a>
+          <button onClick={handleLogout} className="border border-red-800 text-red-400 px-3 py-1 rounded-lg text-xs hover:border-red-500 hover:text-red-300 transition">ออกจากระบบ</button>
         </div>
       </nav>
 
