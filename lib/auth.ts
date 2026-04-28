@@ -33,7 +33,12 @@ async function pbkdf2(password: string, salt: Uint8Array | Buffer): Promise<Arra
     "raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]
   )
   return crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    { 
+      name: "PBKDF2", 
+      salt: salt as Uint8Array, // Explicit cast to satisfy TypeScript
+      iterations: 100000, 
+      hash: "SHA-256" 
+    },
     keyMaterial, 256
   )
 }
