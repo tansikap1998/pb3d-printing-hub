@@ -6,7 +6,7 @@ import { OrbitControls, Center, Environment, ContactShadows } from "@react-three
 import * as THREE from "three"
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js"
 import type { Technology, Material, InfillLevel, LayerHeight, EstimateResult } from "@/lib/priceCalculator"
-import { formatTime, estimatePrice } from "@/lib/priceCalculator"
+import { formatTime } from "@/lib/priceCalculator"
 
 // ─── CONSTANTS ───
 const SHOP_NAME = "PB3D Printing Hub"
@@ -126,8 +126,16 @@ export default function UploadPage() {
     if (!model) return
     setLoading(true)
     try {
-      const res = await estimatePrice({ volumeCm3: model.volumeCm3, technology, material, infill, layerHeight, quantity })
-      setResult(res)
+      const res = await fetch("/api/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ volumeCm3: model.volumeCm3, technology, material, infill, layerHeight, quantity }),
+      })
+      const data = await res.json()
+      setResult(data)
+    } catch (err) {
+      console.error(err)
+      alert("เกิดข้อผิดพลาดในการคำนวณราคา")
     } finally { setLoading(false) }
   }
 
