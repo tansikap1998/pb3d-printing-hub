@@ -1,6 +1,10 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect, useMemo, Suspense } from "react"
+import { Canvas } from "@react-three/fiber"
+import { OrbitControls, Center, Environment, ContactShadows } from "@react-three/drei"
+import * as THREE from "three"
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js"
 import type { Technology, Material, InfillLevel, LayerHeight, EstimateResult } from "@/lib/priceCalculator"
 import { formatTime } from "@/lib/priceCalculator"
 
@@ -60,6 +64,19 @@ function Section({ title, children }: { title:string; children:React.ReactNode }
   )
 }
 
+function ModelRenderer({ buffer, color }: { buffer: ArrayBuffer, color: string }) {
+  const geometry = useMemo(() => {
+    const loader = new STLLoader()
+    return loader.parse(buffer)
+  }, [buffer])
+
+  return (
+    <mesh geometry={geometry} castShadow receiveShadow>
+      <meshStandardMaterial color={color} roughness={0.3} metalness={0.2} />
+    </mesh>
+  )
+}
+
 export default function UploadPage() {
   const [model,setModel]=useState<ModelInfo|null>(null)
   const [technology,setTechnology]=useState<Technology>("FDM")
@@ -87,9 +104,12 @@ export default function UploadPage() {
 
   // Success
   const [showSuccess,setShowSuccess]=useState(false)
+  const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null)
 
   const handleFile=useCallback(async(file:File)=>{
-    const buf=await file.arrayBuffer(); const parsed=parseSTLVolume(buf)
+    const buf=await file.arrayBuffer()
+    setFileBuffer(buf)
+    const parsed=parseSTLVolume(buf)
     setModel({name:file.name,sizeX:parsed.sizeX,sizeY:parsed.sizeY,sizeZ:parsed.sizeZ,volumeCm3:parsed.volume,hasError:parsed.hasError})
     setResult(null)
   },[])
@@ -165,24 +185,30 @@ export default function UploadPage() {
       <div className="grid grid-cols-[300px_1fr_320px] gap-4 max-w-[1400px] mx-auto p-4 pb-28 min-h-[calc(100vh-56px)]">
 
         {/* LEFT — Print Settings */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-y-auto max-h-[calc(100vh-88px)] flex flex-col">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col h-fit max-h-[calc(100vh-180px)] sticky top-[72px]">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
             <h2 className="font-bold text-base">Print Settings</h2>
           </div>
-          <Section title="Dimensions">
-            {model ? (
-              <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-2 items-center mt-3">
-                <span className="text-xs text-gray-500">Size (mm)</span>
-                <span className="text-xs font-bold text-center text-red-500">X</span>
-                <span className="text-xs font-bold text-center text-green-600">Y</span>
-                <span className="text-xs font-bold text-center text-blue-600">Z</span>
-                <div/>
-                {[model.sizeX,model.sizeY,model.sizeZ].map((v,i)=>(
-                  <input key={i} readOnly value={v} className="border border-gray-200 rounded-lg py-1.5 text-xs text-center bg-gray-50 w-full"/>
-                ))}
-              </div>
-            ) : <p className="text-xs text-gray-400 mt-3 italic">อัปโหลดไฟล์เพื่อดูขนาด</p>}
-          </Section>
+          <div className="overflow-y-auto flex-1 pb-10 custom-scrollbar">
+            <Section title="Dimensions">
+              {model ? (
+                <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-2 items-center mt-3">
+                  <span className="text-xs text-gray-400 font-bold">Size (mm)</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-red-500 mb-1">X</span>
+                    <input readOnly value={model.sizeX} className="border border-gray-100 rounded-lg py-1.5 text-xs text-center bg-gray-50 w-full font-mono"/>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-green-600 mb-1">Y</span>
+                    <input readOnly value={model.sizeY} className="border border-gray-100 rounded-lg py-1.5 text-xs text-center bg-gray-50 w-full font-mono"/>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-blue-600 mb-1">Z</span>
+                    <input readOnly value={model.sizeZ} className="border border-gray-100 rounded-lg py-1.5 text-xs text-center bg-gray-50 w-full font-mono"/>
+                  </div>
+                </div>
+              ) : <p className="text-xs text-gray-400 mt-3 italic">อัปโหลดไฟล์เพื่อดูขนาด</p>}
+            </Section>
           <Section title="Technology">
             <div className="flex gap-2 mt-3">
               {(["FDM","RESIN"] as Technology[]).map(t=>(
@@ -226,35 +252,69 @@ export default function UploadPage() {
               </select>
             </div>
           </Section>
-          <Section title="หมายเหตุ">
-            <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3}
-              className="mt-3 w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:border-violet-400"
-              placeholder="รายละเอียดพิเศษ เช่น สีที่ต้องการ..."/>
-          </Section>
-          <div className="p-5 mt-auto">
+            <Section title="หมายเหตุ">
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3}
+                className="mt-3 w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:border-violet-400"
+                placeholder="รายละเอียดพิเศษ เช่น สีที่ต้องการ..."/>
+            </Section>
+          </div>
+          
+          <div className="p-5 border-t border-gray-50 bg-white rounded-b-2xl flex-shrink-0">
             {result && (
-              <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 mb-4 space-y-3">
-                <div><p className="text-xs text-gray-500 mb-0.5">เวลาพิมพ์</p><p className="text-lg font-bold text-gray-800">{formatTime(result.printTimeMin)}</p></div>
-                <div><p className="text-xs text-gray-500 mb-0.5">น้ำหนัก</p><p className="text-lg font-bold text-gray-800">{result.weightG} g</p></div>
-                <div><p className="text-xs text-gray-500 mb-0.5">ราคารวม</p><p className="text-lg font-bold text-violet-600">{result.totalPrice} THB</p></div>
+              <div className="bg-violet-50 border border-violet-100 rounded-xl p-3 mb-3 space-y-2">
+                <div className="flex justify-between items-center"><span className="text-[10px] text-gray-500">เวลาพิมพ์</span><span className="text-sm font-bold text-gray-800">{formatTime(result.printTimeMin)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] text-gray-500">น้ำหนัก</span><span className="text-sm font-bold text-gray-800">{result.weightG} g</span></div>
               </div>
             )}
             <button onClick={handleEstimate} disabled={!model||loading}
               className="w-full py-3 rounded-xl text-white font-bold text-sm bg-gradient-to-r from-violet-600 to-purple-500 shadow-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition">
-              {loading?"⏳ กำลังคำนวณ...":result?"ประเมินราคาแล้ว ✓":"ประเมินราคา →"}
+              {loading?"⏳ กำลังคำนวณ...":result?"ประเมินราคาใหม่":"ประเมินราคา →"}
             </button>
           </div>
         </div>
+        </div>
 
         {/* CENTER — 3D Preview */}
-        <div className="bg-[#1a1a2e] rounded-2xl flex flex-col items-center justify-center relative min-h-[460px] shadow-xl overflow-hidden">
-          {model ? (
+        <div className="bg-[#121218] rounded-2xl flex flex-col items-center justify-center relative min-h-[460px] shadow-xl overflow-hidden group">
+          {model && fileBuffer ? (
             <>
-              <p className="absolute top-4 text-gray-400 text-sm">{model.name}</p>
-              <div style={{width:180,height:90,background:"linear-gradient(135deg,#c8c8d8,#8888a8)",borderRadius:4,transform:"perspective(500px) rotateX(20deg) rotateY(-30deg)",boxShadow:"6px 6px 0 #7070a0,12px 12px 20px rgba(0,0,0,.5)"}} className="model-float"/>
-              <div className="absolute bottom-5 left-5 text-xs font-bold leading-6">
-                <div className="text-blue-400">Z ↑</div><div className="text-green-400">Y →</div><div className="text-red-400">X ↗</div>
+              <div className="absolute top-4 left-6 z-10 flex flex-col gap-1">
+                <p className="text-white/90 font-bold text-sm tracking-wide">{model.name}</p>
+                <div className="flex gap-2">
+                  <span className="px-2 py-0.5 bg-white/10 rounded text-[10px] text-white/50 border border-white/5 uppercase">{technology}</span>
+                  <span className="px-2 py-0.5 bg-violet-500/20 rounded text-[10px] text-violet-300 border border-violet-500/20">{material}</span>
+                </div>
               </div>
+              
+              <div className="w-full h-full">
+                <Canvas shadows camera={{ position: [150, 150, 150], fov: 35 }}>
+                  <color attach="background" args={['#121218']} />
+                  <ambientLight intensity={0.5} />
+                  <spotLight position={[200, 200, 200]} angle={0.15} penumbra={1} intensity={1} castShadow />
+                  <pointLight position={[-100, -100, -100]} intensity={0.5} />
+                  
+                  <Suspense fallback={null}>
+                    <Center top>
+                      <ModelRenderer buffer={fileBuffer} color={color} />
+                    </Center>
+                    <Environment preset="city" />
+                    <ContactShadows position={[0, -0.5, 0]} opacity={0.4} scale={300} blur={2} far={4.5} />
+                  </Suspense>
+                  
+                  <OrbitControls makeDefault minPolarAngle={0} maxPolarAngle={Math.PI / 1.75} />
+                </Canvas>
+              </div>
+
+              <div className="absolute bottom-5 left-5 text-[10px] font-bold space-y-1 opacity-50">
+                <div className="flex items-center gap-2"><span className="w-8 h-[1px] bg-blue-400 inline-block"/> <span className="text-blue-400">Z-AXIS</span></div>
+                <div className="flex items-center gap-2"><span className="w-8 h-[1px] bg-green-400 inline-block"/> <span className="text-green-400">Y-AXIS</span></div>
+                <div className="flex items-center gap-2"><span className="w-8 h-[1px] bg-red-400 inline-block"/> <span className="text-red-400">X-AXIS</span></div>
+              </div>
+              
+              <button onClick={()=>{setModel(null);setFileBuffer(null);setResult(null)}} 
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-all flex items-center justify-center border border-white/10">
+                ✕
+              </button>
             </>
           ) : (
             <div onDragOver={e=>{e.preventDefault();setIsDragging(true)}} onDragLeave={()=>setIsDragging(false)} onDrop={onDrop}
@@ -269,12 +329,12 @@ export default function UploadPage() {
         </div>
 
         {/* RIGHT — Models */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-y-auto max-h-[calc(100vh-88px)] flex flex-col">
-          <div className="px-5 py-4 border-b border-gray-100"><h2 className="font-bold text-base">Models</h2></div>
-          <div className="p-4 flex flex-col gap-3">
-            <div onClick={()=>fileRef.current?.click()} className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center cursor-pointer hover:bg-gray-50 transition">
-              <div className="text-2xl text-gray-300 mb-1">＋</div>
-              <p className="text-xs text-gray-400">Click or drag and drop to add a model</p>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col h-fit max-h-[calc(100vh-180px)] sticky top-[72px]">
+          <div className="px-5 py-4 border-b border-gray-100 flex-shrink-0"><h2 className="font-bold text-base">Models List</h2></div>
+          <div className="p-4 flex-1 overflow-y-auto pb-10 custom-scrollbar flex flex-col gap-3">
+            <div onClick={()=>fileRef.current?.click()} className="border-2 border-dashed border-gray-100 rounded-xl p-5 text-center cursor-pointer hover:bg-gray-50 transition-colors group">
+              <div className="text-2xl text-gray-200 mb-1 group-hover:text-violet-300 transition-colors">＋</div>
+              <p className="text-[11px] text-gray-400">Click or drag and drop to add</p>
             </div>
             {model && (
               <div className="border-[1.5px] border-violet-400 rounded-xl p-3 bg-violet-50/40">
