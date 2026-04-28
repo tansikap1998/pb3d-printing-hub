@@ -272,7 +272,6 @@ export default function UploadPage() {
             </button>
           </div>
         </div>
-        </div>
 
         {/* CENTER — 3D Preview */}
         <div className="bg-[#121218] rounded-2xl flex flex-col items-center justify-center relative min-h-[460px] shadow-xl overflow-hidden group">
