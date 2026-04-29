@@ -98,7 +98,6 @@ export default function Home() {
       </nav>
 
       <main>
-        {/* HERO */}
         <section className="relative min-h-screen flex flex-col justify-end px-8 pb-16 overflow-hidden">
           <InteractiveBackground />
           <div className="relative z-10 w-full">
@@ -126,12 +125,11 @@ export default function Home() {
           </div>
         </section>
 
-        {/* SECTION 01: MACHINE FOCUS */}
         <section className="py-40 px-8 border-t border-white/5">
           <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-12 items-center">
             <div className="md:col-span-7">
               <h2 className="font-header text-7xl md:text-9xl leading-none uppercase tracking-tighter mb-12">
-                Precision<br/>Engineered.
+                Rapid<br/>Prototypes.
               </h2>
               <div className="aspect-video bg-white/5 rounded-3xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
                 <img src="/media__1777429328508.png" alt="Bambu Lab X1C" className="w-full h-full object-cover" />
@@ -139,7 +137,7 @@ export default function Home() {
             </div>
             <div className="md:col-span-5 flex flex-col gap-8">
                <p className="font-serif text-4xl text-white/60 leading-tight">
-                Industrial grade machines for professional results.
+                Our platform automates the bridge between CAD data and physical output. Zero friction, total precision.
                </p>
                <div className="aspect-[4/5] bg-white/5 rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
                 <img src="/media__1777365099190.png" alt="AMS System" className="w-full h-full object-cover" />
@@ -148,23 +146,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* SECTION 02: PRODUCT GALLERY (FULL WIDTH) */}
-        <section className="py-20">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4">
-             <div className="aspect-[4/5] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
-                <img src="/media__1777363717739.png" alt="Product" className="w-full h-full object-cover" />
-             </div>
-             <div className="aspect-[4/5] md:translate-y-20 rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
-                <img src="/media__1777363626244.png" alt="Product" className="w-full h-full object-cover" />
-             </div>
-             <div className="aspect-[4/5] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
-                <img src="/media__1777363653135.png" alt="Product" className="w-full h-full object-cover" />
-             </div>
-          </div>
-        </section>
-
-        {/* MATERIALS SECTION (UPGRADED) */}
-        <section id="materials" className="py-40 px-8 border-y border-white/5 bg-[#F2F2F2] text-black mt-20">
+        <section id="materials" className="py-40 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-24 gap-8">
               <h2 className="font-header text-7xl md:text-9xl leading-none uppercase tracking-tighter">{t.materials.title}</h2>
@@ -174,7 +156,7 @@ export default function Home() {
               <div className="grid md:grid-cols-2 gap-4">
                 {MATERIALS.map((m, i) => (
                   <button key={m.id} onClick={() => setSelectedMat(m)}
-                    className={`group relative p-10 border border-black/10 transition-all duration-500 flex flex-col justify-between aspect-[3/4] rounded-3xl ${selectedMat.id === m.id ? 'bg-black text-white' : 'hover:bg-black/5'}`}>
+                    className={`group relative p-10 border border-black/10 transition-all duration-500 flex flex-col justify-between aspect-[3/4] ${selectedMat.id === m.id ? 'bg-black text-white' : 'hover:bg-black/5'}`}>
                     <div className="flex justify-between items-start">
                       <span className="font-header text-6xl tracking-tighter">0{i+1}</span>
                       <span className="text-3xl grayscale group-hover:grayscale-0 transition-all">{m.icon}</span>
@@ -186,24 +168,24 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              <div className="bg-black/5 p-12 rounded-[3rem] flex flex-col justify-between">
+              <div className="bg-black/5 p-12 rounded-[2rem] flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-6 mb-12">
-                    <div className="w-24 h-24 bg-black text-white flex items-center justify-center text-5xl rounded-3xl">{selectedMat.icon}</div>
+                    <div className="w-20 h-20 bg-black text-white flex items-center justify-center text-4xl rounded-2xl">{selectedMat.icon}</div>
                     <h3 className="font-header text-5xl uppercase tracking-tighter">{selectedMat.name}</h3>
                   </div>
-                  <div className="space-y-12">
+                  <div className="space-y-10">
                     <div>
-                      <h4 className="font-header text-[10px] tracking-widest uppercase opacity-30 mb-4">{t.materials.details}</h4>
-                      <p className="text-3xl font-serif italic text-black/80 leading-snug">{selectedMat.details}</p>
+                      <h4 className="font-header text-[10px] tracking-widest uppercase opacity-30 mb-2">{t.materials.details}</h4>
+                      <p className="text-3xl font-serif italic text-black/70 leading-tight">{selectedMat.details}</p>
                     </div>
                     <div>
-                      <h4 className="font-header text-[10px] tracking-widest uppercase opacity-30 mb-4">{t.materials.suitable}</h4>
-                      <p className="font-body font-black text-xl uppercase tracking-tight">{selectedMat.bestFor}</p>
+                      <h4 className="font-header text-[10px] tracking-widest uppercase opacity-30 mb-2">{t.materials.suitable}</h4>
+                      <p className="font-body font-bold text-lg">{selectedMat.bestFor}</p>
                     </div>
                   </div>
                 </div>
-                <Link href="/upload" className="mt-16 bg-black text-white font-header text-sm tracking-[0.2em] uppercase py-7 text-center rounded-2xl hover:opacity-80 transition-all shadow-2xl">
+                <Link href="/upload" className="mt-12 bg-black text-white font-header text-xs tracking-widest uppercase py-6 text-center rounded-xl hover:opacity-80 transition-all">
                   {t.materials.cta}
                 </Link>
               </div>
@@ -211,7 +193,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CTA SECTION */}
         <section className="py-60 px-8 text-center flex flex-col items-center">
           <h2 className="font-header text-[8vw] leading-[0.8] uppercase tracking-tighter mb-16">
             Ready to<br/><span className="font-serif italic tracking-normal text-white/30 lowercase">the</span> materialize.
