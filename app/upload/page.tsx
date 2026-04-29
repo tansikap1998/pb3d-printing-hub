@@ -137,7 +137,7 @@ export default function UploadPage() {
         </button>
       </nav>
 
-      <main className="pt-40 pb-32 px-6 max-w-7xl mx-auto grid lg:grid-cols-12 gap-16">
+      <main className="pt-40 pb-32 px-6 max-w-7xl mx-auto flex flex-col lg:grid lg:grid-cols-12 gap-16">
         <div className="lg:col-span-7 space-y-8">
           <div className="aspect-square bg-white/[0.02] border border-white/5 rounded-[3rem] overflow-hidden relative shadow-2xl">
             {models.length > 0 ? (
@@ -189,7 +189,7 @@ export default function UploadPage() {
 
         <div className="lg:col-span-5 space-y-12">
           <div className="flex justify-between items-end border-b border-white/5 pb-8">
-            <h2 className="font-header text-6xl uppercase tracking-tighter leading-none">{t.upload.settings}</h2>
+            <h2 className="font-header text-[clamp(2.5rem,8vw,6rem)] uppercase tracking-tighter leading-none">{t.upload.settings}</h2>
             <span className="font-header text-[12px] tracking-[0.4em] opacity-30 uppercase">Step 01</span>
           </div>
 
@@ -258,7 +258,7 @@ export default function UploadPage() {
               </div>
               <div className="flex justify-between items-center">
                 <p className="font-header text-[12px] tracking-[0.5em] opacity-30 uppercase">{t.upload.total}</p>
-                <p className="font-header text-7xl tracking-tighter">฿{result.totalPrice}</p>
+                <p className="font-header text-[clamp(2.5rem,10vw,7rem)] tracking-tighter">฿{result.totalPrice}</p>
               </div>
               <button className="w-full mt-12 py-7 bg-black text-white rounded-2xl font-header text-sm uppercase tracking-[0.4em] hover:opacity-90 transition-all shadow-xl active:scale-[0.98]">
                 {t.upload.checkout} →

@@ -104,7 +104,7 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto p-6">
         {/* Stats */}
-        <div className="grid grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           {[
             { key:"all",   label:"ทั้งหมด",    num: orders.length,             color:"text-gray-800" },
             { key:"pending",   label:"รอยืนยัน",   num: counts.pending||0,   color:"text-amber-600" },
@@ -142,16 +142,16 @@ export default function AdminPage() {
             return (
               <div key={order.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition">
                 {/* Header row */}
-                <div className="px-6 py-4 flex items-center gap-4 cursor-pointer" onClick={()=>setExpanded(isExpanded?null:order.id)}>
-                  <span className="font-mono text-sm font-bold text-violet-600 shrink-0">#{order.id}</span>
+                <div className="px-4 py-4 sm:px-6 flex flex-wrap sm:flex-nowrap items-center gap-4 cursor-pointer" onClick={()=>setExpanded(isExpanded?null:order.id)}>
+                  <span className="font-mono text-xs sm:text-sm font-bold text-violet-600 shrink-0">#{order.id}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 text-sm">{order.customer.name}</p>
-                    <p className="text-gray-400 text-xs">{order.customer.email}</p>
+                    <p className="font-bold text-gray-900 text-xs sm:text-sm truncate">{order.customer.name}</p>
+                    <p className="text-gray-400 text-[10px] sm:text-xs truncate">{order.customer.email}</p>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-bold border ${sc.bg} ${sc.color} shrink-0`}>{sc.label}</div>
+                  <div className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border ${sc.bg} ${sc.color} shrink-0`}>{sc.label}</div>
                   <div className="text-right shrink-0">
-                    <p className="font-black text-lg text-gray-900">{order.pricing.total} THB</p>
-                    <p className="text-gray-400 text-xs">{formatDate(order.createdAt)}</p>
+                    <p className="font-black text-sm sm:text-lg text-gray-900">{order.pricing.total} THB</p>
+                    <p className="text-gray-400 text-[10px] sm:text-xs">{formatDate(order.createdAt)}</p>
                   </div>
                   <span className="text-gray-400 text-sm">{isExpanded?"▲":"▼"}</span>
                 </div>

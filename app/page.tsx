@@ -135,10 +135,10 @@ export default function Home() {
           <InteractiveBackground />
           <div className="relative z-10 w-full">
             <div className="mb-10 opacity-30 font-header text-[12px] md:text-[14px] tracking-[0.6em] uppercase">{t.hero.subtitle}</div>
-            <h1 className="font-header text-[15vw] md:text-[12vw] leading-[0.75] uppercase tracking-tighter mix-blend-difference">
+            <h1 className="font-header text-[clamp(4rem,15vw,12rem)] md:text-[clamp(5rem,12vw,15rem)] leading-[0.75] uppercase tracking-tighter mix-blend-difference">
               Digital<br/>
               <span className="flex items-center gap-6">
-                <span className="font-serif text-[12vw] md:text-[10vw] lowercase tracking-normal text-white/40">{lang === 'TH' ? 'เข้าสู่' : 'into'}</span>
+                <span className="font-serif text-[clamp(3rem,12vw,8rem)] md:text-[clamp(4rem,10vw,10rem)] lowercase tracking-normal text-white/40">{lang === 'TH' ? 'เข้าสู่' : 'into'}</span>
                 Physical
               </span>
             </h1>
@@ -164,12 +164,12 @@ export default function Home() {
         <section className="py-40 px-8">
            <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-20 items-center">
               <div>
-                 <h2 className="font-header text-7xl md:text-9xl leading-none uppercase tracking-tighter mb-12">
-                   {t.shopee.title}
-                 </h2>
-                 <p className="font-serif text-3xl text-white/60 leading-relaxed mb-12">
-                   {t.shopee.desc}
-                 </p>
+                <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-12">
+                  {t.shopee.title}
+                </h2>
+                <p className="font-serif text-2xl md:text-3xl text-white/60 leading-relaxed mb-12">
+                  {t.shopee.desc}
+                </p>
                  <a href="https://shopee.co.th/shop/9883965" target="_blank" className="inline-flex items-center gap-4 bg-[#EE4D2D] text-white font-header text-xs tracking-widest uppercase px-12 py-5 rounded-full hover:opacity-80 transition-all shadow-2xl">
                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.124 16.5c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm-11.666 0c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm13.14-11.644c-.38-.285-.855-.356-1.282-.19l-11.62 4.437c-.38.143-.665.474-.759.855l-2.09 9.12h17.1c.38 0 .712-.237.855-.57l1.52-7.6c.047-.285 0-.57-.143-.855l-3.581-5.207zM18.026 6.5l2.612 3.8H6.556l1.235-5.32 10.235-3.98L18.026 6.5z"/></svg>
                    {t.trust.shopeeCta}
@@ -192,8 +192,8 @@ export default function Home() {
         <section id="materials" className="py-60 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-32 gap-10">
-              <h2 className="font-header text-[12vw] md:text-[9vw] leading-[0.8] uppercase tracking-tighter">{t.materials.title}</h2>
-              <div className="font-header text-[12px] tracking-[0.4em] uppercase opacity-40">{t.materials.subtitle}</div>
+              <h2 className="font-header text-[clamp(3.5rem,12vw,10rem)] leading-[0.8] uppercase tracking-tighter">{t.materials.title}</h2>
+              <div className="font-header text-[10px] md:text-[12px] tracking-[0.4em] uppercase opacity-40">{t.materials.subtitle}</div>
             </div>
             <div className="grid lg:grid-cols-2 gap-12 items-stretch">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -241,7 +241,7 @@ export default function Home() {
 
         {/* CTA */}
         <section className="py-80 px-8 text-center flex flex-col items-center">
-          <h2 className="font-header text-[12vw] md:text-[10vw] leading-[0.8] uppercase tracking-tighter mb-24">
+          <h2 className="font-header text-[clamp(3.5rem,12vw,10rem)] leading-[0.8] uppercase tracking-tighter mb-24">
             พร้อมหรือยังที่จะ<br/><span className="font-serif italic tracking-normal text-white/30 lowercase">ทำให้</span> จินตนาการเป็นจริง.
           </h2>
           <Link href="/upload" className="group flex flex-col items-center gap-6">
@@ -253,14 +253,15 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="py-32 px-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-end gap-20 text-white/30">
-        <div className="flex flex-col gap-6">
-          <span className="font-header text-5xl tracking-tighter uppercase text-white">PB3D<span className="opacity-10">HUB</span></span>
-          <p className="font-body text-[11px] uppercase tracking-[0.3em] font-bold">© 2025 ALL RIGHTS RESERVED.</p>
+      <footer className="py-20 px-8 border-t border-white/5 flex flex-col items-center gap-10 text-white/20">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="font-header text-4xl tracking-tighter uppercase text-white">PB3D<span className="opacity-10">HUB</span></span>
+          <p className="font-body text-[10px] uppercase tracking-[0.3em] font-bold">© 2025 ALL RIGHTS RESERVED.</p>
         </div>
-        <div className="flex gap-16 font-header text-[12px] tracking-[0.5em] uppercase">
-          <a href="#" className="hover:text-white transition-colors">Instagram</a>
-          <a href="#" className="hover:text-white transition-colors">Facebook</a>
+        <div className="flex gap-12 font-header text-[10px] tracking-[0.5em] uppercase">
+          <a href="https://shopee.co.th/shop/9883965" target="_blank" className="hover:text-white transition-colors">SHOPEE</a>
+          <a href="#" className="hover:text-white transition-colors">INSTAGRAM</a>
+          <a href="#" className="hover:text-white transition-colors">FACEBOOK</a>
         </div>
       </footer>
     </div>
