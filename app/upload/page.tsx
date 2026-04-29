@@ -88,7 +88,7 @@ export default function UploadPage() {
         })
       } else if (extension === '3mf') {
         const loader = new ThreeMFLoader()
-        loader.load(url, (group) => {
+        loader.load(url, (group: THREE.Group) => {
           const box = new THREE.Box3().setFromObject(group)
           const size = new THREE.Vector3()
           box.getSize(size)
