@@ -103,13 +103,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F2F2F2] selection:bg-white/20 font-sans overflow-x-hidden">
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Cormorant+Garamond:ital,wght@1,600&family=Inter:wght@400;700;900&display=swap');
-        .font-header { font-family: 'Anton', sans-serif; }
-        .font-serif { font-family: 'Cormorant Garamond', serif; font-style: italic; }
-        .font-body { font-family: 'Inter', sans-serif; }
-        html { scroll-behavior: smooth; }
-      `}</style>
 
       <nav className={`fixed top-0 left-0 right-0 z-[100] px-8 py-8 flex items-center justify-between transition-all duration-500 ${isMenuOpen ? 'bg-black mix-blend-normal' : 'mix-blend-difference'}`}>
         <Link href="/" className="font-header text-4xl tracking-tighter uppercase leading-none z-[101]">

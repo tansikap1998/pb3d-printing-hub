@@ -126,11 +126,6 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F2F2F2] font-sans selection:bg-white/20 overflow-x-hidden">
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;700;900&display=swap');
-        .font-header { font-family: 'Anton', sans-serif; }
-        .font-body { font-family: 'Inter', sans-serif; }
-      `}</style>
 
       <nav className={`fixed top-0 left-0 right-0 z-[100] px-8 py-8 flex items-center justify-between transition-all duration-500 ${isMenuOpen ? 'bg-black mix-blend-normal' : 'mix-blend-difference'}`}>
         <div className="flex items-center gap-8">
