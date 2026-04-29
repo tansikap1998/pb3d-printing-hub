@@ -99,6 +99,7 @@ export default function Home() {
   ]
 
   const [selectedMat, setSelectedMat] = useState(MATERIALS[0])
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F2F2F2] selection:bg-white/20 font-sans overflow-x-hidden">
@@ -110,17 +111,44 @@ export default function Home() {
         html { scroll-behavior: smooth; }
       `}</style>
 
-      <nav className="fixed top-0 left-0 right-0 z-50 px-8 py-8 flex items-center justify-between mix-blend-difference">
-        <Link href="/" className="font-header text-4xl tracking-tighter uppercase leading-none">
+      <nav className={`fixed top-0 left-0 right-0 z-[100] px-8 py-8 flex items-center justify-between transition-all duration-500 ${isMenuOpen ? 'bg-black mix-blend-normal' : 'mix-blend-difference'}`}>
+        <Link href="/" className="font-header text-4xl tracking-tighter uppercase leading-none z-[101]">
           PB3D<span className="text-white/20">HUB</span>
         </Link>
-        <div className="hidden md:flex items-center gap-16 font-header text-xs tracking-[0.3em] uppercase">
+        
+        {/* Desktop Menu */}
+        <div className="hidden lg:flex items-center gap-16 font-header text-xs tracking-[0.3em] uppercase">
+          <a href="#how-it-works" className="hover:opacity-50 transition-opacity">{t.nav.howItWorks}</a>
           <a href="#materials" className="hover:opacity-50 transition-opacity">{t.nav.materials}</a>
+          <Link href="/upload" className="hover:opacity-50 transition-opacity">{t.nav.order}</Link>
           <button onClick={() => setLang(lang === 'TH' ? 'EN' : 'TH')} className="hover:opacity-50 transition-opacity border-x border-white/10 px-6">
             {lang === 'TH' ? 'ENGLISH' : 'ภาษาไทย'}
           </button>
         </div>
-        <Link href="/upload" className="font-header text-xs tracking-[0.3em] uppercase border border-white/20 px-8 py-3 rounded-full hover:bg-white hover:text-black transition-all">
+
+        {/* Hamburger Toggle */}
+        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden z-[101] flex flex-col gap-1.5 p-2">
+          <div className={`w-8 h-0.5 bg-white transition-all ${isMenuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+          <div className={`w-8 h-0.5 bg-white transition-all ${isMenuOpen ? 'opacity-0' : ''}`} />
+          <div className={`w-8 h-0.5 bg-white transition-all ${isMenuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+        </button>
+
+        {/* Mobile Menu Overlay */}
+        <div className={`fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center gap-12 transition-all duration-700 lg:hidden ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+          <div className="flex flex-col items-center gap-8 font-header text-2xl tracking-[0.2em] uppercase">
+            <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="hover:text-white/40 transition-colors">{t.nav.howItWorks}</a>
+            <a href="#materials" onClick={() => setIsMenuOpen(false)} className="hover:text-white/40 transition-colors">{t.nav.materials}</a>
+            <Link href="/upload" onClick={() => setIsMenuOpen(false)} className="hover:text-white/40 transition-colors">{t.nav.order}</Link>
+            <button onClick={() => { setLang(lang === 'TH' ? 'EN' : 'TH'); setIsMenuOpen(false); }} className="text-white/40">
+              {lang === 'TH' ? 'ENGLISH' : 'ภาษาไทย'}
+            </button>
+          </div>
+          <Link href="/upload" onClick={() => setIsMenuOpen(false)} className="font-header text-sm tracking-[0.3em] uppercase bg-white text-black px-12 py-5 rounded-full">
+            {t.nav.start}
+          </Link>
+        </div>
+
+        <Link href="/upload" className="hidden lg:block font-header text-xs tracking-[0.3em] uppercase border border-white/20 px-8 py-3 rounded-full hover:bg-white hover:text-black transition-all">
           {t.nav.start}
         </Link>
       </nav>
@@ -135,13 +163,18 @@ export default function Home() {
           <InteractiveBackground />
           <div className="relative z-10 w-full">
             <div className="mb-10 opacity-30 font-header text-[12px] md:text-[14px] tracking-[0.6em] uppercase">{t.hero.subtitle}</div>
-            <h1 className="font-header text-[clamp(4rem,15vw,12rem)] md:text-[clamp(5rem,12vw,15rem)] leading-[0.75] uppercase tracking-tighter mix-blend-difference">
+            <h1 className="font-header text-[clamp(3.5rem,15vw,10rem)] md:text-[clamp(5rem,12vw,15rem)] leading-[0.75] uppercase tracking-tighter mix-blend-difference">
               Digital<br/>
-              <span className="flex items-center gap-6">
-                <span className="font-serif text-[clamp(3rem,12vw,8rem)] md:text-[clamp(4rem,10vw,10rem)] lowercase tracking-normal text-white/40">{lang === 'TH' ? 'เข้าสู่' : 'into'}</span>
+              <span className="flex flex-wrap items-center gap-4 md:gap-6">
+                <span className="font-serif text-[clamp(2.5rem,12vw,7rem)] md:text-[clamp(4rem,10vw,10rem)] lowercase tracking-normal text-white/40">{lang === 'TH' ? 'เข้าสู่' : 'into'}</span>
                 Physical
               </span>
             </h1>
+            <div className="mt-12 flex flex-col items-start gap-8">
+              <Link href="/upload" className="bg-white text-black px-12 py-6 rounded-full font-header text-sm tracking-[0.3em] uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)]">
+                {t.hero.cta}
+              </Link>
+            </div>
             <div className="mt-16 flex flex-col md:flex-row justify-between items-end gap-16">
               <p className="max-w-xl font-body text-white/40 text-lg md:text-xl leading-relaxed tracking-tight">{t.hero.desc}</p>
               <div className="flex gap-16 font-header text-[11px] tracking-[0.4em] uppercase">
@@ -159,6 +192,29 @@ export default function Home() {
         </section>
 
         <TrustBar t={t} />
+
+        {/* HOW IT WORKS */}
+        <section id="how-it-works" className="py-40 px-8">
+           <div className="max-w-7xl mx-auto">
+              <div className="mb-24">
+                <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-8">{t.howItWorks.title}</h2>
+                <p className="font-serif text-2xl md:text-3xl text-white/60 lowercase">{t.howItWorks.subtitle}</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-8">
+                {[
+                  { step: "01", title: t.howItWorks.step1Title, desc: t.howItWorks.step1Desc },
+                  { step: "02", title: t.howItWorks.step2Title, desc: t.howItWorks.step2Desc },
+                  { step: "03", title: t.howItWorks.step3Title, desc: t.howItWorks.step3Desc },
+                ].map((s, i) => (
+                  <div key={i} className="group p-10 bg-white/[0.02] border border-white/5 rounded-[3rem] hover:bg-white/[0.05] transition-all">
+                    <span className="font-header text-5xl opacity-10 group-hover:opacity-30 transition-opacity">{s.step}</span>
+                    <h3 className="font-header text-2xl uppercase mt-8 mb-4 tracking-tight">{s.title}</h3>
+                    <p className="font-body text-white/40 leading-relaxed text-sm">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+           </div>
+        </section>
 
         {/* MARKETPLACE INTEGRATION */}
         <section className="py-40 px-8">
@@ -195,8 +251,8 @@ export default function Home() {
               <h2 className="font-header text-[clamp(3.5rem,12vw,10rem)] leading-[0.8] uppercase tracking-tighter">{t.materials.title}</h2>
               <div className="font-header text-[10px] md:text-[12px] tracking-[0.4em] uppercase opacity-40">{t.materials.subtitle}</div>
             </div>
-            <div className="grid lg:grid-cols-2 gap-12 items-stretch">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-12 items-stretch">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {MATERIALS.map((m, i) => (
                   <button key={m.id} onClick={() => setSelectedMat(m)}
                     className={`group relative p-8 border border-black/10 transition-all duration-500 flex flex-col justify-between aspect-[3/4] rounded-[2rem] ${selectedMat.id === m.id ? 'bg-black text-white shadow-2xl scale-[1.02]' : 'hover:bg-black/5 hover:scale-[1.02]'}`}>
@@ -258,13 +314,18 @@ export default function Home() {
           <span className="font-header text-4xl tracking-tighter uppercase text-white">PB3D<span className="opacity-10">HUB</span></span>
           <p className="font-body text-[10px] uppercase tracking-[0.3em] font-bold">© 2025 ALL RIGHTS RESERVED.</p>
         </div>
-        <div className="flex gap-12 font-header text-[10px] tracking-[0.5em] uppercase">
+        <div className="flex flex-wrap justify-center gap-8 md:gap-12 font-header text-[10px] tracking-[0.5em] uppercase">
           <a href="https://shopee.co.th/shop/9883965" target="_blank" className="hover:text-white transition-colors">SHOPEE</a>
-          <a href="#" className="hover:text-white transition-colors">INSTAGRAM</a>
-          <a href="#" className="hover:text-white transition-colors">FACEBOOK</a>
+          <a href="https://facebook.com/pb3d" target="_blank" className="hover:text-white transition-colors">FACEBOOK</a>
+          <a href="https://line.me/ti/p/@pb3d" target="_blank" className="hover:text-white transition-colors">LINE OA</a>
           <Link href="/admin" className="hover:text-white transition-colors opacity-50 hover:opacity-100">ADMIN</Link>
         </div>
       </footer>
+
+      {/* Floating LINE Button */}
+      <a href="https://line.me/ti/p/@pb3d" target="_blank" className="fixed bottom-8 right-8 z-[90] w-16 h-16 bg-[#06C755] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.58 2 10c0 2.9 1.87 5.48 4.7 7.04-.13.5-.47 1.94-.54 2.22-.08.3-.38 1.18.16 1.18.52 0 2.4-1.6 3.3-2.22.45.12.92.18 1.38.18 5.52 0 10-3.58 10-8s-4.48-8-10-8zm-5 11h-1v-4h1v4zm3 0h-1v-4h1v4zm3-4v4h-1v-4h1zm3 4h-1v-4h1v4z"/></svg>
+      </a>
     </div>
   )
 }

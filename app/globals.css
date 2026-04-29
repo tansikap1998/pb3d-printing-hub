@@ -2,11 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Prompt:wght@400;700;900&family=Inter:wght@400;700;900&family=Cormorant+Garamond:ital,wght@1,600&display=swap');
+
 * { box-sizing: border-box; }
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+@layer base {
+  body {
+    @apply antialiased min-h-screen bg-[#000000] text-[#F2F2F2];
+    font-family: 'Inter', 'Prompt', sans-serif;
+  }
+}
+
+.font-header { font-family: 'Anton', 'Prompt', sans-serif; }
+.font-body { font-family: 'Inter', 'Prompt', sans-serif; }
+.font-serif { font-family: 'Cormorant Garamond', serif; font-style: italic; }
 
 @keyframes float {
   0%, 100% { transform: perspective(500px) rotateX(20deg) rotateY(-30deg) translateY(0px); }
