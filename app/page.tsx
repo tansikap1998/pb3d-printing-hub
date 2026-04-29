@@ -45,26 +45,26 @@ export default function Home() {
   const MATERIALS = [
     {
       id: 'PLA', name: 'PLA', icon: '🧊', desc: lang === 'TH' ? 'ทั่วไป · แข็ง · พิมพ์เร็ว' : 'General · Rigid · Fast', price: '฿3/g',
-      details: lang === 'TH' ? 'วัสดุยอดนิยมที่สุด พิมพ์ง่าย ผิวสวย เหมาะสำหรับโมเดลตั้งโชว์' : 'The standard for prototypes and visual models. High detail and easy to print.',
-      bestFor: lang === 'TH' ? 'ของตกแต่งบ้าน, โมเดลต้นแบบ' : 'Decorative pieces, non-functional prototypes.',
+      details: t.materials.items.PLA.details,
+      bestFor: t.materials.items.PLA.bestFor,
       properties: lang === 'TH' ? ['พิมพ์ง่าย', 'ผิวละเอียด', 'เป็นมิตรกับสิ่งแวดล้อม'] : ['Ease of Use', 'Detail Accuracy', 'Eco-friendly']
     },
     {
       id: 'PETG', name: 'PETG', icon: '💧', desc: lang === 'TH' ? 'ทนทาน · กันน้ำ' : 'Durable · Waterproof', price: '฿4/g',
-      details: lang === 'TH' ? 'มีความเหนียว ทนทานกว่า PLA ทนต่อสารเคมีและกันน้ำได้ดี' : 'Tougher than PLA with better chemical and moisture resistance.',
-      bestFor: lang === 'TH' ? 'อะไหล่เครื่องจักร, กระถางต้นไม้' : 'Mechanical parts, water containers.',
+      details: t.materials.items.PETG.details,
+      bestFor: t.materials.items.PETG.bestFor,
       properties: lang === 'TH' ? ['ทนทาน', 'กันน้ำ', 'ทนสารเคมี'] : ['Toughness', 'Chemical Resistance', 'UV Stable']
     },
     {
       id: 'CarbonFiber', name: 'CarbonFiber', icon: '🛡️', desc: lang === 'TH' ? 'แข็งแรงพิเศษ · ดำด้าน' : 'High-Rigidity · Matte', price: '฿10/g',
-      details: lang === 'TH' ? 'ผสมเส้นใยคาร์บอน แข็งแกร่งสูงมาก ไม่ยืดหยุ่น ผิวดำด้านพรีเมียม' : 'Extreme stiffness with a premium matte black finish.',
-      bestFor: lang === 'TH' ? 'โดรน, อุปกรณ์ RC, โครงสร้าง' : 'Drones, RC parts, structural frames.',
+      details: t.materials.items.CarbonFiber.details,
+      bestFor: t.materials.items.CarbonFiber.bestFor,
       properties: lang === 'TH' ? ['แข็งแกร่งมาก', 'น้ำหนักเบา', 'ผิวด้านพรีเมียม'] : ['Extreme Rigidity', 'Premium Finish', 'High Strength']
     },
     {
       id: 'Nylon', name: 'Nylon', icon: '⛓️', desc: lang === 'TH' ? 'ทนแรงเสียดสี · เหนียวมาก' : 'Low-Friction · Tough', price: '฿12/g',
-      details: lang === 'TH' ? 'เหนียวและทนต่อแรงเสียดทานสูงสุด เหมาะสำหรับงานวิศวกรรม' : 'The toughest engineering material for high-wear parts.',
-      bestFor: lang === 'TH' ? 'เฟือง, บูช, ข้อต่อ' : 'Gears, bearings, snap-fits.',
+      details: t.materials.items.Nylon.details,
+      bestFor: t.materials.items.Nylon.bestFor,
       properties: lang === 'TH' ? ['ทนแรงเสียดสี', 'เหนียวพิเศษ', 'รับแรงกระแทก'] : ['Wear Resistance', 'Impact Strength', 'Industrial']
     }
   ]
@@ -104,10 +104,10 @@ export default function Home() {
           <div className="relative z-10 w-full">
             <div className="mb-8 opacity-40 font-header text-xs tracking-[0.5em] uppercase">{t.hero.subtitle}</div>
             <h1 className="font-header text-[12vw] md:text-[15vw] leading-[0.8] uppercase tracking-tighter mix-blend-difference">
-              {lang === 'TH' ? 'Digital' : 'Digital'}<br/>
+              Digital<br/>
               <span className="flex items-center gap-4">
                 <span className="font-serif text-[10vw] md:text-[12vw] lowercase tracking-normal text-white/50">{lang === 'TH' ? 'เข้าสู่' : 'into'}</span>
-                {lang === 'TH' ? 'Physical' : 'Physical'}
+                Physical
               </span>
             </h1>
             <div className="mt-12 flex flex-col md:flex-row justify-between items-end gap-12">
@@ -126,30 +126,45 @@ export default function Home() {
           </div>
         </section>
 
-        {/* INFO SECTION WITH LOCAL IMAGES */}
+        {/* SECTION 01: MACHINE FOCUS */}
         <section className="py-40 px-8 border-t border-white/5">
-          <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-12">
+          <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-12 items-center">
             <div className="md:col-span-7">
               <h2 className="font-header text-7xl md:text-9xl leading-none uppercase tracking-tighter mb-12">
-                {lang === 'TH' ? 'ความแม่นยำ' : 'Precision'}<br/>{lang === 'TH' ? 'ระดับโปร.' : 'Output.'}
+                Precision<br/>Engineered.
               </h2>
-              <div className="aspect-[16/9] bg-white/5 rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
+              <div className="aspect-video bg-white/5 rounded-3xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
                 <img src="/media__1777429328508.png" alt="Bambu Lab X1C" className="w-full h-full object-cover" />
               </div>
             </div>
-            <div className="md:col-span-5 md:pt-40 flex flex-col gap-12">
+            <div className="md:col-span-5 flex flex-col gap-8">
                <p className="font-serif text-4xl text-white/60 leading-tight">
-                {lang === 'TH' ? 'เราใช้เครื่องพิมพ์ระดับ Industrial Grade เพื่อผลลัพธ์ที่สมบูรณ์แบบที่สุด' : 'We use industrial-grade machines to ensure the most perfect results.'}
+                Industrial grade machines for professional results.
                </p>
-               <div className="aspect-square bg-white/5 rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
+               <div className="aspect-[4/5] bg-white/5 rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
                 <img src="/media__1777365099190.png" alt="AMS System" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
         </section>
 
-        {/* MATERIALS SECTION */}
-        <section id="materials" className="py-40 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
+        {/* SECTION 02: PRODUCT GALLERY (FULL WIDTH) */}
+        <section className="py-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4">
+             <div className="aspect-[4/5] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
+                <img src="/media__1777363717739.png" alt="Product" className="w-full h-full object-cover" />
+             </div>
+             <div className="aspect-[4/5] md:translate-y-20 rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
+                <img src="/media__1777363626244.png" alt="Product" className="w-full h-full object-cover" />
+             </div>
+             <div className="aspect-[4/5] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000">
+                <img src="/media__1777363653135.png" alt="Product" className="w-full h-full object-cover" />
+             </div>
+          </div>
+        </section>
+
+        {/* MATERIALS SECTION (UPGRADED) */}
+        <section id="materials" className="py-40 px-8 border-y border-white/5 bg-[#F2F2F2] text-black mt-20">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-24 gap-8">
               <h2 className="font-header text-7xl md:text-9xl leading-none uppercase tracking-tighter">{t.materials.title}</h2>
@@ -159,7 +174,7 @@ export default function Home() {
               <div className="grid md:grid-cols-2 gap-4">
                 {MATERIALS.map((m, i) => (
                   <button key={m.id} onClick={() => setSelectedMat(m)}
-                    className={`group relative p-10 border border-black/10 transition-all duration-500 flex flex-col justify-between aspect-[3/4] ${selectedMat.id === m.id ? 'bg-black text-white' : 'hover:bg-black/5'}`}>
+                    className={`group relative p-10 border border-black/10 transition-all duration-500 flex flex-col justify-between aspect-[3/4] rounded-3xl ${selectedMat.id === m.id ? 'bg-black text-white' : 'hover:bg-black/5'}`}>
                     <div className="flex justify-between items-start">
                       <span className="font-header text-6xl tracking-tighter">0{i+1}</span>
                       <span className="text-3xl grayscale group-hover:grayscale-0 transition-all">{m.icon}</span>
@@ -171,24 +186,24 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              <div className="bg-black/5 p-12 rounded-[2rem] flex flex-col justify-between">
+              <div className="bg-black/5 p-12 rounded-[3rem] flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-6 mb-12">
-                    <div className="w-20 h-20 bg-black text-white flex items-center justify-center text-4xl rounded-2xl">{selectedMat.icon}</div>
+                    <div className="w-24 h-24 bg-black text-white flex items-center justify-center text-5xl rounded-3xl">{selectedMat.icon}</div>
                     <h3 className="font-header text-5xl uppercase tracking-tighter">{selectedMat.name}</h3>
                   </div>
-                  <div className="space-y-10">
+                  <div className="space-y-12">
                     <div>
-                      <h4 className="font-header text-[10px] tracking-widest uppercase opacity-30 mb-2">{t.materials.details}</h4>
-                      <p className="text-2xl font-serif italic text-black/70">{selectedMat.details}</p>
+                      <h4 className="font-header text-[10px] tracking-widest uppercase opacity-30 mb-4">{t.materials.details}</h4>
+                      <p className="text-3xl font-serif italic text-black/80 leading-snug">{selectedMat.details}</p>
                     </div>
                     <div>
-                      <h4 className="font-header text-[10px] tracking-widest uppercase opacity-30 mb-2">{t.materials.suitable}</h4>
-                      <p className="font-body font-bold text-lg">{selectedMat.bestFor}</p>
+                      <h4 className="font-header text-[10px] tracking-widest uppercase opacity-30 mb-4">{t.materials.suitable}</h4>
+                      <p className="font-body font-black text-xl uppercase tracking-tight">{selectedMat.bestFor}</p>
                     </div>
                   </div>
                 </div>
-                <Link href="/upload" className="mt-12 bg-black text-white font-header text-xs tracking-widest uppercase py-6 text-center rounded-xl hover:opacity-80 transition-all">
+                <Link href="/upload" className="mt-16 bg-black text-white font-header text-sm tracking-[0.2em] uppercase py-7 text-center rounded-2xl hover:opacity-80 transition-all shadow-2xl">
                   {t.materials.cta}
                 </Link>
               </div>
@@ -196,11 +211,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FINAL CTA WITH LOCAL IMAGE */}
+        {/* CTA SECTION */}
         <section className="py-60 px-8 text-center flex flex-col items-center">
-          <div className="mb-12 w-32 h-32 rounded-full overflow-hidden grayscale opacity-40">
-            <img src="/media__1777363717739.png" alt="Print Your Style" className="w-full h-full object-cover" />
-          </div>
           <h2 className="font-header text-[8vw] leading-[0.8] uppercase tracking-tighter mb-16">
             Ready to<br/><span className="font-serif italic tracking-normal text-white/30 lowercase">the</span> materialize.
           </h2>

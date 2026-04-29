@@ -23,6 +23,24 @@ export const translations = {
       suitable: "เหมาะสำหรับ",
       properties: "คุณสมบัติเด่น",
       cta: "สั่งพิมพ์ด้วยวัสดุนี้เลย",
+      items: {
+        PLA: {
+          details: "วัสดุมาตรฐานที่ผิวเนียนและละเอียดที่สุด ให้สีสันสดใสคล้ายพลาสติกของเล่นเกรดพรีเมียม พิมพ์ง่ายและไม่บิดรูป เหมาะสำหรับงานโชว์รายละเอียด",
+          bestFor: "โมเดลตั้งโชว์, ฟิกเกอร์, งานศิลปะ, ต้นแบบที่เน้นความสวยงาม",
+        },
+        PETG: {
+          details: "ส่วนผสมที่ลงตัวระหว่างความแข็งของ PLA และความเหนียวของ ABS ผิวเงางาม ทนแดดทนฝน และกันน้ำได้ดีเยี่ยม เหมือนพลาสติกขวดน้ำที่แข็งแรงพิเศษ",
+          bestFor: "อุปกรณ์ในสวน, ขาตั้งกล้อง, ชิ้นส่วนที่ต้องโดนน้ำหรือใช้งานกลางแจ้ง",
+        },
+        CarbonFiber: {
+          details: "พลาสติกผสมเส้นใยคาร์บอนแท้ ให้ผิวสัมผัส 'ดำด้าน' ที่หรูหราและสากมือ แข็งแกร่งสูงมาก ไม่บิดงอเมื่อรับแรงกด เหมาะสำหรับงานที่ต้องการความเท่และดุดัน",
+          bestFor: "โดรนแข่ง, อะไหล่รถยนต์, อุปกรณ์ที่ต้องการความแข็งแรงและน้ำหนักเบา",
+        },
+        Nylon: {
+          details: "ราชาแห่งความเหนียวและลื่น ทนแรงเสียดสีได้ดีเยี่ยม ไม่แตกหักง่ายเมื่อถูกกระแทกแรงๆ ผิวสัมผัสกึ่งเงาเหมือนพลาสติกวิศวกรรมในเครื่องจักร",
+          bestFor: "เฟืองเกียร์, ข้อต่อที่ต้องขยับบ่อย, บูชรองล้อ, อุปกรณ์รับแรงกระแทกสูง",
+        }
+      }
     },
     upload: {
       title: "อัปโหลดไฟล์ 3D",
@@ -62,10 +80,28 @@ export const translations = {
     materials: {
       title: "Material Curated.",
       subtitle: "Selection 01 — Engineering Plastics",
-      details: "Material Details",
+      details: "Material Insight",
       suitable: "Best For",
       properties: "Technical Properties",
       cta: "Order with this material",
+      items: {
+        PLA: {
+          details: "The gold standard for detail. Provides a smooth, matte-to-semi-gloss finish similar to high-grade injection molded plastic. It's rigid and retains dimensions perfectly.",
+          bestFor: "Display models, tabletop miniatures, architectural mockups, and aesthetic prototypes.",
+        },
+        PETG: {
+          details: "The perfect hybrid of strength and ease. It offers the durability of industrial plastics with a glossy finish. Highly resistant to water and chemicals, like a heavy-duty water bottle.",
+          bestFor: "Functional outdoor gear, mechanical brackets, and waterproof containers.",
+        },
+        CarbonFiber: {
+          details: "Infused with genuine carbon fibers, this material delivers a stunning 'Matte Black' finish. It is exceptionally rigid and won't flex under pressure, perfect for high-tech aesthetics.",
+          bestFor: "Drone frames, automotive interior parts, and ultra-light structural components.",
+        },
+        Nylon: {
+          details: "The king of durability. Known for its incredible toughness and low-friction properties. It can withstand heavy impacts and repeated mechanical stress without cracking.",
+          bestFor: "Gears, sliding bushings, snap-fit joints, and heavy-duty mechanical assemblies.",
+        }
+      }
     },
     upload: {
       title: "Upload 3D File",
