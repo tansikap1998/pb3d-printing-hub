@@ -24,7 +24,7 @@ const InteractiveBackground = () => {
 
     class Particle {
       x: number; y: number; size: number; speedX: number; speedY: number; opacity: number
-      constructor() {
+      constructor(canvas: HTMLCanvasElement) {
         this.x = Math.random() * canvas.width
         this.y = Math.random() * canvas.height
         this.size = Math.random() * 1.5 + 0.5
@@ -32,7 +32,7 @@ const InteractiveBackground = () => {
         this.speedY = Math.random() * 0.5 - 0.25
         this.opacity = Math.random() * 0.5 + 0.1
       }
-      update() {
+      update(canvas: HTMLCanvasElement) {
         this.x += this.speedX
         this.y += this.speedY
         if (this.x > canvas.width) this.x = 0
@@ -49,8 +49,7 @@ const InteractiveBackground = () => {
           this.y -= dy * 0.02
         }
       }
-      draw() {
-        if (!ctx) return
+      draw(ctx: CanvasRenderingContext2D) {
         ctx.fillStyle = `rgba(129, 140, 248, ${this.opacity})`
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
@@ -60,14 +59,14 @@ const InteractiveBackground = () => {
 
     const init = () => {
       particles = []
-      for (let i = 0; i < 80; i++) particles.push(new Particle())
+      for (let i = 0; i < 80; i++) particles.push(new Particle(canvas))
     }
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       particles.forEach(p => {
-        p.update()
-        p.draw()
+        p.update(canvas)
+        p.draw(ctx)
       })
       
       // Draw lines between particles
