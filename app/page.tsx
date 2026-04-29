@@ -39,11 +39,10 @@ const InteractiveBackground = () => {
 }
 
 const ImageCarousel = () => {
-  // Using paths that were previously successful or identified
   const images = [
-    "/media__1777430714628.png", // Image 05
-    "/media__1777429810223.png", // Image 01
-    "/media__1777429328508.png", // Image 02
+    "/media__1777430714628.png", 
+    "/media__1777429810223.png", 
+    "/media__1777429328508.png", 
     "/media__1777365099190.png", 
     "/media__1777363717739.png",
   ]
@@ -59,22 +58,30 @@ const ImageCarousel = () => {
         ))}
       </div>
       <style jsx>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-33.33%); }
-        }
-        .animate-marquee {
-          display: flex;
-          width: fit-content;
-          animation: marquee 40s linear infinite;
-        }
-        .animate-marquee:hover {
-          animation-play-state: paused;
-        }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
+        .animate-marquee { display: flex; width: fit-content; animation: marquee 40s linear infinite; }
+        .animate-marquee:hover { animation-play-state: paused; }
       `}</style>
     </div>
   )
 }
+
+const TrustBar = ({ t }: { t: any }) => (
+  <div className="border-y border-white/5 py-12 flex flex-wrap justify-center gap-12 md:gap-24 opacity-60">
+    <div className="flex items-center gap-4">
+      <span className="font-header text-3xl">4.9/5.0</span>
+      <span className="font-header text-[10px] tracking-widest uppercase leading-none opacity-50">{t.trust.rating}</span>
+    </div>
+    <div className="flex items-center gap-4">
+      <span className="font-header text-3xl">10+</span>
+      <span className="font-header text-[10px] tracking-widest uppercase leading-none opacity-50">{t.trust.years}</span>
+    </div>
+    <div className="flex items-center gap-4">
+      <span className="font-header text-3xl">1,000+</span>
+      <span className="font-header text-[10px] tracking-widest uppercase leading-none opacity-50">{t.trust.orders}</span>
+    </div>
+  </div>
+)
 
 export default function Home() {
   const [lang, setLang] = useState<Language>('EN')
@@ -119,10 +126,10 @@ export default function Home() {
       </nav>
 
       <main>
-        {/* HERO WITH AMS IMAGE 05 */}
+        {/* HERO */}
         <section className="relative min-h-screen flex flex-col justify-end px-8 pb-20 overflow-hidden">
           <div className="absolute inset-0 z-0">
-             <img src="/media__1777430714628.png" alt="AMS System Hero" className="w-full h-full object-cover opacity-40 grayscale" />
+             <img src="/media__1777430714628.png" alt="Hero" className="w-full h-full object-cover opacity-40 grayscale" />
              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
           </div>
           <InteractiveBackground />
@@ -151,26 +158,34 @@ export default function Home() {
           </div>
         </section>
 
-        {/* INFO */}
-        <section className="py-60 px-8 border-t border-white/5">
-          <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-20 items-center">
-            <div className="md:col-span-7">
-              <h2 className="font-header text-[10vw] md:text-[8vw] leading-[0.8] uppercase tracking-tighter mb-16">
-                Rapid<br/>Prototypes.
-              </h2>
-              <div className="aspect-video bg-white/5 rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl">
-                <img src="/media__1777429810223.png" alt="Product" className="w-full h-full object-cover" />
+        <TrustBar t={t} />
+
+        {/* MARKETPLACE INTEGRATION */}
+        <section className="py-40 px-8">
+           <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-20 items-center">
+              <div>
+                 <h2 className="font-header text-7xl md:text-9xl leading-none uppercase tracking-tighter mb-12">
+                   {t.shopee.title}
+                 </h2>
+                 <p className="font-serif text-3xl text-white/60 leading-relaxed mb-12">
+                   {t.shopee.desc}
+                 </p>
+                 <a href="https://shopee.co.th/shop/9883965" target="_blank" className="inline-flex items-center gap-4 bg-[#EE4D2D] text-white font-header text-xs tracking-widest uppercase px-12 py-5 rounded-full hover:opacity-80 transition-all">
+                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.124 16.5c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm-11.666 0c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm13.14-11.644c-.38-.285-.855-.356-1.282-.19l-11.62 4.437c-.38.143-.665.474-.759.855l-2.09 9.12h17.1c.38 0 .712-.237.855-.57l1.52-7.6c.047-.285 0-.57-.143-.855l-3.581-5.207zM18.026 6.5l2.612 3.8H6.556l1.235-5.32 10.235-3.98L18.026 6.5z"/></svg>
+                   {t.trust.shopeeCta}
+                 </a>
               </div>
-            </div>
-            <div className="md:col-span-5 flex flex-col gap-12 pt-20">
-               <p className="font-serif text-[4vw] md:text-[3vw] text-white/60 leading-[1.1] tracking-tight">
-                Industrial grade machines for professional results.
-               </p>
-               <div className="aspect-[4/5] bg-white/5 rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl">
-                <img src="/media__1777429328508.png" alt="Printing" className="w-full h-full object-cover" />
+              <div className="grid grid-cols-1 gap-4">
+                 {[t.shopee.review1, t.shopee.review2, t.shopee.review3].map((rev, i) => (
+                   <div key={i} className="bg-white/5 p-8 rounded-3xl border border-white/5 hover:bg-white/10 transition-all">
+                     <div className="flex gap-1 mb-4 text-orange-400">
+                       {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
+                     </div>
+                     <p className="font-serif italic text-2xl text-white/80">"{rev}"</p>
+                   </div>
+                 ))}
               </div>
-            </div>
-          </div>
+           </div>
         </section>
 
         {/* MATERIALS */}
