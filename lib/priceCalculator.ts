@@ -10,6 +10,7 @@ export interface EstimateInput {
   infill: InfillLevel
   layerHeight: LayerHeight
   quantity: number
+  isAnyColor?: boolean
 }
 
 export interface EstimateResult {
@@ -39,15 +40,19 @@ const LAYER_TIME_FACTOR: Record<number, number> = {
 
 export function calculate(input: EstimateInput): EstimateResult {
   const { volumeCm3, technology, material, infill, layerHeight, quantity } = input
+  const { volumeCm3, technology, material, infill, layerHeight, quantity, isAnyColor } = input
   const shellVolume = volumeCm3 * 0.15
   const infillVolume = (volumeCm3 - shellVolume) * (infill / 100)
   const actualVolume = shellVolume + infillVolume
   const weightG = Math.round(actualVolume * DENSITY[material] * 10) / 10
   const basePrintMin = (volumeCm3 / 2) * (infill / 25)
   const printTimeMin = Math.round(basePrintMin * LAYER_TIME_FACTOR[layerHeight])
-  const materialCost = weightG * PRICE_PER_GRAM[material]
+  let materialPrice = PRICE_PER_GRAM[material] || 0
+  if (isAnyColor) materialPrice = Math.max(0.5, materialPrice - 2)
+
+  const filamentPrice = weightG * materialPrice
   const machineCost = (printTimeMin / 60) * MACHINE_RATE[technology]
-  const pricePerPc = Math.round((materialCost + machineCost) * 1.2)
+  const pricePerPc = Math.round((filamentPrice + machineCost) * 1.2)
   return { weightG, printTimeMin, pricePerPc, totalPrice: pricePerPc * quantity }
 }
 

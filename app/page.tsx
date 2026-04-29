@@ -1,6 +1,80 @@
+"use client"
+
+import { useState } from 'react'
 import Link from 'next/link'
 
+const MATERIALS = [
+  {
+    id: 'PLA',
+    name: 'PLA',
+    icon: '🧊',
+    desc: 'ทั่วไป · แข็ง · พิมพ์เร็ว',
+    price: '฿3/g',
+    color: '#e2e8f0',
+    details: 'วัสดุยอดนิยมที่สุด พิมพ์ง่าย ผิวสวย เหมาะสำหรับโมเดลตั้งโชว์ ฟิกเกอร์ หรือชิ้นงานที่ไม่ต้องรับแรงกระแทกสูง',
+    bestFor: 'ของตกแต่งบ้าน, โมเดลต้นแบบ, อุปกรณ์สำนักงาน',
+    properties: ['พิมพ์ง่าย', 'ผิวละเอียด', 'เป็นมิตรกับสิ่งแวดล้อม']
+  },
+  {
+    id: 'PETG',
+    name: 'PETG',
+    icon: '💧',
+    desc: 'กันน้ำ · ทนกระแทก',
+    price: '฿4/g',
+    color: '#7dd3fc',
+    details: 'มีความเหนียวและทนทานกว่า PLA ทนต่อสารเคมีและกันน้ำได้ดี เหมาะสำหรับงานที่ต้องใช้งานจริงกลางแจ้งหรือโดนน้ำ',
+    bestFor: 'อะไหล่เครื่องจักร, กระถางต้นไม้, อุปกรณ์ตกแต่งรถ',
+    properties: ['ทนทาน', 'กันน้ำ', 'ทนสารเคมี']
+  },
+  {
+    id: 'ABS',
+    name: 'ABS',
+    icon: '🔥',
+    desc: 'ทนความร้อนสูง',
+    price: '฿4/g',
+    color: '#fbbf24',
+    details: 'วัสดุเกรดอุตสาหกรรม ทนความร้อนและแรงเสียดสีได้ดีเยี่ยม สามารถขัดแต่งผิวได้ง่ายด้วยน้ำยาอะซิโตน',
+    bestFor: 'กล่องวงจรไฟฟ้า, อุปกรณ์ในห้องเครื่อง, ตัวต่อของเล่น',
+    properties: ['ทนความร้อน', 'เหนียว', 'ตกแต่งผิวได้']
+  },
+  {
+    id: 'CarbonFiber',
+    name: 'CarbonFiber',
+    icon: '🛡️',
+    desc: 'แข็งแรงพิเศษ · ดำด้าน',
+    price: '฿10/g',
+    color: '#111111',
+    details: 'ผสมเส้นใยคาร์บอนเพื่อให้มีความแข็งแกร่ง (Rigid) สูงมาก ไม่ยืดหยุ่น ผิวสัมผัสมีความสากและดำด้านพรีเมียม',
+    bestFor: 'โดรน, อุปกรณ์ RC, ชิ้นส่วนโครงสร้างเบาแต่แข็งแรง',
+    properties: ['แข็งแกร่งมาก', 'น้ำหนักเบา', 'ผิวด้านสวยงาม']
+  },
+  {
+    id: 'Nylon',
+    name: 'Nylon',
+    icon: '⛓️',
+    desc: 'ทนแรงเสียดสี · เหนียวมาก',
+    price: '฿12/g',
+    color: '#ffffff',
+    details: 'วัสดุที่มีความเหนียวและทนต่อแรงเสียดทานสูงสุด เหมาะสำหรับทำเฟืองหรือชิ้นส่วนที่ต้องมีการเคลื่อนที่ตลอดเวลา',
+    bestFor: 'เฟือง, บูช, ข้อต่อรับแรงดัน',
+    properties: ['ทนแรงเสียดสี', 'เหนียวพิเศษ', 'รับแรงกระแทกได้ดี']
+  },
+  {
+    id: 'TPU',
+    name: 'TPU',
+    icon: '👟',
+    desc: 'ยืดหยุ่น · นุ่ม',
+    price: '฿6/g',
+    color: '#f9a8d4',
+    details: 'วัสดุที่มีลักษณะคล้ายยาง ยืดหยุ่นได้สูง บิดงอได้โดยไม่เสียรูปทรง รับแรงกระแทกได้ดีเยี่ยม',
+    bestFor: 'เคสมือถือ, ซีลกันรั่ว, ล้อรถบังคับ',
+    properties: ['ยืดหยุ่น', 'กันกระแทก', 'ทนการฉีกขาด']
+  }
+]
+
 export default function Home() {
+  const [selectedMat, setSelectedMat] = useState(MATERIALS[0])
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col text-white">
       <nav className="sticky top-0 z-50 bg-[#0a0a0f]/90 backdrop-blur-md border-b border-white/5">
@@ -129,34 +203,78 @@ export default function Home() {
           </div>
         </section>
 
-        {/* MATERIALS */}
+        {/* MATERIALS SECTION (INTERACTIVE) */}
         <section id="materials" className="bg-white/[0.02] border-y border-white/5 px-6 py-20">
-          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
-            <div>
+          <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-16 items-start">
+            <div className="w-full lg:w-1/2">
               <p className="text-indigo-400 text-xs font-bold tracking-widest uppercase mb-3">วัสดุ</p>
               <h2 className="font-black text-4xl text-white mb-10">เลือกวัสดุตามงาน</h2>
-              <div className="flex flex-col gap-2">
-                {[
-                  {name:'PLA', color:'#e2e8f0',desc:'ทั่วไป · แข็ง · พิมพ์เร็ว',price:'฿3/g'},
-                  {name:'PETG',color:'#7dd3fc',desc:'กันน้ำ · ทนกระแทก',price:'฿4/g'},
-                  {name:'ABS', color:'#fbbf24',desc:'ทนความร้อนสูง',price:'฿4/g'},
-                  {name:'ASA', color:'#6ee7b7',desc:'ทน UV · กลางแจ้ง',price:'฿5/g'},
-                  {name:'TPU', color:'#f9a8d4',desc:'ยืดหยุ่น · นุ่ม',price:'฿6/g'},
-                ].map(m => (
-                  <div key={m.name} className="flex items-center gap-4 p-4 bg-white/[0.03] border border-white/8 rounded-xl hover:border-indigo-500/30 transition-all">
-                    <div className="w-8 h-8 rounded-full flex-shrink-0 border-2 border-white/10" style={{background:m.color}} />
-                    <div className="flex-1">
-                      <span className="font-bold text-sm text-white tracking-wide">{m.name}</span>
-                      <span className="text-white/40 text-xs ml-3">{m.desc}</span>
+              <div className="flex flex-col gap-3">
+                {MATERIALS.map(m => (
+                  <button key={m.id} 
+                    onClick={() => setSelectedMat(m)}
+                    className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${selectedMat.id === m.id ? 'bg-indigo-500/10 border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'bg-white/[0.03] border-white/5 hover:border-white/10 hover:bg-white/[0.05]'}`}>
+                    <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-3xl flex-shrink-0">
+                      {m.icon}
                     </div>
-                    <span className="font-bold text-indigo-400 text-sm">{m.price}</span>
-                  </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-black text-lg text-white tracking-wide">{m.name}</span>
+                        <span className="font-black text-indigo-400">{m.price}</span>
+                      </div>
+                      <span className="text-white/40 text-sm">{m.desc}</span>
+                    </div>
+                  </button>
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl overflow-hidden aspect-[4/3] relative">
-              <img src="https://images.unsplash.com/photo-1609230307906-bde1477c3906?w=900&q=80" alt="filaments" className="w-full h-full object-cover brightness-75" />
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent" />
+            
+            <div className="w-full lg:w-1/2 lg:sticky lg:top-24">
+              <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 lg:p-10 animate-in fade-in slide-in-from-right-8 duration-500">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-4xl">
+                    {selectedMat.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-black text-3xl text-white">{selectedMat.name}</h3>
+                    <p className="text-indigo-400 font-bold">{selectedMat.desc}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-8">
+                  <div>
+                    <h4 className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">รายละเอียดวัสดุ</h4>
+                    <p className="text-white/70 leading-relaxed text-lg">{selectedMat.details}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">เหมาะสำหรับ</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-4 py-2 bg-white/5 rounded-full text-sm text-indigo-300 font-medium">
+                        {selectedMat.bestFor}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">คุณสมบัติเด่น</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedMat.properties.map((p, i) => (
+                        <div key={i} className="flex items-center gap-2 text-white/60 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                          {p}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-10 pt-8 border-t border-white/5">
+                  <Link href="/upload" className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-400 hover:text-white transition-all shadow-xl">
+                    สั่งพิมพ์ด้วย {selectedMat.name} เลย →
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>

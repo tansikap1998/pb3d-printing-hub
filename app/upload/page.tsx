@@ -26,7 +26,7 @@ const COLORS = [
   { name: "Pink (สีชมพู)", hex: "#ffc0cb" },
   { name: "Skin (สีเนื้อ)", hex: "#ffdbac" },
   { name: "Pink neon", hex: "#ff1493" },
-  { name: "AnyColor (ตามใจร้าน)", hex: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)" },
+  { name: "AnyColor (ตามใจร้าน)", hex: "linear-gradient(to bottom right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8f00ff)" },
 ]
 
 interface ModelInfo {
@@ -147,7 +147,15 @@ export default function UploadPage() {
       const res = await fetch("/api/estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ volumeCm3: model.volumeCm3, technology, material, infill, layerHeight, quantity }),
+        body: JSON.stringify({ 
+          volumeCm3: model.volumeCm3, 
+          technology, 
+          material, 
+          infill, 
+          layerHeight, 
+          quantity,
+          isAnyColor: colorName.includes("AnyColor")
+        }),
       })
       const data = await res.json()
       setResult(data)
