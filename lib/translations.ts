@@ -123,6 +123,16 @@ export const translations = {
       total: "ยอดรวม",
       checkout: "สั่งพิมพ์ชิ้นงาน →",
       anyColor: "ตามใจร้าน (ลด ฿2/g)",
+    },
+    findFiles: {
+      title: "ยังไม่มีไฟล์ 3D?",
+      subtitle: "ค้นหาโมเดลที่ต้องการจากแหล่งรวมไฟล์ระดับโลก",
+      searchAll: "ค้นหาทั้งหมด (แนะนำ)",
+      popular: "เว็บยอดนิยม",
+      contactHelp: "ทัก LINE ให้ช่วยหา",
+      hint: "ลองค้นหา: keychain, phone stand, anime, name tag",
+      licenseTitle: "🚨 สิ่งที่ต้องทราบ",
+      licenseDesc: "กรุณาตรวจสอบสิทธิ์การใช้งาน (License) ของไฟล์ บางโมเดลอาจใช้ได้เพื่อส่วนตัวเท่านั้น",
     }
   },
   EN: {
@@ -247,6 +257,16 @@ export const translations = {
       total: "Total Amount",
       checkout: "Place Order →",
       anyColor: "AnyColor (Discount ฿2/g)",
+    },
+    findFiles: {
+      title: "Don't have a 3D file yet?",
+      subtitle: "Find your model from world-class libraries",
+      searchAll: "Search All (Recommended)",
+      popular: "Popular Sites",
+      contactHelp: "Contact LINE for help",
+      hint: "Try searching: keychain, phone stand, anime, name tag",
+      licenseTitle: "🚨 Important Note",
+      licenseDesc: "Please check the file license. Some models may be for personal use only.",
     }
   }
 };

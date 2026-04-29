@@ -68,6 +68,7 @@ export default function UploadPage() {
   const [showContactForm, setShowContactForm] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', line: '' })
+  const [showFindFiles, setShowFindFiles] = useState(false)
 
   useEffect(() => {
     if (material === "CarbonFiber") setColorId("black")
@@ -197,6 +198,65 @@ export default function UploadPage() {
             )}
           </div>
           
+          {models.length === 0 && (
+            <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+               <div className="flex flex-col sm:flex-row gap-4">
+                  <button onClick={() => setShowFindFiles(!showFindFiles)} className={`flex-1 border py-5 rounded-2xl font-header text-[10px] tracking-[0.3em] uppercase transition-all flex items-center justify-center gap-3 ${showFindFiles ? 'bg-white text-black border-white' : 'bg-white/5 border-white/10 hover:bg-white/10 text-white'}`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    {t.findFiles.title}
+                  </button>
+                  <a href="https://line.me/ti/p/@pb3d" target="_blank" className="flex-1 bg-[#06C755]/10 border border-[#06C755]/20 text-[#06C755] py-5 rounded-2xl font-header text-[10px] tracking-[0.3em] uppercase hover:bg-[#06C755]/20 transition-all flex items-center justify-center gap-3">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.58 2 10c0 2.9 1.87 5.48 4.7 7.04-.13.5-.47 1.94-.54 2.22-.08.3-.38 1.18.16 1.18.52 0 2.4-1.6 3.3-2.22.45.12.92.18 1.38.18 5.52 0 10-3.58 10-8s-4.48-8-10-8zm-5 11h-1v-4h1v4zm3 0h-1v-4h1v4zm3-4v4h-1v-4h1zm3 4h-1v-4h1v4z"/></svg>
+                    {t.findFiles.contactHelp}
+                  </a>
+               </div>
+               
+               {showFindFiles && (
+                 <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-12 animate-in fade-in zoom-in-95 duration-500 shadow-2xl">
+                    <div className="mb-12">
+                      <h3 className="font-header text-2xl uppercase tracking-tighter mb-2 text-white">{t.findFiles.popular}</h3>
+                      <p className="font-body text-xs text-white/30 uppercase tracking-[0.2em]">{t.findFiles.subtitle}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-12">
+                      {[
+                        { name: "Thingiverse", url: "https://www.thingiverse.com" },
+                        { name: "Printables", url: "https://www.printables.com" },
+                        { name: "Cults3D", url: "https://cults3d.com" },
+                        { name: "MyMiniFactory", url: "https://www.myminifactory.com" }
+                      ].map(site => (
+                        <a key={site.name} href={site.url} target="_blank" className="bg-white/5 border border-white/5 p-8 rounded-3xl text-center hover:bg-white/10 transition-all group relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <p className="font-header text-[12px] tracking-widest uppercase mb-1 relative z-10">{site.name}</p>
+                          <p className="text-[8px] opacity-20 group-hover:opacity-50 transition-opacity relative z-10 tracking-[0.3em]">VISIT LIBRARY →</p>
+                        </a>
+                      ))}
+                    </div>
+
+                    <div className="bg-white/[0.03] p-10 rounded-[2.5rem] border border-white/10 mb-12 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/10 transition-all" />
+                      <h3 className="font-header text-[10px] tracking-[0.5em] uppercase mb-8 text-white/30">{t.findFiles.searchAll}</h3>
+                      <div className="flex flex-col gap-6">
+                        <a href="https://www.yeggi.com" target="_blank" className="w-full bg-white text-black py-6 rounded-2xl font-header text-sm tracking-[0.4em] uppercase text-center hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 shadow-[0_0_40px_rgba(255,255,255,0.1)]">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                          YEGGI SEARCH
+                        </a>
+                        <p className="text-[11px] text-white/20 font-body text-center tracking-wide italic">{t.findFiles.hint}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-orange-500/10 border border-orange-500/20 p-8 rounded-3xl flex gap-6 items-start">
+                       <span className="text-2xl mt-1">🚨</span>
+                       <div>
+                         <p className="font-header text-[10px] tracking-[0.4em] uppercase text-orange-500/80 mb-2">{t.findFiles.licenseTitle}</p>
+                         <p className="text-[12px] text-orange-500/40 font-body leading-relaxed">{t.findFiles.licenseDesc}</p>
+                       </div>
+                    </div>
+                 </div>
+               )}
+            </div>
+          )}
+
           {models.length > 0 && (
             <div className="grid grid-cols-3 gap-6 bg-white/[0.02] p-10 rounded-[2.5rem] border border-white/5">
               <div className="text-center">
