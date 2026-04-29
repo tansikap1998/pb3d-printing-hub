@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, Suspense, useEffect } from "react"
-import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Stage, useGLTF, Center } from "@react-three/drei"
+import { Canvas, useLoader } from "@react-three/fiber"
+import { OrbitControls, Stage, Center } from "@react-three/drei"
 import * as THREE from "three"
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
+import { ThreeMFLoader } from 'three/examples/jsm/loaders/ThreeMFLoader'
 import Link from 'next/link'
 import { translations, Language } from '@/lib/translations'
 
@@ -29,9 +31,22 @@ interface ModelInfo {
   id: string; file: File; name: string; url: string; volumeCm3: number; dimensions: { x: number; y: number; z: number }
 }
 
-function Model({ url }: { url: string }) {
-  const { scene } = useGLTF(url)
-  return <primitive object={scene} castShadow receiveShadow />
+function Model({ url, fileName }: { url: string; fileName: string }) {
+  const extension = fileName.split('.').pop()?.toLowerCase()
+  
+  if (extension === 'stl') {
+    const geometry = useLoader(STLLoader, url)
+    return (
+      <mesh geometry={geometry} castShadow receiveShadow>
+        <meshStandardMaterial color="#808080" />
+      </mesh>
+    )
+  } else if (extension === '3mf') {
+    const group = useLoader(ThreeMFLoader, url)
+    return <primitive object={group} castShadow receiveShadow />
+  }
+  
+  return null
 }
 
 export default function UploadPage() {
@@ -56,11 +71,23 @@ export default function UploadPage() {
     const files = e.target.files; if (!files) return
     Array.from(files).forEach((file) => {
       const url = URL.createObjectURL(file)
-      const loader = (window as any).STLLoader ? new (window as any).STLLoader() : null
-      if (loader) {
+      const extension = file.name.split('.').pop()?.toLowerCase()
+      
+      if (extension === 'stl') {
+        const loader = new STLLoader()
         loader.load(url, (geometry: THREE.BufferGeometry) => {
           geometry.computeBoundingBox()
           const box = geometry.boundingBox!
+          const size = new THREE.Vector3()
+          box.getSize(size)
+          const volumeCm3 = Math.abs(size.x * size.y * size.z) / 1000
+          const newModel: ModelInfo = { id: Math.random().toString(), file, name: file.name, url, volumeCm3, dimensions: { x: size.x, y: size.y, z: size.z } }
+          setModels((prev) => [...prev, newModel])
+        })
+      } else if (extension === '3mf') {
+        const loader = new ThreeMFLoader()
+        loader.load(url, (group) => {
+          const box = new THREE.Box3().setFromObject(group)
           const size = new THREE.Vector3()
           box.getSize(size)
           const volumeCm3 = Math.abs(size.x * size.y * size.z) / 1000
@@ -112,17 +139,27 @@ export default function UploadPage() {
         <div className="lg:col-span-7 space-y-8">
           <div className="aspect-square bg-white/[0.02] border border-white/5 rounded-[3rem] overflow-hidden relative shadow-2xl">
             {models.length > 0 ? (
-              <Canvas shadows camera={{ position: [100, 100, 100], fov: 45 }}>
+              <Canvas 
+                shadows 
+                camera={{ position: [100, 100, 100], fov: 45 }}
+                onCreated={({ gl }) => {
+                  gl.domElement.addEventListener('webglcontextlost', (event) => {
+                    event.preventDefault()
+                    console.warn('WebGL context lost. Reloading...')
+                    window.location.reload()
+                  }, false)
+                }}
+              >
                 <Suspense fallback={null}>
                   <Stage intensity={0.5} environment="city" adjustCamera={false}>
-                    <Center><Model url={models[0].url} /></Center>
+                    <Center><Model url={models[0].url} fileName={models[0].name} /></Center>
                   </Stage>
                 </Suspense>
                 <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
               </Canvas>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white/10">
-                <input type="file" multiple accept=".stl" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                <input type="file" multiple accept=".stl,.3mf" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-8 opacity-20"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                 <p className="font-header text-2xl tracking-[0.3em] uppercase">{t.upload.title}</p>
                 <p className="text-[10px] font-black tracking-[0.5em] mt-4 opacity-40">STL / 3MF FILES ONLY</p>
