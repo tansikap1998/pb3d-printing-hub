@@ -39,21 +39,21 @@ const InteractiveBackground = () => {
 }
 
 const ImageCarousel = () => {
-  // Using absolute paths from the project structure for Vercel
+  // Using paths that were previously successful or identified
   const images = [
-    "/media__1777429328508.png",
-    "/media__1777365099190.png",
+    "/media__1777430714628.png", // Image 05
+    "/media__1777429810223.png", // Image 01
+    "/media__1777429328508.png", // Image 02
+    "/media__1777365099190.png", 
     "/media__1777363717739.png",
-    "/media__1777363626244.png",
-    "/media__1777363653135.png",
   ]
   return (
-    <div className="w-full overflow-hidden bg-white/5 py-20 border-y border-white/5">
+    <div className="w-full overflow-hidden bg-white/5 py-32 border-y border-white/5 mt-40">
       <div className="flex animate-marquee whitespace-nowrap">
         {[...images, ...images, ...images].map((img, i) => (
-          <div key={i} className="inline-block px-4">
-            <div className="h-60 md:h-80 w-[400px] rounded-3xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-700 shadow-2xl bg-white/5">
-              <img src={img} alt="PB3D Gallery" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+          <div key={i} className="inline-block px-6">
+            <div className="h-[400px] w-[500px] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl bg-white/5 group border border-white/10">
+              <img src={img} alt="PB3D Showcase" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-all duration-1000" />
             </div>
           </div>
         ))}
@@ -66,7 +66,7 @@ const ImageCarousel = () => {
         .animate-marquee {
           display: flex;
           width: fit-content;
-          animation: marquee 30s linear infinite;
+          animation: marquee 40s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
@@ -79,7 +79,7 @@ const ImageCarousel = () => {
 export default function Home() {
   const [lang, setLang] = useState<Language>('EN')
   const t = translations[lang]
-  const tTH = translations['TH'] // Force Thai for material insights
+  const tTH = translations['TH']
 
   const MATERIALS = [
     { id: 'PLA', name: 'PLA', icon: '🧊', desc: lang === 'TH' ? 'ทั่วไป · แข็ง · พิมพ์เร็ว' : 'General · Rigid · Fast', price: '฿3/g', details: tTH.materials.items.PLA.details, bestFor: tTH.materials.items.PLA.bestFor },
@@ -119,8 +119,12 @@ export default function Home() {
       </nav>
 
       <main>
-        {/* HERO */}
+        {/* HERO WITH AMS IMAGE 05 */}
         <section className="relative min-h-screen flex flex-col justify-end px-8 pb-20 overflow-hidden">
+          <div className="absolute inset-0 z-0">
+             <img src="/media__1777430714628.png" alt="AMS System Hero" className="w-full h-full object-cover opacity-40 grayscale" />
+             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          </div>
           <InteractiveBackground />
           <div className="relative z-10 w-full">
             <div className="mb-10 opacity-30 font-header text-[12px] md:text-[14px] tracking-[0.6em] uppercase">{t.hero.subtitle}</div>
@@ -155,7 +159,7 @@ export default function Home() {
                 Rapid<br/>Prototypes.
               </h2>
               <div className="aspect-video bg-white/5 rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl">
-                <img src="/media__1777429328508.png" alt="X1C" className="w-full h-full object-cover" />
+                <img src="/media__1777429810223.png" alt="Product" className="w-full h-full object-cover" />
               </div>
             </div>
             <div className="md:col-span-5 flex flex-col gap-12 pt-20">
@@ -163,13 +167,13 @@ export default function Home() {
                 Industrial grade machines for professional results.
                </p>
                <div className="aspect-[4/5] bg-white/5 rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl">
-                <img src="/media__1777365099190.png" alt="AMS" className="w-full h-full object-cover" />
+                <img src="/media__1777429328508.png" alt="Printing" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
         </section>
 
-        {/* MATERIALS (LOCK THAI FOR INSIGHTS) */}
+        {/* MATERIALS */}
         <section id="materials" className="py-60 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-32 gap-10">
