@@ -39,6 +39,7 @@ const InteractiveBackground = () => {
 }
 
 const ImageCarousel = () => {
+  // Using absolute paths from the project structure for Vercel
   const images = [
     "/media__1777429328508.png",
     "/media__1777365099190.png",
@@ -47,23 +48,28 @@ const ImageCarousel = () => {
     "/media__1777363653135.png",
   ]
   return (
-    <div className="w-full overflow-hidden bg-white/5 py-20">
+    <div className="w-full overflow-hidden bg-white/5 py-20 border-y border-white/5">
       <div className="flex animate-marquee whitespace-nowrap">
-        {[...images, ...images].map((img, i) => (
+        {[...images, ...images, ...images].map((img, i) => (
           <div key={i} className="inline-block px-4">
-            <img src={img} alt="Gallery" className="h-60 md:h-80 w-auto rounded-3xl object-cover grayscale hover:grayscale-0 transition-all duration-700 shadow-2xl" />
+            <div className="h-60 md:h-80 w-[400px] rounded-3xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-700 shadow-2xl bg-white/5">
+              <img src={img} alt="PB3D Gallery" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+            </div>
           </div>
         ))}
       </div>
       <style jsx>{`
         @keyframes marquee {
           0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+          100% { transform: translateX(-33.33%); }
         }
         .animate-marquee {
           display: flex;
           width: fit-content;
-          animation: marquee 40s linear infinite;
+          animation: marquee 30s linear infinite;
+        }
+        .animate-marquee:hover {
+          animation-play-state: paused;
         }
       `}</style>
     </div>
@@ -73,15 +79,16 @@ const ImageCarousel = () => {
 export default function Home() {
   const [lang, setLang] = useState<Language>('EN')
   const t = translations[lang]
+  const tTH = translations['TH'] // Force Thai for material insights
 
   const MATERIALS = [
-    { id: 'PLA', name: 'PLA', icon: '🧊', desc: lang === 'TH' ? 'ทั่วไป · แข็ง · พิมพ์เร็ว' : 'General · Rigid · Fast', price: '฿3/g', details: t.materials.items.PLA.details, bestFor: t.materials.items.PLA.bestFor },
-    { id: 'PETG', name: 'PETG', icon: '💧', desc: lang === 'TH' ? 'ทนทาน · กันน้ำ' : 'Durable · Waterproof', price: '฿4/g', details: t.materials.items.PETG.details, bestFor: t.materials.items.PETG.bestFor },
-    { id: 'ABS', name: 'ABS', icon: '🔥', desc: lang === 'TH' ? 'ทนร้อน · เหนียว' : 'High Heat · Tough', price: '฿4/g', details: t.materials.items.ABS.details, bestFor: t.materials.items.ABS.bestFor },
-    { id: 'ASA', name: 'ASA', icon: '☀️', desc: lang === 'TH' ? 'ทน UV · กลางแจ้ง' : 'UV Resistant · Outdoor', price: '฿5/g', details: t.materials.items.ASA.details, bestFor: t.materials.items.ASA.bestFor },
-    { id: 'TPU', name: 'TPU', icon: '👟', desc: lang === 'TH' ? 'ยืดหยุ่น · นุ่ม' : 'Flexible · Elastic', price: '฿6/g', details: t.materials.items.TPU.details, bestFor: t.materials.items.TPU.bestFor },
-    { id: 'CarbonFiber', name: 'CarbonFiber', icon: '🛡️', desc: lang === 'TH' ? 'แข็งแรงพิเศษ · ดำด้าน' : 'High-Rigidity · Matte', price: '฿10/g', details: t.materials.items.CarbonFiber.details, bestFor: t.materials.items.CarbonFiber.bestFor },
-    { id: 'Nylon', name: 'Nylon', icon: '⛓️', desc: lang === 'TH' ? 'ทนแรงเสียดสี · เหนียวมาก' : 'Low-Friction · Tough', price: '฿12/g', details: t.materials.items.Nylon.details, bestFor: t.materials.items.Nylon.bestFor },
+    { id: 'PLA', name: 'PLA', icon: '🧊', desc: lang === 'TH' ? 'ทั่วไป · แข็ง · พิมพ์เร็ว' : 'General · Rigid · Fast', price: '฿3/g', details: tTH.materials.items.PLA.details, bestFor: tTH.materials.items.PLA.bestFor },
+    { id: 'PETG', name: 'PETG', icon: '💧', desc: lang === 'TH' ? 'ทนทาน · กันน้ำ' : 'Durable · Waterproof', price: '฿4/g', details: tTH.materials.items.PETG.details, bestFor: tTH.materials.items.PETG.bestFor },
+    { id: 'ABS', name: 'ABS', icon: '🔥', desc: lang === 'TH' ? 'ทนร้อน · เหนียว' : 'High Heat · Tough', price: '฿4/g', details: tTH.materials.items.ABS.details, bestFor: tTH.materials.items.ABS.bestFor },
+    { id: 'ASA', name: 'ASA', icon: '☀️', desc: lang === 'TH' ? 'ทน UV · กลางแจ้ง' : 'UV Resistant · Outdoor', price: '฿5/g', details: tTH.materials.items.ASA.details, bestFor: tTH.materials.items.ASA.bestFor },
+    { id: 'TPU', name: 'TPU', icon: '👟', desc: lang === 'TH' ? 'ยืดหยุ่น · นุ่ม' : 'Flexible · Elastic', price: '฿6/g', details: tTH.materials.items.TPU.details, bestFor: tTH.materials.items.TPU.bestFor },
+    { id: 'CarbonFiber', name: 'CarbonFiber', icon: '🛡️', desc: lang === 'TH' ? 'แข็งแรงพิเศษ · ดำด้าน' : 'High-Rigidity · Matte', price: '฿10/g', details: tTH.materials.items.CarbonFiber.details, bestFor: tTH.materials.items.CarbonFiber.bestFor },
+    { id: 'Nylon', name: 'Nylon', icon: '⛓️', desc: lang === 'TH' ? 'ทนแรงเสียดสี · เหนียวมาก' : 'Low-Friction · Tough', price: '฿12/g', details: tTH.materials.items.Nylon.details, bestFor: tTH.materials.items.Nylon.bestFor },
   ]
 
   const [selectedMat, setSelectedMat] = useState(MATERIALS[0])
@@ -162,7 +169,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* MATERIALS (REFINED LAYOUT) */}
+        {/* MATERIALS (LOCK THAI FOR INSIGHTS) */}
         <section id="materials" className="py-60 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-32 gap-10">
@@ -193,12 +200,12 @@ export default function Home() {
                   </div>
                   <div className="space-y-12">
                     <div>
-                      <h4 className="font-header text-[10px] tracking-[0.4em] uppercase opacity-30 mb-6">{t.materials.details}</h4>
-                      <p className="text-3xl md:text-4xl font-serif italic text-black/80 leading-[1.3] tracking-tight">{selectedMat.details}</p>
+                      <h4 className="font-header text-[10px] tracking-[0.4em] uppercase opacity-30 mb-6">รายละเอียดวัสดุ (MATERIAL INSIGHT)</h4>
+                      <p className="text-3xl md:text-4xl font-serif italic text-black/80 leading-[1.4] tracking-tight">{selectedMat.details}</p>
                     </div>
                     <div>
-                      <h4 className="font-header text-[10px] tracking-[0.4em] uppercase opacity-30 mb-6">{t.materials.suitable}</h4>
-                      <p className="font-body font-black text-lg uppercase tracking-tighter opacity-80 leading-relaxed">{selectedMat.bestFor}</p>
+                      <h4 className="font-header text-[10px] tracking-[0.4em] uppercase opacity-30 mb-6">เหมาะสำหรับ (BEST FOR)</h4>
+                      <p className="font-body font-black text-xl uppercase tracking-tighter opacity-80 leading-relaxed">{selectedMat.bestFor}</p>
                     </div>
                   </div>
                 </div>
