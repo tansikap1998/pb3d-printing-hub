@@ -39,7 +39,6 @@ const LAYER_TIME_FACTOR: Record<number, number> = {
 }
 
 export function calculate(input: EstimateInput): EstimateResult {
-  const { volumeCm3, technology, material, infill, layerHeight, quantity } = input
   const { volumeCm3, technology, material, infill, layerHeight, quantity, isAnyColor } = input
   const shellVolume = volumeCm3 * 0.15
   const infillVolume = (volumeCm3 - shellVolume) * (infill / 100)
