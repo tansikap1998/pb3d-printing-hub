@@ -51,8 +51,8 @@ const ImageCarousel = () => {
       <div className="flex animate-marquee whitespace-nowrap">
         {[...images, ...images, ...images].map((img, i) => (
           <div key={i} className="inline-block px-6">
-            <div className="h-[400px] w-[500px] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl bg-white/5 group border border-white/10">
-              <img src={img} alt="PB3D Showcase" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-all duration-1000" />
+            <div className="h-[400px] w-[500px] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl bg-white/10 group border border-white/10 flex items-center justify-center">
+              <img src={img} alt="PB3D Showcase" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-all duration-1000" onError={(e) => { e.currentTarget.style.display = 'none' }} />
             </div>
           </div>
         ))}
@@ -129,7 +129,7 @@ export default function Home() {
         {/* HERO */}
         <section className="relative min-h-screen flex flex-col justify-end px-8 pb-20 overflow-hidden">
           <div className="absolute inset-0 z-0">
-             <img src="/media__1777430714628.png" alt="Hero" className="w-full h-full object-cover opacity-40 grayscale" />
+             <img src="/media__1777430714628.png" alt="Hero" className="w-full h-full object-cover opacity-40 grayscale" onError={(e) => { e.currentTarget.style.display = 'none' }} />
              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
           </div>
           <InteractiveBackground />
