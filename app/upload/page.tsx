@@ -267,6 +267,19 @@ export default function UploadPage() {
           )}
         </div>
       </main>
+
+      <footer className="py-20 px-8 border-t border-white/5 flex flex-col items-center gap-10 text-white/20">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="font-header text-4xl tracking-tighter uppercase text-white">PB3D<span className="opacity-10">HUB</span></span>
+          <p className="font-body text-[10px] uppercase tracking-[0.3em] font-bold">© 2025 ALL RIGHTS RESERVED.</p>
+        </div>
+        <div className="flex gap-12 font-header text-[10px] tracking-[0.5em] uppercase">
+          <a href="https://shopee.co.th/shop/9883965" target="_blank" className="hover:text-white transition-colors">SHOPEE</a>
+          <a href="#" className="hover:text-white transition-colors">INSTAGRAM</a>
+          <a href="#" className="hover:text-white transition-colors">FACEBOOK</a>
+          <Link href="/admin" className="hover:text-white transition-colors opacity-50 hover:opacity-100">ADMIN</Link>
+        </div>
+      </footer>
     </div>
   )
 }

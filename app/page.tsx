@@ -262,6 +262,7 @@ export default function Home() {
           <a href="https://shopee.co.th/shop/9883965" target="_blank" className="hover:text-white transition-colors">SHOPEE</a>
           <a href="#" className="hover:text-white transition-colors">INSTAGRAM</a>
           <a href="#" className="hover:text-white transition-colors">FACEBOOK</a>
+          <Link href="/admin" className="hover:text-white transition-colors opacity-50 hover:opacity-100">ADMIN</Link>
         </div>
       </footer>
     </div>
