@@ -4,7 +4,9 @@ import { useState, Suspense, useEffect } from "react"
 import { Canvas, useLoader } from "@react-three/fiber"
 import { OrbitControls, Stage, Center } from "@react-three/drei"
 import * as THREE from "three"
+// @ts-ignore
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
+// @ts-ignore
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader'
 import Link from 'next/link'
 import { translations, Language } from '@/lib/translations'
