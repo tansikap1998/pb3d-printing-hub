@@ -1,0 +1,90 @@
+export type Language = 'TH' | 'EN';
+
+export const translations = {
+  TH: {
+    nav: {
+      about: "เกี่ยวกับเรา",
+      materials: "วัสดุ",
+      order: "สั่งพิมพ์เลย",
+      start: "เริ่มโปรเจกต์",
+    },
+    hero: {
+      subtitle: "อนาคตของการผลิต",
+      title1: "เปลี่ยนดิจิทัล",
+      title2: "ให้เป็นชิ้นงานจริง",
+      desc: "เราเชื่อมโยงจินตนาการของคุณสู่โลกความเป็นจริงด้วยการพิมพ์ 3 มิติระดับอุตสาหกรรม รวดเร็ว แม่นยำ และเป็นระบบดิจิทัล 100%",
+      status: "สถานะระบบ",
+      online: "ออนไลน์ — จัดส่งใน 48 ชม.",
+    },
+    materials: {
+      title: "คัดสรรวัสดุ.",
+      subtitle: "รายการที่ 01 — พลาสติกวิศวกรรม",
+      details: "รายละเอียดวัสดุ",
+      suitable: "เหมาะสำหรับ",
+      properties: "คุณสมบัติเด่น",
+      cta: "สั่งพิมพ์ด้วยวัสดุนี้เลย",
+    },
+    upload: {
+      title: "อัปโหลดไฟล์ 3D",
+      settings: "การตั้งค่าการพิมพ์",
+      dimensions: "ขนาดชิ้นงาน",
+      technology: "เทคโนโลยี",
+      material: "วัสดุ",
+      detail: "รายละเอียด & อินฟิล",
+      layer: "ความหนาชั้น",
+      infill: "ความหนาแน่น",
+      color: "สี",
+      notes: "หมายเหตุ",
+      estimate: "ประเมินราคา",
+      calculating: "กำลังคำนวณ...",
+      reestimate: "ประเมินราคาใหม่",
+      summary: "สรุปรายการ",
+      total: "ยอดรวม",
+      checkout: "ชำระเงิน",
+      anyColor: "ตามใจร้าน (ลด ฿2/g)",
+    }
+  },
+  EN: {
+    nav: {
+      about: "About",
+      materials: "Materials",
+      order: "Order Now",
+      start: "Start Project",
+    },
+    hero: {
+      subtitle: "Future of Manufacturing",
+      title1: "Digital",
+      title2: "into Physical",
+      desc: "We bridge the gap between imagination and reality with industrial-grade 3D additive manufacturing. Fast, precise, and purely digital.",
+      status: "System Status",
+      online: "Online — 48H Delivery",
+    },
+    materials: {
+      title: "Material Curated.",
+      subtitle: "Selection 01 — Engineering Plastics",
+      details: "Material Details",
+      suitable: "Best For",
+      properties: "Technical Properties",
+      cta: "Order with this material",
+    },
+    upload: {
+      title: "Upload 3D File",
+      settings: "Print Settings",
+      dimensions: "Dimensions",
+      technology: "Technology",
+      material: "Material",
+      detail: "Detail & Infill",
+      layer: "Layer Height",
+      infill: "Infill Density",
+      color: "Color",
+      notes: "Notes",
+      estimate: "Estimate Price",
+      calculating: "Calculating...",
+      reestimate: "Re-estimate",
+      summary: "Models List",
+      total: "Total Amount",
+      checkout: "Checkout",
+      anyColor: "AnyColor (Discount ฿2/g)",
+    }
+  }
+};
