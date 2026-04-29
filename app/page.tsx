@@ -84,7 +84,7 @@ const TrustBar = ({ t }: { t: any }) => (
 )
 
 export default function Home() {
-  const [lang, setLang] = useState<Language>('EN')
+  const [lang, setLang] = useState<Language>('TH')
   const t = translations[lang]
   const tTH = translations['TH']
 
@@ -170,7 +170,7 @@ export default function Home() {
                  <p className="font-serif text-3xl text-white/60 leading-relaxed mb-12">
                    {t.shopee.desc}
                  </p>
-                 <a href="https://shopee.co.th/shop/9883965" target="_blank" className="inline-flex items-center gap-4 bg-[#EE4D2D] text-white font-header text-xs tracking-widest uppercase px-12 py-5 rounded-full hover:opacity-80 transition-all">
+                 <a href="https://shopee.co.th/shop/9883965" target="_blank" className="inline-flex items-center gap-4 bg-[#EE4D2D] text-white font-header text-xs tracking-widest uppercase px-12 py-5 rounded-full hover:opacity-80 transition-all shadow-2xl">
                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.124 16.5c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm-11.666 0c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm13.14-11.644c-.38-.285-.855-.356-1.282-.19l-11.62 4.437c-.38.143-.665.474-.759.855l-2.09 9.12h17.1c.38 0 .712-.237.855-.57l1.52-7.6c.047-.285 0-.57-.143-.855l-3.581-5.207zM18.026 6.5l2.612 3.8H6.556l1.235-5.32 10.235-3.98L18.026 6.5z"/></svg>
                    {t.trust.shopeeCta}
                  </a>
@@ -242,7 +242,7 @@ export default function Home() {
         {/* CTA */}
         <section className="py-80 px-8 text-center flex flex-col items-center">
           <h2 className="font-header text-[12vw] md:text-[10vw] leading-[0.8] uppercase tracking-tighter mb-24">
-            Ready to<br/><span className="font-serif italic tracking-normal text-white/30 lowercase">the</span> materialize.
+            พร้อมหรือยังที่จะ<br/><span className="font-serif italic tracking-normal text-white/30 lowercase">ทำให้</span> จินตนาการเป็นจริง.
           </h2>
           <Link href="/upload" className="group flex flex-col items-center gap-6">
             <div className="w-32 h-32 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all duration-700 shadow-2xl">

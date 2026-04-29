@@ -35,7 +35,7 @@ function Model({ url }: { url: string }) {
 }
 
 export default function UploadPage() {
-  const [lang, setLang] = useState<Language>('EN')
+  const [lang, setLang] = useState<Language>('TH')
   const t = translations[lang]
 
   const [models, setModels] = useState<ModelInfo[]>([])
