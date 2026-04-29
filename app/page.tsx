@@ -67,18 +67,20 @@ const ImageCarousel = () => {
 }
 
 const TrustBar = ({ t }: { t: any }) => (
-  <div className="border-y border-white/5 py-12 flex flex-wrap justify-center gap-12 md:gap-24 opacity-60">
-    <div className="flex items-center gap-4">
-      <span className="font-header text-3xl">4.9/5.0</span>
-      <span className="font-header text-[10px] tracking-widest uppercase leading-none opacity-50">{t.trust.rating}</span>
+  <div className="border-y border-white/5 py-14 flex flex-wrap justify-center items-center gap-12 md:gap-32">
+    <div className="flex flex-col items-center gap-2">
+      <span className="font-header text-4xl tracking-tighter">4.9/5.0</span>
+      <span className="font-header text-[9px] tracking-[0.5em] uppercase opacity-30">{t.trust.rating}</span>
     </div>
-    <div className="flex items-center gap-4">
-      <span className="font-header text-3xl">10+</span>
-      <span className="font-header text-[10px] tracking-widest uppercase leading-none opacity-50">{t.trust.years}</span>
+    <div className="hidden md:block w-px h-12 bg-white/5" />
+    <div className="flex flex-col items-center gap-2">
+      <span className="font-header text-4xl tracking-tighter">10+</span>
+      <span className="font-header text-[9px] tracking-[0.5em] uppercase opacity-30">{t.trust.years}</span>
     </div>
-    <div className="flex items-center gap-4">
-      <span className="font-header text-3xl">1,000+</span>
-      <span className="font-header text-[10px] tracking-widest uppercase leading-none opacity-50">{t.trust.orders}</span>
+    <div className="hidden md:block w-px h-12 bg-white/5" />
+    <div className="flex flex-col items-center gap-2">
+      <span className="font-header text-4xl tracking-tighter">1,000+</span>
+      <span className="font-header text-[9px] tracking-[0.5em] uppercase opacity-30">{t.trust.orders}</span>
     </div>
   </div>
 )
@@ -156,12 +158,12 @@ export default function Home() {
           <InteractiveBackground />
           <div className="relative z-10 w-full">
             <div className="mb-10 opacity-30 font-header text-[12px] md:text-[14px] tracking-[0.6em] uppercase">{t.hero.subtitle}</div>
-            <h1 className="font-header text-[clamp(3.5rem,15vw,10rem)] md:text-[clamp(5rem,12vw,15rem)] leading-[0.75] uppercase tracking-tighter mix-blend-difference">
+            <h1 className="font-header text-[clamp(4rem,18vw,12rem)] md:text-[clamp(6rem,14vw,18rem)] leading-[0.75] uppercase tracking-tighter mix-blend-difference relative">
               Digital<br/>
-              <span className="flex flex-wrap items-center gap-4 md:gap-6">
-                <span className="font-serif text-[clamp(2.5rem,12vw,7rem)] md:text-[clamp(4rem,10vw,10rem)] lowercase tracking-normal text-white/40">{lang === 'TH' ? 'เข้าสู่' : 'into'}</span>
-                Physical
+              <span className="absolute top-[45%] left-0 md:left-20 font-serif italic text-[0.3em] md:text-[0.25em] normal-case tracking-normal text-white/40 -translate-y-1/2 z-10 pointer-events-none">
+                {lang === 'TH' ? 'เข้าสู่' : 'into'}
               </span>
+              Physical
             </h1>
             <div className="mt-12 flex flex-col items-start gap-8">
               <Link href="/upload" className="bg-white text-black px-12 py-6 rounded-full font-header text-sm tracking-[0.3em] uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)]">
@@ -199,10 +201,11 @@ export default function Home() {
                   { step: "02", title: t.howItWorks.step2Title, desc: t.howItWorks.step2Desc },
                   { step: "03", title: t.howItWorks.step3Title, desc: t.howItWorks.step3Desc },
                 ].map((s, i) => (
-                  <div key={i} className="group p-10 bg-white/[0.02] border border-white/5 rounded-[3rem] hover:bg-white/[0.05] transition-all">
-                    <span className="font-header text-5xl opacity-10 group-hover:opacity-30 transition-opacity">{s.step}</span>
-                    <h3 className="font-header text-2xl uppercase mt-8 mb-4 tracking-tight">{s.title}</h3>
-                    <p className="font-body text-white/40 leading-relaxed text-sm">{s.desc}</p>
+                  <div key={i} className="group p-12 bg-white/[0.02] border border-white/5 rounded-[4rem] hover:bg-white/[0.05] transition-all relative overflow-hidden">
+                    <span className="absolute -top-10 -right-10 font-header text-[12rem] leading-none opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none">{s.step}</span>
+                    <span className="font-header text-xs tracking-[0.5em] opacity-20 group-hover:opacity-100 transition-opacity uppercase mb-12 block">{s.step}</span>
+                    <h3 className="font-header text-3xl uppercase mt-8 mb-6 tracking-tighter">{s.title}</h3>
+                    <p className="font-body text-white/40 leading-relaxed text-sm max-w-[200px]">{s.desc}</p>
                   </div>
                 ))}
               </div>
@@ -214,6 +217,7 @@ export default function Home() {
            <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-20 items-center">
               <div>
                 <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-12">
+                  <span className="font-serif italic lowercase tracking-normal block text-[0.4em] mb-4 opacity-40">PB3D Hub</span>
                   {t.shopee.title}
                 </h2>
                 <p className="font-serif text-2xl md:text-3xl text-white/60 leading-relaxed mb-12">
@@ -290,8 +294,10 @@ export default function Home() {
 
         {/* CTA */}
         <section className="py-80 px-8 text-center flex flex-col items-center">
-          <h2 className="font-header text-[clamp(3.5rem,12vw,10rem)] leading-[0.8] uppercase tracking-tighter mb-24">
-            พร้อมหรือยังที่จะ<br/><span className="font-serif italic tracking-normal text-white/30 lowercase">ทำให้</span> จินตนาการเป็นจริง.
+          <h2 className="font-header text-[clamp(4.5rem,15vw,14rem)] leading-[0.8] uppercase tracking-tighter mb-32 max-w-5xl">
+            พร้อมหรือยังที่จะ<br/>
+            <span className="font-serif italic tracking-normal text-white/10 lowercase block my-4">ทำให้</span>
+            จินตนาการเป็นจริง.
           </h2>
           <Link href="/upload" className="group flex flex-col items-center gap-6">
             <div className="w-32 h-32 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all duration-700 shadow-2xl">
