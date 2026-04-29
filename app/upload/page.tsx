@@ -12,6 +12,23 @@ import { formatTime } from "@/lib/priceCalculator"
 const SHOP_NAME = "PB3D Printing Hub"
 const PROMPTPAY_NUMBER = "0812345678" // Replace with actual
 
+const COLORS = [
+  { name: "White (สีขาว)", hex: "#ffffff" },
+  { name: "Black (สีดำ)", hex: "#111111" },
+  { name: "Grey (สีเทา)", hex: "#808080" },
+  { name: "Brown (สีน้ำตาล)", hex: "#8b4513" },
+  { name: "Yellow (สีเหลือง)", hex: "#ffcc00" },
+  { name: "Blue (สีน้ำเงิน)", hex: "#0055ff" },
+  { name: "Orange (สีส้ม)", hex: "#ff6600" },
+  { name: "Red (สีแดง)", hex: "#ee0000" },
+  { name: "Mint Green (มิ้นต์)", hex: "#98ff98" },
+  { name: "Green (สีเขียว)", hex: "#008800" },
+  { name: "Pink (สีชมพู)", hex: "#ffc0cb" },
+  { name: "Skin (สีเนื้อ)", hex: "#ffdbac" },
+  { name: "Pink neon", hex: "#ff1493" },
+  { name: "AnyColor (ตามใจร้าน)", hex: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)" },
+]
+
 interface ModelInfo {
   name: string; sizeX: number; sizeY: number; sizeZ: number; volumeCm3: number; hasError: boolean
 }
@@ -90,7 +107,8 @@ export default function UploadPage() {
   const [material, setMaterial] = useState<Material>("PLA")
   const [infill, setInfill] = useState<InfillLevel>(20 as InfillLevel)
   const [layerHeight, setLayerHeight] = useState<LayerHeight>(0.2 as LayerHeight)
-  const [color, setColor] = useState("#a855f7")
+  const [color, setColor] = useState(COLORS[1].hex) // Default Black
+  const [colorName, setColorName] = useState(COLORS[1].name)
   const [quantity, setQuantity] = useState(1)
   const [notes, setNotes] = useState("")
 
@@ -213,21 +231,20 @@ export default function UploadPage() {
               </div>
             </Section>
             <Section title="Material">
-              <select value={material} onChange={e => setMaterial(e.target.value as Material)} className="mt-3 w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-violet-400 bg-gray-50">
-                {technology === "FDM" ? (
-                  <>
-                    <option value="PLA">PLA (Standard)</option>
-                    <option value="PETG">PETG (Durable)</option>
-                    <option value="ABS">ABS (Tough)</option>
-                    <option value="TPU">TPU (Flexible)</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="Standard">Standard Resin</option>
-                    <option value="Tough">Tough Resin</option>
-                    <option value="Clear">Clear Resin</option>
-                  </>
-                )}
+              <select value={material} onChange={e => {
+                const m = e.target.value as Material
+                setMaterial(m)
+                if (m === "CarbonFiber") {
+                  setColor("#111111")
+                  setColorName("Black (สีดำ)")
+                }
+              }} className="mt-3 w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-violet-400 bg-gray-50">
+                <option value="PLA">PLA (Standard)</option>
+                <option value="PETG">PETG (Durable)</option>
+                <option value="ABS">ABS (Tough)</option>
+                <option value="CarbonFiber">CarbonFiber (Strong + Black Only)</option>
+                <option value="Nylon">Nylon (Industrial)</option>
+                <option value="TPU">TPU (Flexible)</option>
               </select>
             </Section>
             <Section title="Detail & Infill">
@@ -247,10 +264,18 @@ export default function UploadPage() {
               </div>
             </Section>
             <Section title="Color">
-              <div className="flex flex-wrap gap-2 mt-3">
-                {["#a855f7", "#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#ffffff", "#000000"].map(c => (
-                  <button key={c} onClick={() => setColor(c)} className={`w-8 h-8 rounded-full border-2 transition ${color === c ? "border-violet-500 scale-110 shadow-lg" : "border-transparent"}`} style={{ backgroundColor: c }} />
-                ))}
+              <p className="text-[10px] font-bold text-violet-500 mt-2">{colorName}</p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {material === "CarbonFiber" ? (
+                   <button className="w-8 h-8 rounded-full border-2 border-violet-500 scale-110 shadow-lg" style={{ backgroundColor: "#111111" }} />
+                ) : (
+                  COLORS.map(c => (
+                    <button key={c.name} onClick={() => { setColor(c.hex); setColorName(c.name) }} 
+                      title={c.name}
+                      className={`w-8 h-8 rounded-full border-2 transition ${color === c.hex ? "border-violet-500 scale-110 shadow-lg" : "border-gray-100 hover:border-gray-300"}`} 
+                      style={{ background: c.hex }} />
+                  ))
+                )}
               </div>
             </Section>
             <Section title="หมายเหตุ">

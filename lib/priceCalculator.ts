@@ -1,5 +1,5 @@
 export type Technology = "FDM" | "RESIN"
-export type Material = "PLA" | "ABS" | "PETG" | "ASA" | "TPU" | "Resin Standard"
+export type Material = "PLA" | "ABS" | "PETG" | "ASA" | "TPU" | "Resin Standard" | "CarbonFiber" | "Nylon"
 export type InfillLevel = 10 | 25 | 50 | 80
 export type LayerHeight = 0.12 | 0.16 | 0.20 | 0.28
 
@@ -22,11 +22,13 @@ export interface EstimateResult {
 const DENSITY: Record<Material, number> = {
   PLA: 1.24, ABS: 1.04, PETG: 1.27,
   ASA: 1.07, TPU: 1.20, "Resin Standard": 1.10,
+  CarbonFiber: 1.40, Nylon: 1.15,
 }
 
 const PRICE_PER_GRAM: Record<Material, number> = {
   PLA: 1.5, ABS: 1.8, PETG: 2.0,
   ASA: 2.2, TPU: 2.8, "Resin Standard": 3.5,
+  CarbonFiber: 5.0, Nylon: 4.5,
 }
 
 const MACHINE_RATE: Record<Technology, number> = { FDM: 40, RESIN: 60 }
