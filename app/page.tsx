@@ -38,35 +38,50 @@ const InteractiveBackground = () => {
   return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none opacity-20" />
 }
 
+const ImageCarousel = () => {
+  const images = [
+    "/media__1777429328508.png",
+    "/media__1777365099190.png",
+    "/media__1777363717739.png",
+    "/media__1777363626244.png",
+    "/media__1777363653135.png",
+  ]
+  return (
+    <div className="w-full overflow-hidden bg-white/5 py-20">
+      <div className="flex animate-marquee whitespace-nowrap">
+        {[...images, ...images].map((img, i) => (
+          <div key={i} className="inline-block px-4">
+            <img src={img} alt="Gallery" className="h-60 md:h-80 w-auto rounded-3xl object-cover grayscale hover:grayscale-0 transition-all duration-700 shadow-2xl" />
+          </div>
+        ))}
+      </div>
+      <style jsx>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          display: flex;
+          width: fit-content;
+          animation: marquee 40s linear infinite;
+        }
+      `}</style>
+    </div>
+  )
+}
+
 export default function Home() {
   const [lang, setLang] = useState<Language>('EN')
   const t = translations[lang]
 
   const MATERIALS = [
-    {
-      id: 'PLA', name: 'PLA', icon: '🧊', desc: lang === 'TH' ? 'ทั่วไป · แข็ง · พิมพ์เร็ว' : 'General · Rigid · Fast', price: '฿3/g',
-      details: t.materials.items.PLA.details,
-      bestFor: t.materials.items.PLA.bestFor,
-      properties: lang === 'TH' ? ['พิมพ์ง่าย', 'ผิวละเอียด', 'เป็นมิตรกับสิ่งแวดล้อม'] : ['Ease of Use', 'Detail Accuracy', 'Eco-friendly']
-    },
-    {
-      id: 'PETG', name: 'PETG', icon: '💧', desc: lang === 'TH' ? 'ทนทาน · กันน้ำ' : 'Durable · Waterproof', price: '฿4/g',
-      details: t.materials.items.PETG.details,
-      bestFor: t.materials.items.PETG.bestFor,
-      properties: lang === 'TH' ? ['ทนทาน', 'กันน้ำ', 'ทนสารเคมี'] : ['Toughness', 'Chemical Resistance', 'UV Stable']
-    },
-    {
-      id: 'CarbonFiber', name: 'CarbonFiber', icon: '🛡️', desc: lang === 'TH' ? 'แข็งแรงพิเศษ · ดำด้าน' : 'High-Rigidity · Matte', price: '฿10/g',
-      details: t.materials.items.CarbonFiber.details,
-      bestFor: t.materials.items.CarbonFiber.bestFor,
-      properties: lang === 'TH' ? ['แข็งแกร่งมาก', 'น้ำหนักเบา', 'ผิวด้านพรีเมียม'] : ['Extreme Rigidity', 'Premium Finish', 'High Strength']
-    },
-    {
-      id: 'Nylon', name: 'Nylon', icon: '⛓️', desc: lang === 'TH' ? 'ทนแรงเสียดสี · เหนียวมาก' : 'Low-Friction · Tough', price: '฿12/g',
-      details: t.materials.items.Nylon.details,
-      bestFor: t.materials.items.Nylon.bestFor,
-      properties: lang === 'TH' ? ['ทนแรงเสียดสี', 'เหนียวพิเศษ', 'รับแรงกระแทก'] : ['Wear Resistance', 'Impact Strength', 'Industrial']
-    }
+    { id: 'PLA', name: 'PLA', icon: '🧊', desc: lang === 'TH' ? 'ทั่วไป · แข็ง · พิมพ์เร็ว' : 'General · Rigid · Fast', price: '฿3/g', details: t.materials.items.PLA.details, bestFor: t.materials.items.PLA.bestFor },
+    { id: 'PETG', name: 'PETG', icon: '💧', desc: lang === 'TH' ? 'ทนทาน · กันน้ำ' : 'Durable · Waterproof', price: '฿4/g', details: t.materials.items.PETG.details, bestFor: t.materials.items.PETG.bestFor },
+    { id: 'ABS', name: 'ABS', icon: '🔥', desc: lang === 'TH' ? 'ทนร้อน · เหนียว' : 'High Heat · Tough', price: '฿4/g', details: t.materials.items.ABS.details, bestFor: t.materials.items.ABS.bestFor },
+    { id: 'ASA', name: 'ASA', icon: '☀️', desc: lang === 'TH' ? 'ทน UV · กลางแจ้ง' : 'UV Resistant · Outdoor', price: '฿5/g', details: t.materials.items.ASA.details, bestFor: t.materials.items.ASA.bestFor },
+    { id: 'TPU', name: 'TPU', icon: '👟', desc: lang === 'TH' ? 'ยืดหยุ่น · นุ่ม' : 'Flexible · Elastic', price: '฿6/g', details: t.materials.items.TPU.details, bestFor: t.materials.items.TPU.bestFor },
+    { id: 'CarbonFiber', name: 'CarbonFiber', icon: '🛡️', desc: lang === 'TH' ? 'แข็งแรงพิเศษ · ดำด้าน' : 'High-Rigidity · Matte', price: '฿10/g', details: t.materials.items.CarbonFiber.details, bestFor: t.materials.items.CarbonFiber.bestFor },
+    { id: 'Nylon', name: 'Nylon', icon: '⛓️', desc: lang === 'TH' ? 'ทนแรงเสียดสี · เหนียวมาก' : 'Low-Friction · Tough', price: '฿12/g', details: t.materials.items.Nylon.details, bestFor: t.materials.items.Nylon.bestFor },
   ]
 
   const [selectedMat, setSelectedMat] = useState(MATERIALS[0])
@@ -138,7 +153,7 @@ export default function Home() {
             </div>
             <div className="md:col-span-5 flex flex-col gap-12 pt-20">
                <p className="font-serif text-[4vw] md:text-[3vw] text-white/60 leading-[1.1] tracking-tight">
-                {lang === 'TH' ? 'เราใช้เครื่องพิมพ์ระดับ Industrial Grade เพื่อผลลัพธ์ที่สมบูรณ์แบบที่สุด' : 'We use industrial-grade machines to ensure the most perfect results.'}
+                Industrial grade machines for professional results.
                </p>
                <div className="aspect-[4/5] bg-white/5 rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl">
                 <img src="/media__1777365099190.png" alt="AMS" className="w-full h-full object-cover" />
@@ -147,53 +162,56 @@ export default function Home() {
           </div>
         </section>
 
-        {/* MATERIALS (REFINED FONT SIZES) */}
+        {/* MATERIALS (REFINED LAYOUT) */}
         <section id="materials" className="py-60 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-32 gap-10">
               <h2 className="font-header text-[12vw] md:text-[9vw] leading-[0.8] uppercase tracking-tighter">{t.materials.title}</h2>
               <div className="font-header text-[12px] tracking-[0.4em] uppercase opacity-40">{t.materials.subtitle}</div>
             </div>
-            <div className="grid lg:grid-cols-2 gap-24">
-              <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid lg:grid-cols-2 gap-12 items-stretch">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {MATERIALS.map((m, i) => (
                   <button key={m.id} onClick={() => setSelectedMat(m)}
-                    className={`group relative p-12 border border-black/10 transition-all duration-500 flex flex-col justify-between aspect-[3/4] rounded-[2.5rem] ${selectedMat.id === m.id ? 'bg-black text-white shadow-2xl' : 'hover:bg-black/5'}`}>
+                    className={`group relative p-8 border border-black/10 transition-all duration-500 flex flex-col justify-between aspect-[3/4] rounded-[2rem] ${selectedMat.id === m.id ? 'bg-black text-white shadow-2xl scale-[1.02]' : 'hover:bg-black/5 hover:scale-[1.02]'}`}>
                     <div className="flex justify-between items-start">
-                      <span className="font-header text-7xl tracking-tighter">0{i+1}</span>
-                      <span className="text-4xl grayscale group-hover:grayscale-0 transition-all">{m.icon}</span>
+                      <span className="font-header text-5xl tracking-tighter">0{i+1}</span>
+                      <span className="text-3xl grayscale group-hover:grayscale-0 transition-all">{m.icon}</span>
                     </div>
-                    <div>
-                      <h3 className="font-header text-5xl uppercase mb-3 tracking-tighter">{m.name}</h3>
-                      <p className="font-body text-[11px] opacity-40 uppercase tracking-[0.2em] font-black">{m.desc}</p>
+                    <div className="text-left">
+                      <h3 className="font-header text-3xl uppercase mb-1 tracking-tighter leading-none">{m.name}</h3>
+                      <p className="font-body text-[9px] opacity-40 uppercase tracking-[0.1em] font-black">{m.desc}</p>
                     </div>
                   </button>
                 ))}
               </div>
-              <div className="bg-black/5 p-16 rounded-[3.5rem] flex flex-col justify-between shadow-inner">
+              <div className="bg-black/5 p-12 lg:p-16 rounded-[3rem] flex flex-col justify-between shadow-inner h-full min-h-[600px]">
                 <div>
-                  <div className="flex items-center gap-8 mb-16">
-                    <div className="w-28 h-28 bg-black text-white flex items-center justify-center text-6xl rounded-[2rem] shadow-xl">{selectedMat.icon}</div>
-                    <h3 className="font-header text-6xl uppercase tracking-tighter">{selectedMat.name}</h3>
+                  <div className="flex items-center gap-8 mb-12">
+                    <div className="w-20 h-20 bg-black text-white flex items-center justify-center text-5xl rounded-[1.5rem] shadow-xl">{selectedMat.icon}</div>
+                    <h3 className="font-header text-6xl uppercase tracking-tighter leading-none">{selectedMat.name}</h3>
                   </div>
-                  <div className="space-y-16">
+                  <div className="space-y-12">
                     <div>
-                      <h4 className="font-header text-[12px] tracking-[0.4em] uppercase opacity-30 mb-6">{t.materials.details}</h4>
-                      <p className="text-4xl md:text-5xl font-serif italic text-black/80 leading-[1.1] tracking-tight">{selectedMat.details}</p>
+                      <h4 className="font-header text-[10px] tracking-[0.4em] uppercase opacity-30 mb-6">{t.materials.details}</h4>
+                      <p className="text-3xl md:text-4xl font-serif italic text-black/80 leading-[1.3] tracking-tight">{selectedMat.details}</p>
                     </div>
                     <div>
-                      <h4 className="font-header text-[12px] tracking-[0.4em] uppercase opacity-30 mb-6">{t.materials.suitable}</h4>
-                      <p className="font-body font-black text-2xl uppercase tracking-tighter">{selectedMat.bestFor}</p>
+                      <h4 className="font-header text-[10px] tracking-[0.4em] uppercase opacity-30 mb-6">{t.materials.suitable}</h4>
+                      <p className="font-body font-black text-lg uppercase tracking-tighter opacity-80 leading-relaxed">{selectedMat.bestFor}</p>
                     </div>
                   </div>
                 </div>
-                <Link href="/upload" className="mt-20 bg-black text-white font-header text-sm tracking-[0.3em] uppercase py-8 text-center rounded-[1.5rem] hover:opacity-80 transition-all shadow-2xl">
+                <Link href="/upload" className="mt-20 bg-black text-white font-header text-xs tracking-[0.3em] uppercase py-7 text-center rounded-[1.2rem] hover:opacity-80 transition-all shadow-2xl">
                   {t.materials.cta}
                 </Link>
               </div>
             </div>
           </div>
         </section>
+
+        {/* IMAGE CAROUSEL */}
+        <ImageCarousel />
 
         {/* CTA */}
         <section className="py-80 px-8 text-center flex flex-col items-center">
