@@ -218,12 +218,16 @@ export default function UploadPage() {
                       <p className="font-body text-xs text-white/30 uppercase tracking-[0.2em]">{t.findFiles.subtitle}</p>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 mb-12">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
                       {[
                         { name: "Thingiverse", url: "https://www.thingiverse.com" },
                         { name: "Printables", url: "https://www.printables.com" },
                         { name: "Cults3D", url: "https://cults3d.com" },
-                        { name: "MyMiniFactory", url: "https://www.myminifactory.com" }
+                        { name: "MyMiniFactory", url: "https://www.myminifactory.com" },
+                        { name: "MakerWorld", url: "https://makerworld.com" },
+                        { name: "GrabCAD", url: "https://grabcad.com" },
+                        { name: "CGTrader", url: "https://www.cgtrader.com" },
+                        { name: "TurboSquid", url: "https://www.turbosquid.com" }
                       ].map(site => (
                         <a key={site.name} href={site.url} target="_blank" className="bg-white/5 border border-white/5 p-8 rounded-3xl text-center hover:bg-white/10 transition-all group relative overflow-hidden">
                           <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
