@@ -9,7 +9,9 @@ import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
 // @ts-ignore
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { translations, Language } from '@/lib/translations'
+import { useOrderStore } from '@/lib/store'
 
 const MATERIALS = ["PLA", "PETG", "ABS", "ASA", "TPU", "CarbonFiber", "Nylon"]
 const COLORS = [
@@ -52,6 +54,9 @@ function Model({ url, fileName }: { url: string; fileName: string }) {
 }
 
 export default function UploadPage() {
+  const router = useRouter()
+  const setEstimateData = useOrderStore((state) => state.setEstimateData)
+
   const [lang, setLang] = useState<Language>('TH')
   const t = translations[lang]
 
@@ -67,7 +72,7 @@ export default function UploadPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showContactForm, setShowContactForm] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', line: '' })
+  const [customerInfo, setCustomerInfo] = useState({ name: '', method: 'line', contactValue: '' })
   const [showFindFiles, setShowFindFiles] = useState(false)
 
   useEffect(() => {
@@ -166,8 +171,59 @@ export default function UploadPage() {
         </div>
       </nav>
 
+      {/* Model Search Modal */}
+      {showFindFiles && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-8">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowFindFiles(false)} />
+          <div className="bg-[#111] border border-white/10 rounded-[2.5rem] p-8 md:p-12 w-full max-w-4xl relative z-10 max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+            <button onClick={() => setShowFindFiles(false)} className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <div className="mb-12">
+              <h3 className="font-header text-3xl uppercase tracking-tighter mb-2 text-white">{t.findFiles.popular}</h3>
+              <p className="font-body text-sm text-white/40 uppercase tracking-[0.2em]">{t.findFiles.subtitle}</p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+              {[
+                { name: "Thingiverse", url: "https://www.thingiverse.com" },
+                { name: "Printables", url: "https://www.printables.com" },
+                { name: "Cults3D", url: "https://cults3d.com" },
+                { name: "MyMiniFactory", url: "https://www.myminifactory.com" },
+                { name: "MakerWorld", url: "https://makerworld.com" },
+                { name: "Yeggi", url: "https://www.yeggi.com" }
+              ].map(site => (
+                <a key={site.name} href={site.url} target="_blank" className="bg-white/5 border border-white/5 p-8 rounded-3xl text-center hover:bg-white/10 hover:border-white/20 transition-all group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <p className="font-header text-[12px] tracking-widest uppercase mb-1 relative z-10">{site.name}</p>
+                  <p className="text-[8px] opacity-20 group-hover:opacity-50 transition-opacity relative z-10 tracking-[0.3em]">VISIT LIBRARY →</p>
+                </a>
+              ))}
+            </div>
+
+            <div className="bg-white/[0.03] p-10 rounded-[2.5rem] border border-white/10 mb-8 relative overflow-hidden group text-center">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/10 transition-all" />
+              <h3 className="font-header text-[10px] tracking-[0.5em] uppercase mb-4 text-white/30">KEYWORD SUGGESTIONS</h3>
+              <p className="text-[14px] text-white/60 font-body tracking-wide italic">{t.findFiles.hint}</p>
+            </div>
+
+            <div className="bg-orange-500/10 border border-orange-500/20 p-8 rounded-3xl flex gap-6 items-start">
+               <span className="text-2xl mt-1">🚨</span>
+               <div>
+                 <p className="font-header text-[12px] tracking-[0.4em] uppercase text-orange-500 mb-2">{t.findFiles.licenseTitle}</p>
+                 <p className="text-[12px] text-orange-500/60 font-body leading-relaxed">{t.findFiles.licenseDesc}</p>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="pt-40 pb-32 px-6 max-w-7xl mx-auto flex flex-col lg:grid lg:grid-cols-12 gap-16">
         <div className="lg:col-span-7 space-y-8">
+          <div className="flex justify-between items-end border-b border-white/5 pb-4 mb-4">
+            <h2 className="font-header text-3xl uppercase tracking-tighter leading-none">{t.upload.title}</h2>
+            <span className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase">Step 01</span>
+          </div>
           <div className="aspect-square bg-white/[0.02] border border-white/5 rounded-[3rem] overflow-hidden relative shadow-2xl">
             {models.length > 0 ? (
               <Canvas 
@@ -201,7 +257,7 @@ export default function UploadPage() {
           {models.length === 0 && (
             <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
                <div className="flex flex-col sm:flex-row gap-4">
-                  <button onClick={() => setShowFindFiles(!showFindFiles)} className={`flex-1 border py-5 rounded-2xl font-header text-[10px] tracking-[0.3em] uppercase transition-all flex items-center justify-center gap-3 ${showFindFiles ? 'bg-white text-black border-white' : 'bg-white/5 border-white/10 hover:bg-white/10 text-white'}`}>
+                  <button onClick={() => setShowFindFiles(true)} className="flex-1 border py-5 rounded-2xl font-header text-[10px] tracking-[0.3em] uppercase transition-all flex items-center justify-center gap-3 bg-white/5 border-white/10 hover:bg-white/10 text-white">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                     {t.findFiles.title}
                   </button>
@@ -210,54 +266,6 @@ export default function UploadPage() {
                     {t.findFiles.contactHelp}
                   </a>
                </div>
-               
-               {showFindFiles && (
-                 <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 md:p-12 animate-in fade-in zoom-in-95 duration-500 shadow-2xl">
-                    <div className="mb-12">
-                      <h3 className="font-header text-2xl uppercase tracking-tighter mb-2 text-white">{t.findFiles.popular}</h3>
-                      <p className="font-body text-xs text-white/30 uppercase tracking-[0.2em]">{t.findFiles.subtitle}</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
-                      {[
-                        { name: "Thingiverse", url: "https://www.thingiverse.com" },
-                        { name: "Printables", url: "https://www.printables.com" },
-                        { name: "Cults3D", url: "https://cults3d.com" },
-                        { name: "MyMiniFactory", url: "https://www.myminifactory.com" },
-                        { name: "MakerWorld", url: "https://makerworld.com" },
-                        { name: "GrabCAD", url: "https://grabcad.com" },
-                        { name: "CGTrader", url: "https://www.cgtrader.com" },
-                        { name: "TurboSquid", url: "https://www.turbosquid.com" }
-                      ].map(site => (
-                        <a key={site.name} href={site.url} target="_blank" className="bg-white/5 border border-white/5 p-8 rounded-3xl text-center hover:bg-white/10 transition-all group relative overflow-hidden">
-                          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          <p className="font-header text-[12px] tracking-widest uppercase mb-1 relative z-10">{site.name}</p>
-                          <p className="text-[8px] opacity-20 group-hover:opacity-50 transition-opacity relative z-10 tracking-[0.3em]">VISIT LIBRARY →</p>
-                        </a>
-                      ))}
-                    </div>
-
-                    <div className="bg-white/[0.03] p-10 rounded-[2.5rem] border border-white/10 mb-12 relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/10 transition-all" />
-                      <h3 className="font-header text-[10px] tracking-[0.5em] uppercase mb-8 text-white/30">{t.findFiles.searchAll}</h3>
-                      <div className="flex flex-col gap-6">
-                        <a href="https://www.yeggi.com" target="_blank" className="w-full bg-white text-black py-6 rounded-2xl font-header text-sm tracking-[0.4em] uppercase text-center hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 shadow-[0_0_40px_rgba(255,255,255,0.1)]">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                          YEGGI SEARCH
-                        </a>
-                        <p className="text-[11px] text-white/20 font-body text-center tracking-wide italic">{t.findFiles.hint}</p>
-                      </div>
-                    </div>
-
-                    <div className="bg-orange-500/10 border border-orange-500/20 p-8 rounded-3xl flex gap-6 items-start">
-                       <span className="text-2xl mt-1">🚨</span>
-                       <div>
-                         <p className="font-header text-[10px] tracking-[0.4em] uppercase text-orange-500/80 mb-2">{t.findFiles.licenseTitle}</p>
-                         <p className="text-[12px] text-orange-500/40 font-body leading-relaxed">{t.findFiles.licenseDesc}</p>
-                       </div>
-                    </div>
-                 </div>
-               )}
             </div>
           )}
 
@@ -280,9 +288,9 @@ export default function UploadPage() {
         </div>
 
         <div className="lg:col-span-5 space-y-12">
-          <div className="flex justify-between items-end border-b border-white/5 pb-8">
-            <h2 className="font-header text-[clamp(2.5rem,8vw,6rem)] uppercase tracking-tighter leading-none">{t.upload.settings}</h2>
-            <span className="font-header text-[12px] tracking-[0.4em] opacity-30 uppercase">Step 01</span>
+          <div className="flex justify-between items-end border-b border-white/5 pb-4">
+            <h2 className="font-header text-3xl uppercase tracking-tighter leading-none">{t.upload.settings}</h2>
+            <span className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase">Step 02</span>
           </div>
 
           <div className="space-y-10">
@@ -338,10 +346,10 @@ export default function UploadPage() {
 
           {result && (
             <div className="bg-[#F2F2F2] text-black p-10 rounded-[3rem] animate-in fade-in slide-in-from-bottom-8 shadow-2xl">
-              <div className="flex justify-between items-start mb-10 border-b border-black/5 pb-8">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.3em] opacity-40 mb-2">{t.upload.summary}</p>
-                  <h3 className="font-header text-4xl tracking-tighter uppercase">{material} PREVIEW</h3>
+              <div className="flex justify-between items-start mb-6 border-b border-black/5 pb-4">
+                <div className="flex gap-4 items-center">
+                  <span className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase">Step 03</span>
+                  <h3 className="font-header text-2xl tracking-tighter uppercase">{material} PREVIEW</h3>
                 </div>
                 <div className="text-right">
                   <p className="text-[11px] font-black uppercase tracking-[0.3em] opacity-40 mb-2">Weight</p>
@@ -353,28 +361,14 @@ export default function UploadPage() {
                 <p className="font-header text-[clamp(2.5rem,10vw,7rem)] tracking-tighter">฿{result.totalPrice}</p>
               </div>
 
-              {!showContactForm ? (
-                <button onClick={() => setShowContactForm(true)} className="w-full mt-4 py-7 bg-black text-white rounded-2xl font-header text-sm uppercase tracking-[0.4em] hover:opacity-90 transition-all shadow-xl active:scale-[0.98]">
-                  {t.upload.checkout}
-                </button>
-              ) : isSubmitted ? (
-                <div className="text-center py-8">
-                   <p className="font-header text-xl text-green-600 uppercase mb-2">✨ SUCCESS</p>
-                   <p className="font-body text-xs opacity-60 leading-relaxed">{t.contact.success}</p>
-                </div>
-              ) : (
-                <div className="space-y-6 pt-6 border-t border-black/5 animate-in fade-in zoom-in-95">
-                  <p className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase">{t.contact.title}</p>
-                  <div className="space-y-4">
-                    <input type="text" placeholder={t.contact.name} value={customerInfo.name} onChange={e=>setCustomerInfo({...customerInfo,name:e.target.value})} className="w-full bg-black/5 border border-black/10 rounded-xl px-6 py-4 text-sm focus:outline-none focus:border-black transition-all font-body"/>
-                    <input type="tel" placeholder={t.contact.phone} value={customerInfo.phone} onChange={e=>setCustomerInfo({...customerInfo,phone:e.target.value})} className="w-full bg-black/5 border border-black/10 rounded-xl px-6 py-4 text-sm focus:outline-none focus:border-black transition-all font-body"/>
-                    <input type="text" placeholder={t.contact.line} value={customerInfo.line} onChange={e=>setCustomerInfo({...customerInfo,line:e.target.value})} className="w-full bg-black/5 border border-black/10 rounded-xl px-6 py-4 text-sm focus:outline-none focus:border-black transition-all font-body"/>
-                  </div>
-                  <button onClick={() => setIsSubmitted(true)} className="w-full py-7 bg-black text-white rounded-2xl font-header text-sm uppercase tracking-[0.4em] hover:opacity-90 transition-all shadow-xl active:scale-[0.98]">
-                    {t.contact.submit}
-                  </button>
-                </div>
-              )}
+              <button 
+                onClick={() => {
+                  setEstimateData({ models, technology, material, infill, layerHeight, colorId, quantity, result })
+                  router.push('/quote')
+                }} 
+                className="w-full mt-4 py-7 bg-black text-white rounded-2xl font-header text-sm uppercase tracking-[0.4em] hover:opacity-90 transition-all shadow-xl active:scale-[0.98]">
+                Proceed to Quote
+              </button>
             </div>
           )}
         </div>
@@ -394,8 +388,9 @@ export default function UploadPage() {
       </footer>
 
       {/* Floating LINE Button */}
-      <a href="https://line.me/ti/p/@pb3d" target="_blank" className="fixed bottom-8 right-8 z-[90] w-16 h-16 bg-[#06C755] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.58 2 10c0 2.9 1.87 5.48 4.7 7.04-.13.5-.47 1.94-.54 2.22-.08.3-.38 1.18.16 1.18.52 0 2.4-1.6 3.3-2.22.45.12.92.18 1.38.18 5.52 0 10-3.58 10-8s-4.48-8-10-8zm-5 11h-1v-4h1v4zm3 0h-1v-4h1v4zm3-4v4h-1v-4h1zm3 4h-1v-4h1v4z"/></svg>
+      <a href="https://line.me/ti/p/@pb3d" target="_blank" className="fixed bottom-8 right-8 z-[90] bg-[#06C755] text-white rounded-full flex items-center gap-3 px-6 py-4 shadow-2xl hover:scale-105 active:scale-95 transition-all">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.58 2 10c0 2.9 1.87 5.48 4.7 7.04-.13.5-.47 1.94-.54 2.22-.08.3-.38 1.18.16 1.18.52 0 2.4-1.6 3.3-2.22.45.12.92.18 1.38.18 5.52 0 10-3.58 10-8s-4.48-8-10-8zm-5 11h-1v-4h1v4zm3 0h-1v-4h1v4zm3-4v4h-1v-4h1zm3 4h-1v-4h1v4z"/></svg>
+        <span className="font-header text-[12px] tracking-widest uppercase">{t.contact.lineFloat}</span>
       </a>
     </div>
   )

@@ -102,6 +102,7 @@ export default function Home() {
 
   const [selectedMat, setSelectedMat] = useState(MATERIALS[0])
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [showFindFiles, setShowFindFiles] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F2F2F2] selection:bg-white/20 font-sans overflow-x-hidden">
@@ -130,15 +131,15 @@ export default function Home() {
 
         {/* Mobile Menu Overlay */}
         <div className={`fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center gap-12 transition-all duration-700 lg:hidden ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
-          <div className="flex flex-col items-center gap-8 font-header text-2xl tracking-[0.2em] uppercase">
+          <div className="flex flex-col items-center gap-8 font-header text-2xl tracking-[0.2em] uppercase mt-20">
             <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="hover:text-white/40 transition-colors">{t.nav.howItWorks}</a>
             <a href="#materials" onClick={() => setIsMenuOpen(false)} className="hover:text-white/40 transition-colors">{t.nav.materials}</a>
             <Link href="/upload" onClick={() => setIsMenuOpen(false)} className="hover:text-white/40 transition-colors">{t.nav.order}</Link>
-            <button onClick={() => { setLang(lang === 'TH' ? 'EN' : 'TH'); setIsMenuOpen(false); }} className="text-white/40">
+            <button onClick={() => { setLang(lang === 'TH' ? 'EN' : 'TH'); setIsMenuOpen(false); }} className="text-white/40 mt-4 border-t border-white/10 pt-8 w-full">
               {lang === 'TH' ? 'ENGLISH' : 'ภาษาไทย'}
             </button>
           </div>
-          <Link href="/upload" onClick={() => setIsMenuOpen(false)} className="font-header text-sm tracking-[0.3em] uppercase bg-white text-black px-12 py-5 rounded-full">
+          <Link href="/upload" onClick={() => setIsMenuOpen(false)} className="font-header text-xs tracking-[0.3em] uppercase bg-white text-black px-10 py-4 rounded-full mt-auto mb-16 max-w-[80vw] text-center truncate">
             {t.nav.start}
           </Link>
         </div>
@@ -148,31 +149,93 @@ export default function Home() {
         </Link>
       </nav>
 
+      {/* Model Search Modal */}
+      {showFindFiles && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-8">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowFindFiles(false)} />
+          <div className="bg-[#111] border border-white/10 rounded-[2.5rem] p-8 md:p-12 w-full max-w-4xl relative z-10 max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+            <button onClick={() => setShowFindFiles(false)} className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <div className="mb-12">
+              <h3 className="font-header text-3xl uppercase tracking-tighter mb-2 text-white">{t.findFiles.popular}</h3>
+              <p className="font-body text-sm text-white/40 uppercase tracking-[0.2em]">{t.findFiles.subtitle}</p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+              {[
+                { name: "Thingiverse", url: "https://www.thingiverse.com" },
+                { name: "Printables", url: "https://www.printables.com" },
+                { name: "Cults3D", url: "https://cults3d.com" },
+                { name: "MyMiniFactory", url: "https://www.myminifactory.com" },
+                { name: "MakerWorld", url: "https://makerworld.com" },
+                { name: "Yeggi", url: "https://www.yeggi.com" }
+              ].map(site => (
+                <a key={site.name} href={site.url} target="_blank" className="bg-white/5 border border-white/5 p-8 rounded-3xl text-center hover:bg-white/10 hover:border-white/20 transition-all group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <p className="font-header text-[12px] tracking-widest uppercase mb-1 relative z-10">{site.name}</p>
+                  <p className="text-[8px] opacity-20 group-hover:opacity-50 transition-opacity relative z-10 tracking-[0.3em]">VISIT LIBRARY →</p>
+                </a>
+              ))}
+            </div>
+
+            <div className="bg-white/[0.03] p-10 rounded-[2.5rem] border border-white/10 mb-8 relative overflow-hidden group text-center">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/10 transition-all" />
+              <h3 className="font-header text-[10px] tracking-[0.5em] uppercase mb-4 text-white/30">KEYWORD SUGGESTIONS</h3>
+              <p className="text-[14px] text-white/60 font-body tracking-wide italic">{t.findFiles.hint}</p>
+            </div>
+
+            <div className="bg-orange-500/10 border border-orange-500/20 p-8 rounded-3xl flex gap-6 items-start">
+               <span className="text-2xl mt-1">🚨</span>
+               <div>
+                 <p className="font-header text-[12px] tracking-[0.4em] uppercase text-orange-500 mb-2">{t.findFiles.licenseTitle}</p>
+                 <p className="text-[12px] text-orange-500/60 font-body leading-relaxed">{t.findFiles.licenseDesc}</p>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main>
         {/* HERO */}
         <section className="relative min-h-screen flex flex-col justify-end px-8 pb-20 overflow-hidden">
-          <div className="absolute inset-0 z-0">
-             <img src="/media__1777430714628.png" alt="Hero" className="w-full h-full object-cover opacity-40 grayscale" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          <div className="absolute inset-0 z-0 bg-black">
+             {/* Replace with actual concrete images when available */}
+             <div className="absolute inset-0 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 opacity-30 mix-blend-luminosity">
+                <div className="bg-white/5 rounded-[2rem] overflow-hidden"><img src="/images/hero-1.png" alt="Products" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} /></div>
+                <div className="bg-white/5 rounded-[2rem] overflow-hidden mt-12"><img src="/images/hero-2.png" alt="Products" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} /></div>
+                <div className="bg-white/5 rounded-[2rem] overflow-hidden hidden md:block"><img src="/images/hero-3.png" alt="Products" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} /></div>
+                <div className="bg-white/5 rounded-[2rem] overflow-hidden hidden md:block mt-24"><img src="/images/hero-4.png" alt="Products" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} /></div>
+             </div>
+             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
           </div>
           <InteractiveBackground />
-          <div className="relative z-10 w-full">
-            <div className="mb-10 opacity-30 font-header text-[12px] md:text-[14px] tracking-[0.6em] uppercase">{t.hero.subtitle}</div>
-            <h1 className="font-header text-[clamp(4rem,18vw,12rem)] md:text-[clamp(6rem,14vw,18rem)] leading-[0.75] uppercase tracking-tighter mix-blend-difference relative">
+          <div className="relative z-10 w-full max-w-7xl mx-auto">
+            <div className="mb-6 opacity-40 font-header text-[12px] md:text-[14px] tracking-[0.6em] uppercase flex items-center gap-4">
+              <span className="w-12 h-px bg-white/40"></span>
+              {t.hero.subtitle}
+            </div>
+            <h1 className="font-header text-[clamp(4rem,15vw,10rem)] leading-[0.8] uppercase tracking-tighter mix-blend-difference relative">
               Digital<br/>
-              <span className="absolute top-[45%] left-0 md:left-20 font-serif italic text-[0.3em] md:text-[0.25em] normal-case tracking-normal text-white/40 -translate-y-1/2 z-10 pointer-events-none">
+              <span className="font-serif italic text-[0.4em] normal-case tracking-normal text-white/60 ml-4 md:ml-12">
                 {lang === 'TH' ? 'เข้าสู่' : 'into'}
               </span>
               Physical
             </h1>
-            <div className="mt-12 flex flex-col items-start gap-8">
-              <Link href="/upload" className="bg-white text-black px-12 py-6 rounded-full font-header text-sm tracking-[0.3em] uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)]">
-                {t.hero.cta}
+            <p className="mt-8 font-header text-[1.2rem] md:text-[1.5rem] tracking-[0.1em] text-white/80 max-w-xl leading-relaxed">
+              {t.hero.copyTag}
+            </p>
+            <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              <Link href="/upload" className="w-full sm:w-auto bg-white text-black px-12 py-6 rounded-full font-header text-xs tracking-[0.3em] uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)] text-center">
+                📁 {t.hero.cta}
               </Link>
+              <button onClick={() => setShowFindFiles(true)} className="w-full sm:w-auto bg-white/10 border border-white/20 text-white px-10 py-6 rounded-full font-header text-xs tracking-[0.3em] uppercase hover:bg-white/20 active:scale-95 transition-all text-center">
+                🔍 {t.hero.ctaSearch}
+              </button>
             </div>
-            <div className="mt-16 flex flex-col md:flex-row justify-between items-end gap-16">
-              <p className="max-w-xl font-body text-white/40 text-lg md:text-xl leading-relaxed tracking-tight">{t.hero.desc}</p>
-              <div className="flex gap-16 font-header text-[11px] tracking-[0.4em] uppercase">
+            <div className="mt-20 flex flex-col md:flex-row justify-between items-start md:items-end gap-12 border-t border-white/10 pt-10">
+              <p className="max-w-xl font-body text-white/40 text-sm md:text-base leading-relaxed tracking-wide">{t.hero.desc}</p>
+              <div className="flex gap-16 font-header text-[10px] tracking-[0.4em] uppercase">
                 <div className="flex flex-col gap-2">
                   <span className="text-white/20">Studio</span>
                   <span>BKK — TH</span>
@@ -195,17 +258,18 @@ export default function Home() {
                 <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-8">{t.howItWorks.title}</h2>
                 <p className="font-serif text-2xl md:text-3xl text-white/60 lowercase">{t.howItWorks.subtitle}</p>
               </div>
-              <div className="grid md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
                   { step: "01", title: t.howItWorks.step1Title, desc: t.howItWorks.step1Desc },
                   { step: "02", title: t.howItWorks.step2Title, desc: t.howItWorks.step2Desc },
                   { step: "03", title: t.howItWorks.step3Title, desc: t.howItWorks.step3Desc },
+                  { step: "04", title: t.howItWorks.step4Title, desc: t.howItWorks.step4Desc },
                 ].map((s, i) => (
-                  <div key={i} className="group p-12 bg-white/[0.02] border border-white/5 rounded-[4rem] hover:bg-white/[0.05] transition-all relative overflow-hidden">
-                    <span className="absolute -top-10 -right-10 font-header text-[12rem] leading-none opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none">{s.step}</span>
-                    <span className="font-header text-xs tracking-[0.5em] opacity-20 group-hover:opacity-100 transition-opacity uppercase mb-12 block">{s.step}</span>
-                    <h3 className="font-header text-3xl uppercase mt-8 mb-6 tracking-tighter">{s.title}</h3>
-                    <p className="font-body text-white/40 leading-relaxed text-sm max-w-[200px]">{s.desc}</p>
+                  <div key={i} className="group p-10 bg-white/[0.02] border border-white/5 rounded-[3rem] hover:bg-white/[0.05] transition-all relative overflow-hidden">
+                    <span className="absolute -top-10 -right-10 font-header text-[10rem] leading-none opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none">{s.step}</span>
+                    <span className="font-header text-[10px] tracking-[0.5em] opacity-20 group-hover:opacity-100 transition-opacity uppercase mb-8 block">{s.step}</span>
+                    <h3 className="font-header text-2xl uppercase mt-8 mb-4 tracking-tighter leading-tight">{s.title}</h3>
+                    <p className="font-body text-white/40 leading-relaxed text-xs">{s.desc}</p>
                   </div>
                 ))}
               </div>
@@ -322,8 +386,9 @@ export default function Home() {
       </footer>
 
       {/* Floating LINE Button */}
-      <a href="https://line.me/ti/p/@pb3d" target="_blank" className="fixed bottom-8 right-8 z-[90] w-16 h-16 bg-[#06C755] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.58 2 10c0 2.9 1.87 5.48 4.7 7.04-.13.5-.47 1.94-.54 2.22-.08.3-.38 1.18.16 1.18.52 0 2.4-1.6 3.3-2.22.45.12.92.18 1.38.18 5.52 0 10-3.58 10-8s-4.48-8-10-8zm-5 11h-1v-4h1v4zm3 0h-1v-4h1v4zm3-4v4h-1v-4h1zm3 4h-1v-4h1v4z"/></svg>
+      <a href="https://line.me/ti/p/@pb3d" target="_blank" className="fixed bottom-8 right-8 z-[90] bg-[#06C755] text-white rounded-full flex items-center gap-3 px-6 py-4 shadow-2xl hover:scale-105 active:scale-95 transition-all">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.58 2 10c0 2.9 1.87 5.48 4.7 7.04-.13.5-.47 1.94-.54 2.22-.08.3-.38 1.18.16 1.18.52 0 2.4-1.6 3.3-2.22.45.12.92.18 1.38.18 5.52 0 10-3.58 10-8s-4.48-8-10-8zm-5 11h-1v-4h1v4zm3 0h-1v-4h1v4zm3-4v4h-1v-4h1zm3 4h-1v-4h1v4z"/></svg>
+        <span className="font-header text-[12px] tracking-widest uppercase">{t.contact.lineFloat}</span>
       </a>
     </div>
   )

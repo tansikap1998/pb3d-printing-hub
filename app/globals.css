@@ -19,7 +19,7 @@ html { scroll-behavior: smooth; }
   }
 }
 
-.font-header { font-family: 'Anton', 'Prompt', 'Noto Sans Thai', sans-serif; }
+.font-header { font-family: 'Anton', 'Prompt', 'Noto Sans Thai', sans-serif; font-weight: 700; }
 .font-body { font-family: 'Inter', 'Prompt', 'Noto Sans Thai', sans-serif; }
 .font-serif { font-family: 'Cormorant Garamond', serif; font-style: italic; }
 

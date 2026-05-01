@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { supabase } from '@/lib/supabase/client'
 
 interface Order {
   id: string; createdAt: string; status: string
@@ -39,17 +40,38 @@ export default function AdminPage() {
     router.push("/admin/login")
   }
 
-  const loadOrders = useCallback(() => {
+  const loadOrders = useCallback(async () => {
     try {
-      const raw = localStorage.getItem("pb3d_orders")
-      if (raw) setOrders(JSON.parse(raw))
-    } catch {}
+      const isPlaceholder = supabase.supabaseUrl.includes('placeholder')
+      if (!isPlaceholder) {
+        const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
+        if (error) throw error
+        
+        // Map DB structure to app structure
+        const mappedOrders: Order[] = data.map(o => ({
+          id: o.id,
+          createdAt: o.created_at,
+          status: o.status,
+          customer: { name: o.customer_name, email: o.customer_email || '', phone: o.customer_phone || '', address: o.customer_address || '' },
+          items: { fileName: o.file_name, material: o.material, technology: o.technology, color: o.color, infill: o.infill, layerHeight: o.layer_height, quantity: o.quantity, notes: o.notes || '' },
+          pricing: { total: o.total_price, weightG: o.weight_g || 0, printTimeMin: o.print_time_min || 0 },
+          delivery: { trackingNumber: o.tracking_number }
+        }))
+        setOrders(mappedOrders)
+      } else {
+        const raw = localStorage.getItem("pb3d_orders")
+        if (raw) setOrders(JSON.parse(raw))
+      }
+    } catch (error) {
+      console.error("Failed to load orders", error)
+    }
     setLastRefresh(new Date().toLocaleTimeString("th-TH"))
   }, [])
 
   useEffect(() => { loadOrders(); const t = setInterval(loadOrders, 15000); return () => clearInterval(t) }, [loadOrders])
 
-  const saveOrders = (updated: Order[]) => {
+  const saveOrders = async (updated: Order[]) => {
+    // Note: In Supabase, we update individual records rather than bulk save, but for local fallback we keep this
     setOrders(updated)
     localStorage.setItem("pb3d_orders", JSON.stringify(updated))
   }
@@ -63,24 +85,44 @@ export default function AdminPage() {
       cancelled: "❌ ยกเลิกคำสั่งซื้อ",
     }
     const tracking = order.delivery.trackingNumber
-    const subject = `[PB3D] ${statusTH[newStatus]||newStatus} — Order #${order.id}`
-    const body = `เรียนคุณ ${order.customer.name}\n\n${statusTH[newStatus]||newStatus}\n\nORDER: #${order.id}\nไฟล์: ${order.items.fileName}\nวัสดุ: ${order.items.material} × ${order.items.quantity} ชิ้น\nราคา: ${order.pricing.total} THB${newStatus==="shipped"&&tracking?"\n\n📮 เลขพัสดุ: "+tracking:""}${newStatus==="cancelled"?"\n\nหากมีข้อสงสัยติดต่อ Line @pb3dprint":""}\n\nขอบคุณที่ใช้บริการ PB3D Printing`
+    const subject = `[PB3D] ${statusTH[newStatus]||newStatus} — Order #${order.id.slice(-6)}`
+    const body = `เรียนคุณ ${order.customer.name}\n\n${statusTH[newStatus]||newStatus}\n\nORDER: #${order.id.slice(-6)}\nไฟล์: ${order.items.fileName}\nวัสดุ: ${order.items.material} × ${order.items.quantity} ชิ้น\nราคา: ${order.pricing.total} THB${newStatus==="shipped"&&tracking?"\n\n📮 เลขพัสดุ: "+tracking:""}${newStatus==="cancelled"?"\n\nหากมีข้อสงสัยติดต่อ Line @pb3dprint":""}\n\nขอบคุณที่ใช้บริการ PB3D Printing`
     window.open(`mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank")
   }
 
-  const updateStatus = (id: string, newStatus: string) => {
-    if (newStatus === "shipped") {
-      const tracking = trackingInputs[id]?.trim()
-      if (!tracking) { alert("กรุณากรอกเลขพัสดุก่อน"); return }
+  const updateStatus = async (id: string, newStatus: string) => {
+    const isPlaceholder = supabase.supabaseUrl.includes('placeholder')
+    const tracking = newStatus === "shipped" ? (trackingInputs[id]?.trim() || null) : null
+    
+    if (newStatus === "shipped" && !tracking) { 
+      alert("กรุณากรอกเลขพัสดุก่อน")
+      return 
     }
-    const updated = orders.map(o => {
-      if (o.id !== id) return o
-      const tracking = newStatus === "shipped" ? (trackingInputs[id] || null) : o.delivery.trackingNumber
-      return { ...o, status: newStatus, delivery: { ...o.delivery, trackingNumber: tracking } }
-    })
-    saveOrders(updated)
-    const order = updated.find(o => o.id === id)
-    if (order) sendStatusEmail(order, newStatus)
+
+    try {
+      if (!isPlaceholder) {
+        const updateData: any = { status: newStatus }
+        if (tracking) updateData.tracking_number = tracking
+        
+        const { error } = await supabase.from('orders').update(updateData).eq('id', id)
+        if (error) throw error
+        await loadOrders() // reload from DB
+      } else {
+        const updated = orders.map(o => {
+          if (o.id !== id) return o
+          const newTracking = newStatus === "shipped" ? tracking : o.delivery.trackingNumber
+          return { ...o, status: newStatus, delivery: { ...o.delivery, trackingNumber: newTracking } }
+        })
+        saveOrders(updated)
+      }
+      
+      const order = orders.find(o => o.id === id) || (isPlaceholder ? null : orders.find(o => o.id === id)) // naive fallback
+      if (order) sendStatusEmail(order, newStatus)
+      
+    } catch (error) {
+      console.error("Failed to update status", error)
+      alert("Failed to update status")
+    }
   }
 
   const counts = orders.reduce((acc,o)=>{acc[o.status]=(acc[o.status]||0)+1;return acc},{} as Record<string,number>)
