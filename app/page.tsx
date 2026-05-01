@@ -398,7 +398,7 @@ export default function Home() {
         </div>
         <div className="flex flex-wrap justify-center gap-8 md:gap-12 font-header text-[10px] tracking-[0.5em] uppercase">
           <a href="https://shopee.co.th/shop/9883965" target="_blank" className="hover:text-white transition-colors">SHOPEE</a>
-          <a href="https://facebook.com/pb3d" target="_blank" className="hover:text-white transition-colors">FACEBOOK</a>
+          <a href="https://www.facebook.com/share/1JPnWMk3md/?mibextid=wwXIfr" target="_blank" className="hover:text-white transition-colors">FACEBOOK</a>
           <a href="https://line.me/ti/p/@pb3d" target="_blank" className="hover:text-white transition-colors">LINE OA</a>
           <Link href="/admin" className="hover:text-white transition-colors opacity-50 hover:opacity-100">ADMIN</Link>
         </div>
