@@ -8,7 +8,7 @@ import { Upload, CheckCircle } from 'lucide-react'
 import { supabase, isPlaceholder } from '@/lib/supabase/client'
 
 // Replace this with the actual promptpay ID (Phone number or National ID)
-const PROMPTPAY_ID = "0812345678" 
+const PROMPTPAY_ID = "5440400032900" 
 
 export default function CheckoutPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -163,17 +163,17 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
             <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8">
               <h2 className="font-header text-lg uppercase tracking-widest text-white/60 mb-6">Bank Transfer</h2>
               <div className="space-y-4 font-header tracking-wide text-sm">
-                <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span className="opacity-40">Bank</span>
-                  <span>Kasikorn Bank (KBank)</span>
+                <div className="flex justify-between border-b border-white/5 pb-2 gap-4">
+                  <span className="opacity-40 shrink-0">Bank</span>
+                  <span className="text-right">ธนาคารกรุงศรีอยุธยา (Krungsri)</span>
                 </div>
-                <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span className="opacity-40">Account No.</span>
-                  <span className="tracking-widest">123-4-56789-0</span>
+                <div className="flex justify-between border-b border-white/5 pb-2 gap-4">
+                  <span className="opacity-40 shrink-0">PromptPay</span>
+                  <span className="tracking-widest text-right">5-4404-00032-900</span>
                 </div>
-                <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span className="opacity-40">Name</span>
-                  <span>Chalawan 3D Co., Ltd.</span>
+                <div className="flex justify-between border-b border-white/5 pb-2 gap-4">
+                  <span className="opacity-40 shrink-0">Name</span>
+                  <span className="text-right">น.ส. รัชณีย์กร บุญหล้า</span>
                 </div>
               </div>
             </div>

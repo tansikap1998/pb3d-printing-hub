@@ -107,7 +107,12 @@ export async function verifyToken(token: string) {
 // ─── Send email via Resend REST ────────────────────────────────────────────
 export async function sendResetEmail(to: string, resetUrl: string) {
   const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) throw new Error("RESEND_API_KEY not configured")
+  
+  if (!apiKey) {
+    console.warn("⚠️ RESEND_API_KEY is not configured. Reset link generated but not sent via email:")
+    console.warn("🔗", resetUrl)
+    throw new Error("ระบบอีเมลยังไม่ได้ตั้งค่า (RESEND_API_KEY) กรุณาตรวจสอบ Console หรือตั้งค่าใน Vercel")
+  }
 
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
@@ -124,12 +129,16 @@ export async function sendResetEmail(to: string, resetUrl: string) {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: process.env.RESEND_FROM ?? "PB3D Admin <noreply@pb3dprint.com>",
+      from: process.env.RESEND_FROM ?? "onboarding@resend.dev",
       to,
       subject: "รีเซ็ตรหัสผ่าน — PB3D Printing Hub",
       html,
     }),
   })
 
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) {
+    const errText = await res.text()
+    console.error("Resend Error:", errText)
+    throw new Error(`ส่งอีเมลไม่สำเร็จ: ${errText}`)
+  }
 }

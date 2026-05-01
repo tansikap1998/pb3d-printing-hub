@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
 
     await sendResetEmail(email, resetUrl)
     return NextResponse.json({ ok: true })
-  } catch (err) {
+  } catch (err: any) {
     console.error("forgot-password error:", err)
-    return NextResponse.json({ error: "ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่" }, { status: 500 })
+    return NextResponse.json({ error: err.message || "ส่งอีเมลไม่สำเร็จ กรุณาลองใหม่" }, { status: 500 })
   }
 }
