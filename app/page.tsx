@@ -266,7 +266,7 @@ export default function Home() {
                   { step: "04", title: t.howItWorks.step4Title, desc: t.howItWorks.step4Desc },
                 ].map((s, i) => (
                   <div key={i} className="group p-10 bg-white/[0.02] border border-white/5 rounded-[3rem] hover:bg-white/[0.05] transition-all relative overflow-hidden">
-                    <span className="absolute -top-10 -right-10 font-header text-[10rem] leading-none opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none">{s.step}</span>
+                    <span className="absolute -top-10 -right-10 font-header text-[10rem] leading-none opacity-20 group-hover:opacity-40 transition-all duration-700 pointer-events-none">{s.step}</span>
                     <span className="font-header text-[10px] tracking-[0.5em] opacity-20 group-hover:opacity-100 transition-opacity uppercase mb-8 block">{s.step}</span>
                     <h3 className="font-header text-2xl uppercase mt-8 mb-4 tracking-tighter leading-tight">{s.title}</h3>
                     <p className="font-body text-white/40 leading-relaxed text-xs">{s.desc}</p>
@@ -277,39 +277,58 @@ export default function Home() {
         </section>
 
         {/* MARKETPLACE INTEGRATION */}
-        <section className="py-40 px-8">
+        <section className="py-40 px-8 overflow-hidden">
            <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-20 items-center">
               <div>
-                <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-12">
+                <h2 className="font-header text-[clamp(1.75rem,5vw,4rem)] leading-none uppercase tracking-tighter mb-8">
                   <span className="font-serif italic lowercase tracking-normal block text-[0.4em] mb-4 opacity-40">PB3D Hub</span>
                   {t.shopee.title}
                 </h2>
-                <p className="font-serif text-2xl md:text-3xl text-white/60 leading-relaxed mb-12">
+                <p className="font-serif text-lg md:text-xl text-white/60 leading-relaxed mb-8">
                   {t.shopee.desc}
                 </p>
-                 <a href="https://shopee.co.th/shop/9883965" target="_blank" className="inline-flex items-center gap-4 bg-[#EE4D2D] text-white font-header text-xs tracking-widest uppercase px-12 py-5 rounded-full hover:opacity-80 transition-all shadow-2xl">
-                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.124 16.5c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm-11.666 0c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm13.14-11.644c-.38-.285-.855-.356-1.282-.19l-11.62 4.437c-.38.143-.665.474-.759.855l-2.09 9.12h17.1c.38 0 .712-.237.855-.57l1.52-7.6c.047-.285 0-.57-.143-.855l-3.581-5.207zM18.026 6.5l2.612 3.8H6.556l1.235-5.32 10.235-3.98L18.026 6.5z"/></svg>
-                   {t.trust.shopeeCta}
-                 </a>
+                <div className="flex flex-wrap gap-4">
+                  <a href="https://shopee.co.th/shop/9883965" target="_blank" className="inline-flex items-center gap-4 bg-[#EE4D2D] text-white font-header text-xs tracking-widest uppercase px-10 py-4 rounded-full hover:opacity-80 transition-all shadow-2xl">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.124 16.5c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm-11.666 0c-.861 0-1.558.697-1.558 1.558s.697 1.558 1.558 1.558 1.558-.697 1.558-1.558-.697-1.558-1.558-1.558zm13.14-11.644c-.38-.285-.855-.356-1.282-.19l-11.62 4.437c-.38.143-.665.474-.759.855l-2.09 9.12h17.1c.38 0 .712-.237.855-.57l1.52-7.6c.047-.285 0-.57-.143-.855l-3.581-5.207zM18.026 6.5l2.612 3.8H6.556l1.235-5.32 10.235-3.98L18.026 6.5z"/></svg>
+                    {t.trust.shopeeCta}
+                  </a>
+                  <a href="https://www.facebook.com/share/1JPnWMk3md/?mibextid=wwXIfr" target="_blank" className="inline-flex items-center gap-4 bg-[#1877F2] text-white font-header text-xs tracking-widest uppercase px-10 py-4 rounded-full hover:opacity-80 transition-all shadow-2xl">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>
+                    {t.trust.facebookCta}
+                  </a>
+                </div>
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                 {[t.shopee.review1, t.shopee.review2, t.shopee.review3].map((rev, i) => (
-                   <div key={i} className="bg-white/5 p-8 rounded-3xl border border-white/5 hover:bg-white/10 transition-all">
-                     <div className="flex gap-1 mb-4 text-orange-400">
-                       {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
-                     </div>
-                     <p className="font-serif italic text-2xl text-white/80">"{rev}"</p>
-                   </div>
-                 ))}
+              <div className="w-full relative h-[500px] overflow-hidden group">
+                <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[#000000] to-transparent z-10 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#000000] to-transparent z-10 pointer-events-none" />
+                <div className="flex flex-col animate-marquee-vertical group-hover:[animation-play-state:paused]">
+                  {[...t.shopee.reviews, ...t.shopee.reviews].map((rev: string, i: number) => (
+                    <div key={i} className="bg-white/5 p-8 rounded-3xl border border-white/5 hover:bg-white/10 transition-all mb-4 mx-2">
+                      <div className="flex gap-1 mb-4 text-orange-400">
+                        {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
+                      </div>
+                      <p className="font-serif italic text-xl text-white/80">"{rev}"</p>
+                    </div>
+                  ))}
+                </div>
               </div>
            </div>
+           <style jsx>{`
+             @keyframes marqueeVertical {
+               0% { transform: translateY(0); }
+               100% { transform: translateY(-50%); }
+             }
+             .animate-marquee-vertical {
+               animation: marqueeVertical 30s linear infinite;
+             }
+           `}</style>
         </section>
 
         {/* MATERIALS */}
         <section id="materials" className="py-60 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-32 gap-10">
-              <h2 className="font-header text-[clamp(3.5rem,12vw,10rem)] leading-[0.8] uppercase tracking-tighter">{t.materials.title}</h2>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-10">
+              <h2 className="font-header text-[clamp(2.5rem,6vw,5rem)] leading-none uppercase tracking-tighter">{t.materials.title}</h2>
               <div className="font-header text-[10px] md:text-[12px] tracking-[0.4em] uppercase opacity-40">{t.materials.subtitle}</div>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-12 items-stretch">
@@ -337,11 +356,11 @@ export default function Home() {
                   <div className="space-y-12">
                     <div>
                       <h4 className="font-header text-[10px] tracking-[0.4em] uppercase opacity-30 mb-6">รายละเอียดวัสดุ (MATERIAL INSIGHT)</h4>
-                      <p className="text-3xl md:text-4xl font-serif italic text-black/80 leading-[1.4] tracking-tight">{selectedMat.details}</p>
+                      <p className="text-xl md:text-2xl font-serif italic text-black/80 leading-[1.8] tracking-normal break-words">{selectedMat.details}</p>
                     </div>
                     <div>
                       <h4 className="font-header text-[10px] tracking-[0.4em] uppercase opacity-30 mb-6">เหมาะสำหรับ (BEST FOR)</h4>
-                      <p className="font-body font-black text-xl uppercase tracking-tighter opacity-80 leading-relaxed">{selectedMat.bestFor}</p>
+                      <p className="font-body font-black text-lg md:text-xl uppercase tracking-wide opacity-80 leading-relaxed break-words">{selectedMat.bestFor}</p>
                     </div>
                   </div>
                 </div>
@@ -386,9 +405,8 @@ export default function Home() {
       </footer>
 
       {/* Floating LINE Button */}
-      <a href="https://line.me/ti/p/@pb3d" target="_blank" className="fixed bottom-8 right-8 z-[90] bg-[#06C755] text-white rounded-full flex items-center gap-3 px-6 py-4 shadow-2xl hover:scale-105 active:scale-95 transition-all">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.58 2 10c0 2.9 1.87 5.48 4.7 7.04-.13.5-.47 1.94-.54 2.22-.08.3-.38 1.18.16 1.18.52 0 2.4-1.6 3.3-2.22.45.12.92.18 1.38.18 5.52 0 10-3.58 10-8s-4.48-8-10-8zm-5 11h-1v-4h1v4zm3 0h-1v-4h1v4zm3-4v4h-1v-4h1zm3 4h-1v-4h1v4z"/></svg>
-        <span className="font-header text-[12px] tracking-widest uppercase">{t.contact.lineFloat}</span>
+      <a href="https://lin.ee/R8Vd7q5" target="_blank" rel="noreferrer" className="fixed bottom-8 right-8 z-[90] hover:scale-105 active:scale-95 transition-all">
+        <img src="https://scdn.line-apps.com/n/line_add_friends/btn/th.png" alt="เพิ่มเพื่อน" height="18" style={{ border: 0 }} />
       </a>
     </div>
   )

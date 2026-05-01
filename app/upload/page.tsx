@@ -388,9 +388,8 @@ export default function UploadPage() {
       </footer>
 
       {/* Floating LINE Button */}
-      <a href="https://line.me/ti/p/@pb3d" target="_blank" className="fixed bottom-8 right-8 z-[90] bg-[#06C755] text-white rounded-full flex items-center gap-3 px-6 py-4 shadow-2xl hover:scale-105 active:scale-95 transition-all">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.58 2 10c0 2.9 1.87 5.48 4.7 7.04-.13.5-.47 1.94-.54 2.22-.08.3-.38 1.18.16 1.18.52 0 2.4-1.6 3.3-2.22.45.12.92.18 1.38.18 5.52 0 10-3.58 10-8s-4.48-8-10-8zm-5 11h-1v-4h1v4zm3 0h-1v-4h1v4zm3-4v4h-1v-4h1zm3 4h-1v-4h1v4z"/></svg>
-        <span className="font-header text-[12px] tracking-widest uppercase">{t.contact.lineFloat}</span>
+      <a href="https://lin.ee/R8Vd7q5" target="_blank" rel="noreferrer" className="fixed bottom-8 right-8 z-[90] hover:scale-105 active:scale-95 transition-all">
+        <img src="https://scdn.line-apps.com/n/line_add_friends/btn/th.png" alt="เพิ่มเพื่อน" height="18" style={{ border: 0 }} />
       </a>
     </div>
   )

@@ -65,6 +65,7 @@ export const translations = {
       years: "ประสบการณ์กว่า 10 ปี",
       orders: "รีวิวจริงจากลูกค้ากว่า 1,000+",
       shopeeCta: "ไปที่ร้าน Shopee",
+      facebookCta: "เพจ Facebook",
     },
     shopee: {
       title: "ความเชื่อมั่นที่จับต้องได้.",
@@ -73,6 +74,14 @@ export const translations = {
       review1: "งานเนี๊ยบมากครับ ส่งไว แพ็คของมาดีสุดๆ แนะนำร้านนี้เลย",
       review2: "สั่งทำชิ้นส่วนพิเศษ ร้านให้คำแนะนำดีมาก งานออกมาตรงสเปคเป๊ะ",
       review3: "รวดเร็ว ทันใจ งานสวยคุ้มค่าราคาครับ",
+      reviews: [
+        "งานเนี๊ยบมากครับ ส่งไว แพ็คของมาดีสุดๆ แนะนำร้านนี้เลย",
+        "สั่งทำชิ้นส่วนพิเศษ ร้านให้คำแนะนำดีมาก งานออกมาตรงสเปคเป๊ะ",
+        "รวดเร็ว ทันใจ งานสวยคุ้มค่าราคาครับ",
+        "ตอบแชทไวมาก ให้คำปรึกษาดี งานพิมพ์ออกมาแข็งแรงทนทาน",
+        "ราคาดีแถมงานเนียนสุดๆ ไม่ผิดหวังเลยครับ",
+        "แพ็คเกจกันกระแทกมาดีมาก ชิ้นส่วนไม่เสียหายเลย พิมพ์สวยครับ"
+      ]
     },
     materials: {
       title: "คัดสรรวัสดุ.",
@@ -206,6 +215,7 @@ export const translations = {
       years: "10+ Years Excellence",
       orders: "1,000+ Verified Reviews",
       shopeeCta: "Visit Shopee Shop",
+      facebookCta: "Facebook Page",
     },
     shopee: {
       title: "Tangible Trust.",
@@ -214,6 +224,14 @@ export const translations = {
       review1: "Exceptional quality, super fast shipping and great packaging. Highly recommend!",
       review2: "Ordered custom parts, the shop provided great advice. Result was perfect.",
       review3: "Fast, reliable, and worth every penny. Beautiful work!",
+      reviews: [
+        "Exceptional quality, super fast shipping and great packaging. Highly recommend!",
+        "Ordered custom parts, the shop provided great advice. Result was perfect.",
+        "Fast, reliable, and worth every penny. Beautiful work!",
+        "Very responsive in chat, good consultation. The printed parts are very strong.",
+        "Great price and super smooth finish. Not disappointed at all!",
+        "Bubble wrapped perfectly. No damages. The print is beautiful."
+      ]
     },
     materials: {
       title: "Material Curated.",

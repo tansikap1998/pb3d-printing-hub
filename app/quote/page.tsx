@@ -8,18 +8,19 @@ import { supabase, isPlaceholder } from '@/lib/supabase/client'
 
 export default function QuotePage() {
   const router = useRouter()
-  const { estimateData, setEstimateData } = useOrderStore()
+  const { estimateData, setEstimateData, _hasHydrated } = useOrderStore()
   
   const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '' })
   const [loading, setLoading] = useState(false)
   
   useEffect(() => {
-    if (!estimateData) {
+    if (_hasHydrated && !estimateData) {
       router.replace('/upload')
     }
-  }, [estimateData, router])
+  }, [estimateData, _hasHydrated, router])
 
-  if (!estimateData) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>
+  if (!_hasHydrated) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>
+  if (!estimateData) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Redirecting...</div>
 
   const handleQuantityChange = (delta: number) => {
     const newQuantity = Math.max(1, estimateData.quantity + delta)
