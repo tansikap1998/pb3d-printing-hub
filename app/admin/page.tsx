@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from '@/lib/supabase/client'
+import { supabase, isPlaceholder } from '@/lib/supabase/client'
 
 interface Order {
   id: string; createdAt: string; status: string
@@ -42,7 +42,6 @@ export default function AdminPage() {
 
   const loadOrders = useCallback(async () => {
     try {
-      const isPlaceholder = supabase.supabaseUrl.includes('placeholder')
       if (!isPlaceholder) {
         const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
         if (error) throw error
@@ -91,7 +90,6 @@ export default function AdminPage() {
   }
 
   const updateStatus = async (id: string, newStatus: string) => {
-    const isPlaceholder = supabase.supabaseUrl.includes('placeholder')
     const tracking = newStatus === "shipped" ? (trackingInputs[id]?.trim() || null) : null
     
     if (newStatus === "shipped" && !tracking) { 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import generatePayload from 'promptpay-qr'
 import { Upload, CheckCircle } from 'lucide-react'
-import { supabase } from '@/lib/supabase/client'
+import { supabase, isPlaceholder } from '@/lib/supabase/client'
 
 // Replace this with the actual promptpay ID (Phone number or National ID)
 const PROMPTPAY_ID = "0812345678" 
@@ -23,7 +23,6 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const isPlaceholder = supabase.supabaseUrl.includes('placeholder')
         let fetchedOrder = null
 
         if (!isPlaceholder) {
@@ -70,8 +69,6 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
     setSubmitting(true)
     
     try {
-      const isPlaceholder = supabase.supabaseUrl.includes('placeholder')
-      
       if (!isPlaceholder) {
         // 1. Upload to Supabase Storage
         const fileExt = slipFile!.name.split('.').pop()

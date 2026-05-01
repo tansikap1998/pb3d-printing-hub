@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase/client'
+import { supabase, isPlaceholder } from '@/lib/supabase/client'
 
 interface ConsentState {
   necessary: boolean;
@@ -32,7 +32,6 @@ export default function CookieBanner() {
     setShow(false)
 
     try {
-      const isPlaceholder = supabase.supabaseUrl.includes('placeholder')
       if (!isPlaceholder) {
         await supabase.from('consent_logs').insert({
           necessary_accepted: state.necessary,

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useOrderStore } from '@/lib/store'
-import { supabase } from '@/lib/supabase/client'
+import { supabase, isPlaceholder } from '@/lib/supabase/client'
 
 export default function QuotePage() {
   const router = useRouter()
@@ -37,8 +37,6 @@ export default function QuotePage() {
       let orderId = crypto.randomUUID()
       
       // Attempt to save to Supabase
-      const isPlaceholder = supabase.supabaseUrl.includes('placeholder')
-      
       if (!isPlaceholder) {
         const { data, error } = await supabase.from('orders').insert({
           customer_name: customer.name,
