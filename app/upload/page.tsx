@@ -400,6 +400,7 @@ export default function UploadPage() {
             </div>
           )}
         </div>
+        </div>
       </main>
 
       <footer className="py-20 px-8 border-t border-white/5 flex flex-col items-center gap-10 text-white/20">
