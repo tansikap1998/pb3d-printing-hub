@@ -219,14 +219,14 @@ export default function UploadPage() {
         </div>
       )}
 
-      <main className="pt-40 pb-32 px-6 max-w-7xl mx-auto">
+      <main className="pt-40 pb-16 px-6 max-w-7xl mx-auto">
         <Stepper steps={[t.nav.order, t.upload.settings, "Checkout"]} currentStep={models.length > 0 ? 1 : 0} />
         
-        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-16">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6">
         <div className="lg:col-span-7 space-y-8">
           <div className="border-b border-white/5 pb-4 mb-4">
             <span className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase block mb-2">Step 01</span>
-            <h2 className="font-header text-5xl md:text-6xl uppercase tracking-tighter leading-none">{t.upload.title}</h2>
+            <h2 className="font-header text-4xl uppercase tracking-tighter leading-none">{t.upload.title}</h2>
           </div>
 
           {models.length > 0 && (
@@ -240,12 +240,12 @@ export default function UploadPage() {
                   <p className="font-medium truncate max-w-[200px] md:max-w-md">{models[0].name}</p>
                 </div>
               </div>
-              <div className="flex gap-6">
-                <label className="cursor-pointer font-header text-xl tracking-widest uppercase bg-white/10 hover:bg-white/20 px-10 py-5 rounded-xl transition-all">
+              <div className="flex gap-4">
+                <label className="cursor-pointer font-header text-base tracking-widest uppercase bg-white/10 hover:bg-white/20 px-6 py-3 rounded-xl transition-all">
                   Change
                   <input type="file" accept=".stl,.3mf" onChange={handleFileUpload} className="hidden" />
                 </label>
-                <button onClick={() => setModels([])} className="font-header text-xl tracking-widest uppercase bg-red-500/10 text-red-500 hover:bg-red-500/20 px-10 py-5 rounded-xl transition-all">
+                <button onClick={() => setModels([])} className="font-header text-base tracking-widest uppercase bg-red-500/10 text-red-500 hover:bg-red-500/20 px-6 py-3 rounded-xl transition-all">
                   Delete
                 </button>
               </div>
@@ -273,10 +273,10 @@ export default function UploadPage() {
                 <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
               </Canvas>
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/10">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 bg-neutral-900 border border-white/10 rounded-[2rem]">
                 <input type="file" multiple accept=".stl,.3mf" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-8 opacity-20"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                <p className="font-header text-2xl tracking-[0.3em] uppercase">{t.upload.title}</p>
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-6 opacity-20"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                <p className="font-header text-xl tracking-[0.3em] uppercase">{t.upload.title}</p>
                 <p className="text-[10px] font-black tracking-[0.5em] mt-4 opacity-40">STL / 3MF FILES ONLY</p>
               </div>
             )}
@@ -326,7 +326,7 @@ export default function UploadPage() {
               <label className="text-[12px] font-black uppercase tracking-tight opacity-30 mb-6 block">{t.upload.material} (วัสดุ)</label>
               <div className="grid grid-cols-3 gap-3">
                 {MATERIALS.map(m => (
-                  <button key={m} onClick={() => setMaterial(m)} className={`py-8 rounded-xl font-header uppercase tracking-[0.2em] border-2 transition-all duration-200 cursor-pointer ${m.length > 8 ? 'text-lg sm:text-xl' : 'text-2xl'} ${material === m ? 'bg-white text-black border-white shadow-xl' : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/40 text-white/40'}`}>
+                  <button key={m} onClick={() => setMaterial(m)} className={`py-3 px-5 rounded-xl font-header font-medium uppercase tracking-[0.2em] border-2 transition-all duration-200 cursor-pointer ${m.length > 8 ? 'text-[10px] sm:text-xs' : 'text-base'} ${material === m ? 'bg-white text-black border-white shadow-xl' : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/40 text-white/40'}`}>
                     {m}
                   </button>
                 ))}
@@ -336,7 +336,7 @@ export default function UploadPage() {
             <div className="grid grid-cols-2 gap-8">
               <div>
                 <label className="text-[12px] font-black uppercase tracking-tight opacity-30 mb-6 block">{t.upload.layer}</label>
-                <select value={layerHeight} onChange={(e) => setLayerHeight(Number(e.target.value))} className="w-full bg-white/[0.05] border-2 border-white/5 rounded-2xl px-6 py-4 font-header text-sm tracking-widest text-white focus:outline-none focus:border-white/20 transition-all">
+                <select value={layerHeight} onChange={(e) => setLayerHeight(Number(e.target.value))} className="w-full bg-white/[0.05] border-2 border-white/5 rounded-lg px-4 py-3 font-header text-base tracking-widest text-white focus:outline-none focus:border-white/20 transition-all">
                   <option value={0.12} className="bg-black">0.12mm (Fine)</option>
                   <option value={0.2} className="bg-black">0.20mm (Standard)</option>
                   <option value={0.28} className="bg-black">0.28mm (Draft)</option>
@@ -344,7 +344,7 @@ export default function UploadPage() {
               </div>
               <div>
                 <label className="text-[12px] font-black uppercase tracking-tight opacity-30 mb-6 block">{t.upload.infill}</label>
-                <select value={infill} onChange={(e) => setInfill(Number(e.target.value))} className="w-full bg-white/[0.05] border-2 border-white/5 rounded-2xl px-6 py-4 font-header text-sm tracking-widest text-white focus:outline-none focus:border-white/20 transition-all">
+                <select value={infill} onChange={(e) => setInfill(Number(e.target.value))} className="w-full bg-white/[0.05] border-2 border-white/5 rounded-lg px-4 py-3 font-header text-base tracking-widest text-white focus:outline-none focus:border-white/20 transition-all">
                   <option value={15} className="bg-black">15% (Standard)</option>
                   <option value={30} className="bg-black">30% (Functional)</option>
                   <option value={100} className="bg-black">100% (Solid)</option>
@@ -367,7 +367,7 @@ export default function UploadPage() {
               <p className={`text-base mt-4 font-medium uppercase tracking-tight ${colorId === 'white' ? 'text-white' : 'opacity-40'}`}>{t.colors[colorId as keyof typeof t.colors]}</p>
             </div>
 
-            <button onClick={handleEstimate} disabled={loading || models.length === 0} className={`w-full py-12 rounded-2xl font-header text-3xl md:text-4xl font-bold uppercase tracking-[0.4em] transition-all duration-200 shadow-2xl active:scale-[0.98] ${result ? 'bg-transparent border-2 border-white/40 hover:bg-white/10 text-white' : 'bg-white text-black hover:bg-white/90'}`}>
+            <button onClick={handleEstimate} disabled={loading || models.length === 0} className={`w-full py-4 rounded-xl font-header text-xl font-semibold uppercase tracking-[0.4em] transition-all duration-200 shadow-2xl active:scale-[0.98] ${result ? 'bg-transparent border-2 border-white/40 hover:bg-white/10 text-white' : 'bg-white text-black hover:bg-white/90'}`}>
               {loading ? t.upload.calculating : (result ? t.upload.reestimate : t.upload.estimate)}
             </button>
           </div>
@@ -394,7 +394,7 @@ export default function UploadPage() {
                   setEstimateData({ models, technology, material, infill, layerHeight, colorId, quantity, result })
                   router.push('/quote')
                 }} 
-                className="w-full mt-4 py-12 bg-black text-white rounded-2xl font-header text-4xl md:text-5xl font-bold uppercase tracking-tight hover:bg-gray-800 transition-all duration-200 shadow-xl active:scale-[0.98]">
+                className="w-full mt-4 py-5 bg-black text-white rounded-xl font-header text-xl font-semibold uppercase tracking-tight hover:bg-gray-800 transition-all duration-200 shadow-xl active:scale-[0.98]">
                 Proceed to Quote
               </button>
             </div>

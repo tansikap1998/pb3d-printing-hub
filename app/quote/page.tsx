@@ -136,9 +136,9 @@ export default function QuotePage() {
                 <div className="flex justify-between items-center py-4">
                   <span className="opacity-40">Quantity</span>
                   <div className="flex items-center gap-6 bg-white/5 rounded-full px-4 py-2">
-                    <button onClick={() => handleQuantityChange(-1)} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-2xl">-</button>
-                    <span className="w-8 text-center text-2xl">{estimateData.quantity}</span>
-                    <button onClick={() => handleQuantityChange(1)} className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-2xl">+</button>
+                    <button onClick={() => handleQuantityChange(-1)} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-xl">-</button>
+                    <span className="w-6 text-center text-xl">{estimateData.quantity}</span>
+                    <button onClick={() => handleQuantityChange(1)} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors text-xl">+</button>
                   </div>
                 </div>
               </div>
@@ -183,7 +183,7 @@ export default function QuotePage() {
             <button 
               onClick={handleConfirm}
               disabled={!isValid || loading}
-              className="w-full py-12 rounded-2xl bg-white text-black font-header text-3xl md:text-4xl font-bold uppercase tracking-[0.4em] transition-all disabled:opacity-20 hover:bg-white/90 active:scale-[0.98]">
+              className="w-full py-5 rounded-xl bg-white text-black font-header text-xl font-semibold uppercase tracking-[0.4em] transition-all disabled:opacity-20 hover:bg-white/90 active:scale-[0.98]">
               {loading ? 'Processing...' : 'Confirm & Pay'}
             </button>
           </div>

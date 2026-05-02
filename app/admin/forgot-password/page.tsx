@@ -38,39 +38,39 @@ export default function ForgotPasswordPage() {
         .font-body { font-family: 'Inter', sans-serif; }
       `}</style>
 
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-white/[0.02] border border-white/10 mb-6 shadow-2xl">
-            <span className="text-4xl">🔑</span>
+      <div className="w-full max-w-md md:max-w-lg space-y-6">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/[0.02] border border-white/10 mb-4 shadow-2xl opacity-80">
+            <span className="text-xl">🔑</span>
           </div>
-          <h1 className="font-header text-4xl tracking-tighter uppercase leading-none text-white">
+          <h1 className="font-header text-3xl tracking-normal uppercase leading-none text-white font-bold">
             PB3D<span className="text-white/20">HUB</span>
           </h1>
-          <p className="font-header text-[10px] tracking-[0.4em] uppercase opacity-40 mt-4">Access Recovery</p>
+          <p className="font-body text-sm text-white/60 mt-2">Access Recovery</p>
         </div>
 
-        <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-10 shadow-2xl backdrop-blur-xl">
+        <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl backdrop-blur-xl">
           {sent ? (
             <div className="text-center space-y-6">
-              <div className="text-5xl">📨</div>
+              <div className="text-4xl">📨</div>
               <div>
                 <p className="font-header text-xl tracking-tighter uppercase">Link Sent</p>
-                <p className="font-body text-xs text-white/40 mt-2 leading-relaxed">
+                <p className="font-body text-sm text-white/60 mt-2 leading-relaxed">
                   Check your inbox at <span className="text-white">{email}</span>
                   <br />The link expires in <strong className="text-white">15 minutes</strong>
                 </p>
               </div>
               <Link
                 href="/admin/login"
-                className="block w-full py-4 bg-white/5 hover:bg-white/10 border border-white/5 font-header text-[10px] tracking-[0.3em] uppercase rounded-2xl transition-all mt-4"
+                className="block w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 font-header text-lg font-semibold tracking-normal uppercase rounded-xl transition-all mt-4 text-center"
               >
                 ← Return to Portal
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block font-header text-[10px] tracking-[0.4em] text-white/20 uppercase mb-4">
+                <label className="block font-header text-[10px] tracking-[0.4em] text-white/20 uppercase mb-3">
                   Identity (Email)
                 </label>
                 <input
@@ -79,20 +79,20 @@ export default function ForgotPasswordPage() {
                   onChange={e => setEmail(e.target.value)}
                   placeholder="admin@pb3d.com"
                   required
-                  className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-white text-sm placeholder-white/10 focus:outline-none focus:border-white/20 transition-all font-body"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-base placeholder-white/10 focus:outline-none focus:border-white/30 transition-all font-body"
                 />
               </div>
 
               {error && (
-                <div className="bg-red-400/10 border border-red-400/20 rounded-2xl px-6 py-4 text-red-400 font-header text-[10px] tracking-widest uppercase">
-                  ⚠️ {error}
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-300 font-body text-sm">
+                   {error}
                 </div>
               )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-6 bg-white text-black font-header text-xs tracking-[0.3em] uppercase rounded-2xl hover:bg-white/80 disabled:opacity-20 transition-all shadow-2xl"
+                className="w-full py-4 bg-white text-black font-header text-lg font-semibold tracking-normal uppercase rounded-xl hover:bg-gray-300 disabled:opacity-20 transition-all shadow-2xl"
               >
                 {loading ? "Sending..." : "Send Reset Link"}
               </button>
@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
               <div className="mt-8 text-center border-t border-white/5 pt-8">
                 <Link
                   href="/admin/login"
-                  className="font-header text-[10px] tracking-[0.4em] text-white/20 hover:text-white transition-all uppercase"
+                  className="font-header text-sm text-white/60 hover:text-white transition-all uppercase tracking-normal"
                 >
                   ← Return to Login
                 </Link>

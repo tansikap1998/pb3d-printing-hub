@@ -150,8 +150,8 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
         />
 
         <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
-          <Link href="/upload" className="flex items-center gap-4 text-white/40 hover:text-white transition-colors text-2xl font-header uppercase tracking-widest">
-            <ArrowLeft className="w-8 h-8" />
+          <Link href="/upload" className="flex items-center gap-2 text-white/40 hover:text-white transition-colors text-base font-header uppercase tracking-widest">
+            <ArrowLeft className="w-4 h-4" />
             Back to edit order
           </Link>
           <div className="text-center">
@@ -188,9 +188,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
               </div>
               <p className="font-header text-5xl md:text-6xl font-bold tracking-tighter mb-4">฿{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               <div className="flex flex-col gap-4">
-                <p className="font-header text-[24px] tracking-widest uppercase opacity-40">Scan to pay instantly</p>
-                <button className="flex items-center justify-center gap-4 text-white/60 hover:text-white transition-colors text-[24px] font-header uppercase tracking-widest mt-4 border-2 border-white/10 px-8 py-4 rounded-xl">
-                  <Download className="w-8 h-8" />
+                <p className="font-header text-sm tracking-widest uppercase opacity-40">Scan to pay instantly</p>
+                <button className="flex items-center justify-center gap-3 text-white/60 hover:text-white transition-colors text-base font-header uppercase tracking-widest mt-4 border border-white/10 px-6 py-3 rounded-xl">
+                  <Download className="w-4 h-4" />
                   Download QR
                 </button>
               </div>
@@ -237,9 +237,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
               {slipPreview ? (
                 <div className="absolute inset-0 bg-neutral-900">
                   <img src={slipPreview} alt="Slip preview" className="w-full h-full object-contain" />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-8 z-30">
-                    <button className="font-header text-2xl tracking-widest uppercase bg-white text-black px-10 py-5 rounded-2xl">Replace</button>
-                    <button onClick={(e) => { e.preventDefault(); setSlipFile(null); setSlipPreview(null); }} className="font-header text-2xl tracking-widest uppercase bg-red-500 text-white px-10 py-5 rounded-2xl">Delete</button>
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 z-30">
+                    <button className="font-header text-base tracking-widest uppercase bg-white text-black px-6 py-3 rounded-xl">Replace</button>
+                    <button onClick={(e) => { e.preventDefault(); setSlipFile(null); setSlipPreview(null); }} className="font-header text-base tracking-widest uppercase bg-red-500 text-white px-6 py-3 rounded-xl">Delete</button>
                   </div>
                   <div className="absolute top-4 right-4 bg-green-500 rounded-full p-1 shadow-lg">
                     <CheckCircle className="w-4 h-4 text-white" />
@@ -265,15 +265,15 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
               <button 
                 onClick={handleSubmitSlip}
                 disabled={!slipPreview || submitting}
-                className={`w-full py-12 rounded-3xl font-header text-3xl md:text-4xl uppercase tracking-[0.4em] transition-all duration-300 shadow-2xl flex items-center justify-center gap-6 ${
+                className={`w-full py-5 rounded-xl font-header text-xl uppercase tracking-[0.4em] transition-all duration-300 shadow-2xl flex items-center justify-center gap-4 ${
                   !slipPreview || submitting 
                     ? 'bg-white/10 text-white/40 cursor-not-allowed' 
-                    : 'bg-white text-black hover:bg-gray-300 font-bold active:scale-[0.98]'
+                    : 'bg-white text-black hover:bg-gray-300 font-semibold active:scale-[0.98]'
                 }`}
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="w-8 h-8 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Processing...
                   </>
                 ) : (
