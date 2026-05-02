@@ -146,7 +146,7 @@ export default function UploadPage() {
         </div>
         
         <div className="flex items-center gap-6 relative z-[110]">
-          <button onClick={() => setLang(lang === 'TH' ? 'EN' : 'TH')} className="font-header text-[10px] tracking-[0.4em] uppercase hover:opacity-50 border border-white/10 px-4 py-2 rounded-full hidden md:block">
+          <button onClick={() => setLang(lang === 'TH' ? 'EN' : 'TH')} className="font-header text-2xl tracking-[0.4em] uppercase hover:opacity-50 border-2 border-white/10 px-8 py-4 rounded-full hidden md:block">
             {lang === 'TH' ? 'ENGLISH' : 'ภาษาไทย'}
           </button>
           {/* Hamburger Toggle */}
@@ -240,12 +240,12 @@ export default function UploadPage() {
                   <p className="font-medium truncate max-w-[200px] md:max-w-md">{models[0].name}</p>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <label className="cursor-pointer font-header text-[10px] tracking-widest uppercase bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl transition-all">
+              <div className="flex gap-6">
+                <label className="cursor-pointer font-header text-xl tracking-widest uppercase bg-white/10 hover:bg-white/20 px-10 py-5 rounded-xl transition-all">
                   Change
                   <input type="file" accept=".stl,.3mf" onChange={handleFileUpload} className="hidden" />
                 </label>
-                <button onClick={() => setModels([])} className="font-header text-[10px] tracking-widest uppercase bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded-xl transition-all">
+                <button onClick={() => setModels([])} className="font-header text-xl tracking-widest uppercase bg-red-500/10 text-red-500 hover:bg-red-500/20 px-10 py-5 rounded-xl transition-all">
                   Delete
                 </button>
               </div>
@@ -326,7 +326,7 @@ export default function UploadPage() {
               <label className="text-[12px] font-black uppercase tracking-tight opacity-30 mb-6 block">{t.upload.material} (วัสดุ)</label>
               <div className="grid grid-cols-3 gap-3">
                 {MATERIALS.map(m => (
-                  <button key={m} onClick={() => setMaterial(m)} className={`py-4 rounded-xl font-header uppercase tracking-[0.2em] border-2 transition-all duration-200 cursor-pointer ${m.length > 8 ? 'text-[9px] sm:text-[10px]' : 'text-[12px]'} ${material === m ? 'bg-white text-black border-white shadow-xl' : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/40 text-white/40'}`}>
+                  <button key={m} onClick={() => setMaterial(m)} className={`py-8 rounded-xl font-header uppercase tracking-[0.2em] border-2 transition-all duration-200 cursor-pointer ${m.length > 8 ? 'text-lg sm:text-xl' : 'text-2xl'} ${material === m ? 'bg-white text-black border-white shadow-xl' : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/40 text-white/40'}`}>
                     {m}
                   </button>
                 ))}
@@ -367,7 +367,7 @@ export default function UploadPage() {
               <p className={`text-base mt-4 font-medium uppercase tracking-tight ${colorId === 'white' ? 'text-white' : 'opacity-40'}`}>{t.colors[colorId as keyof typeof t.colors]}</p>
             </div>
 
-            <button onClick={handleEstimate} disabled={loading || models.length === 0} className={`w-full py-6 rounded-2xl font-header text-sm uppercase tracking-[0.4em] transition-all duration-200 shadow-2xl active:scale-[0.98] ${result ? 'bg-transparent border border-white/40 hover:bg-white/10 text-white' : 'bg-white text-black hover:bg-white/90'}`}>
+            <button onClick={handleEstimate} disabled={loading || models.length === 0} className={`w-full py-12 rounded-2xl font-header text-3xl md:text-4xl font-bold uppercase tracking-[0.4em] transition-all duration-200 shadow-2xl active:scale-[0.98] ${result ? 'bg-transparent border-2 border-white/40 hover:bg-white/10 text-white' : 'bg-white text-black hover:bg-white/90'}`}>
               {loading ? t.upload.calculating : (result ? t.upload.reestimate : t.upload.estimate)}
             </button>
           </div>
@@ -394,7 +394,7 @@ export default function UploadPage() {
                   setEstimateData({ models, technology, material, infill, layerHeight, colorId, quantity, result })
                   router.push('/quote')
                 }} 
-                className="w-full mt-4 py-7 bg-black text-white rounded-2xl font-header text-lg font-semibold uppercase tracking-tight hover:bg-gray-800 transition-all duration-200 shadow-xl active:scale-[0.98]">
+                className="w-full mt-4 py-12 bg-black text-white rounded-2xl font-header text-4xl md:text-5xl font-bold uppercase tracking-tight hover:bg-gray-800 transition-all duration-200 shadow-xl active:scale-[0.98]">
                 Proceed to Quote
               </button>
             </div>

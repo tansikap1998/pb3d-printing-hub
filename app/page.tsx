@@ -48,12 +48,12 @@ const ImageCarousel = () => {
     "/showcase/showcase_6.png",
   ]
   return (
-    <div id="showcase" className="py-40 px-8">
-      <div className="max-w-7xl mx-auto mb-24">
+    <div id="showcase" className="py-20 px-8">
+      <div className="max-w-7xl mx-auto mb-12">
         <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-8">Showcase.</h2>
         <p className="font-serif text-2xl md:text-3xl text-white/60 lowercase">High-quality 3D printing gallery</p>
       </div>
-      <div className="w-full overflow-hidden bg-white/5 py-32 border-y border-white/5">
+      <div className="w-full overflow-hidden bg-white/5 py-16 border-y border-white/5">
         <div className="flex animate-marquee whitespace-nowrap">
           {[...images, ...images, ...images].map((img, i) => (
             <div key={i} className="inline-block px-6">
@@ -74,20 +74,20 @@ const ImageCarousel = () => {
 }
 
 const TrustBar = ({ t }: { t: any }) => (
-  <div className="border-y border-white/5 py-14 flex flex-wrap justify-center items-center gap-12 md:gap-32">
-    <div className="flex flex-col items-center gap-2">
-      <span className="font-header text-4xl tracking-tighter">4.9/5.0</span>
-      <span className="font-header text-[9px] tracking-[0.5em] uppercase opacity-30">{t.trust.rating}</span>
+  <div className="border-y border-white/5 py-24 flex flex-wrap justify-center items-center gap-12 md:gap-32">
+    <div className="flex flex-col items-center gap-4">
+      <span className="font-header text-8xl tracking-tighter">4.9/5.0</span>
+      <span className="font-header text-[36px] tracking-[0.5em] uppercase opacity-30">{t.trust.rating}</span>
     </div>
-    <div className="hidden md:block w-px h-12 bg-white/5" />
-    <div className="flex flex-col items-center gap-2">
-      <span className="font-header text-4xl tracking-tighter">10+</span>
-      <span className="font-header text-[9px] tracking-[0.5em] uppercase opacity-30">{t.trust.years}</span>
+    <div className="hidden md:block w-px h-24 bg-white/5" />
+    <div className="flex flex-col items-center gap-4">
+      <span className="font-header text-8xl tracking-tighter">10+</span>
+      <span className="font-header text-[36px] tracking-[0.5em] uppercase opacity-30">{t.trust.years}</span>
     </div>
-    <div className="hidden md:block w-px h-12 bg-white/5" />
-    <div className="flex flex-col items-center gap-2">
-      <span className="font-header text-4xl tracking-tighter">1,000+</span>
-      <span className="font-header text-[9px] tracking-[0.5em] uppercase opacity-30">{t.trust.orders}</span>
+    <div className="hidden md:block w-px h-24 bg-white/5" />
+    <div className="flex flex-col items-center gap-4">
+      <span className="font-header text-8xl tracking-tighter">1,000+</span>
+      <span className="font-header text-[36px] tracking-[0.5em] uppercase opacity-30">{t.trust.orders}</span>
     </div>
   </div>
 )
@@ -124,7 +124,7 @@ export default function Home() {
           <a href="#how-it-works" className="hover:opacity-50 transition-opacity">{t.nav.howItWorks}</a>
           <a href="#materials" className="hover:opacity-50 transition-opacity">{t.nav.materials}</a>
           <Link href="/upload" className="hover:opacity-50 transition-opacity">{t.nav.order}</Link>
-          <button onClick={() => setLang(lang === 'TH' ? 'EN' : 'TH')} className="hover:opacity-50 transition-opacity border-x border-white/10 px-6">
+          <button onClick={() => setLang(lang === 'TH' ? 'EN' : 'TH')} className="hover:opacity-50 transition-opacity border-x-2 border-white/10 px-8 py-2 text-xl">
             {lang === 'TH' ? 'ENGLISH' : 'ภาษาไทย'}
           </button>
         </div>
@@ -151,7 +151,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <Link href="/upload" className="hidden lg:block font-header text-xs tracking-[0.3em] uppercase border border-white/20 px-8 py-3 rounded-full hover:bg-white hover:text-black transition-all">
+        <Link href="/upload" className="hidden lg:block font-header text-2xl tracking-[0.3em] uppercase border-2 border-white/20 px-10 py-4 rounded-full hover:bg-white hover:text-black transition-all">
           {t.nav.start}
         </Link>
       </nav>
@@ -232,24 +232,24 @@ export default function Home() {
             <p className="mt-8 font-header text-[1.2rem] md:text-[1.5rem] tracking-[0.1em] text-white/80 max-w-xl leading-relaxed">
               {t.hero.copyTag}
             </p>
-            <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-              <Link href="/upload" className="w-full sm:w-auto bg-white text-black px-12 py-6 rounded-full font-header text-xs tracking-[0.3em] uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)] text-center">
+            <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-10">
+              <Link href="/upload" className="w-full sm:w-auto bg-white text-black px-24 py-12 rounded-full font-header text-3xl md:text-3xl font-bold tracking-[0.3em] uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)] text-center">
                 📁 {t.hero.cta}
               </Link>
-              <button onClick={() => setShowFindFiles(true)} className="w-full sm:w-auto bg-white/10 border border-white/20 text-white px-10 py-6 rounded-full font-header text-xs tracking-[0.3em] uppercase hover:bg-white/20 active:scale-95 transition-all text-center">
+              <button onClick={() => setShowFindFiles(true)} className="w-full sm:w-auto bg-white/10 border border-white/20 text-white px-20 py-12 rounded-full font-header text-3xl md:text-3xl font-bold tracking-[0.3em] uppercase hover:bg-white/20 active:scale-95 transition-all text-center">
                 🔍 {t.hero.ctaSearch}
               </button>
             </div>
             <div className="mt-20 flex flex-col md:flex-row justify-between items-start md:items-end gap-12 border-t border-white/10 pt-10">
               <p className="max-w-xl font-body text-white/40 text-sm md:text-base leading-relaxed tracking-wide">{t.hero.desc}</p>
-              <div className="flex gap-16 font-header text-[10px] tracking-[0.4em] uppercase">
-                <div className="flex flex-col gap-2">
+              <div className="flex gap-24 font-header text-[20px] tracking-[0.4em] uppercase font-bold">
+                <div className="flex flex-col gap-4">
                   <span className="text-white/20">Studio</span>
                   <span>BKK — TH</span>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <span className="text-white/20">{t.hero.status}</span>
-                  <span className="text-green-500">{t.hero.online}</span>
+                <div className="flex flex-col gap-4">
+                  <span className="text-white/20">System Status</span>
+                  <span className="text-green-500">Online — Ships within 48 hrs</span>
                 </div>
               </div>
             </div>
@@ -311,10 +311,10 @@ export default function Home() {
                 <div className="flex flex-col animate-marquee-vertical group-hover:[animation-play-state:paused]">
                   {[...t.shopee.reviews, ...t.shopee.reviews].map((rev: string, i: number) => (
                     <div key={i} className="bg-white/5 p-12 rounded-[3rem] border border-white/5 hover:bg-white/10 transition-all mb-8 mx-2">
-                      <div className="flex gap-2 mb-8 text-orange-400 text-4xl">
+                      <div className="flex gap-2 mb-6 text-orange-400 text-3xl">
                         {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
                       </div>
-                      <p className="font-serif italic text-4xl md:text-5xl text-white/80 leading-snug">"{rev}"</p>
+                      <p className="font-serif italic text-xl md:text-2xl text-white/60 leading-snug">"{rev}"</p>
                     </div>
                   ))}
                 </div>
@@ -383,13 +383,11 @@ export default function Home() {
         <ImageCarousel />
 
         {/* CTA */}
-        <section className="pt-60 pb-20 px-8 text-center flex flex-col items-center">
-          <h2 className="font-header text-3xl md:text-3xl uppercase tracking-tighter mb-12 max-w-4xl">
-            พร้อมหรือยังที่จะ<br/>
-            <span className="font-serif italic tracking-normal text-white/10 lowercase block my-4">ทำให้</span>
-            จินตนาการเป็นจริง.
+        <section className="pt-40 pb-20 px-8 text-center flex flex-col items-center">
+          <h2 className="font-header text-6xl md:text-6xl uppercase tracking-tighter mb-16 max-w-4xl">
+            Ready to turn your imagination into reality?
           </h2>
-          <Link href="/upload" className="bg-white text-black px-12 py-6 rounded-2xl font-header text-2xl md:text-3xl font-bold tracking-[0.2em] uppercase hover:bg-[#9CA3AF] transition-all duration-300 shadow-[0_0_50px_rgba(255,255,255,0.1)] text-center active:scale-95">
+          <Link href="/upload" className="bg-white text-black px-24 py-12 rounded-2xl font-header text-4xl md:text-4xl font-bold tracking-[0.2em] uppercase hover:bg-[#9CA3AF] transition-all duration-300 shadow-[0_0_50px_rgba(255,255,255,0.1)] text-center active:scale-95">
             {t.nav.order}
           </Link>
         </section>
