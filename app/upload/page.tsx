@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { translations, Language } from '@/lib/translations'
 import { useOrderStore } from '@/lib/store'
+import { Stepper } from '@/components/Stepper'
 
 const MATERIALS = ["PLA", "PETG", "ABS", "ASA", "TPU", "CarbonFiber", "Nylon"]
 const COLORS = [
@@ -144,7 +145,7 @@ export default function UploadPage() {
           </Link>
         </div>
         
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-6 relative z-[110]">
           <button onClick={() => setLang(lang === 'TH' ? 'EN' : 'TH')} className="font-header text-[10px] tracking-[0.4em] uppercase hover:opacity-50 border border-white/10 px-4 py-2 rounded-full hidden md:block">
             {lang === 'TH' ? 'ENGLISH' : 'ภาษาไทย'}
           </button>
@@ -218,13 +219,40 @@ export default function UploadPage() {
         </div>
       )}
 
-      <main className="pt-40 pb-32 px-6 max-w-7xl mx-auto flex flex-col lg:grid lg:grid-cols-12 gap-16">
+      <main className="pt-40 pb-32 px-6 max-w-7xl mx-auto">
+        <Stepper steps={[t.nav.order, t.upload.settings, "Checkout"]} currentStep={models.length > 0 ? 1 : 0} />
+        
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-16">
         <div className="lg:col-span-7 space-y-8">
-          <div className="flex justify-between items-end border-b border-white/5 pb-4 mb-4">
-            <h2 className="font-header text-3xl uppercase tracking-tighter leading-none">{t.upload.title}</h2>
-            <span className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase">Step 01</span>
+          <div className="border-b border-white/5 pb-4 mb-4">
+            <span className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase block mb-2">Step 01</span>
+            <h2 className="font-header text-5xl md:text-6xl uppercase tracking-tighter leading-none">{t.upload.title}</h2>
           </div>
-          <div className="aspect-square bg-white/[0.02] border border-white/5 rounded-[3rem] overflow-hidden relative shadow-2xl">
+
+          {models.length > 0 && (
+            <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10 mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center gap-4 text-sm">
+                <div className="p-2 bg-white/10 rounded-lg">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                </div>
+                <div>
+                  <p className="font-header text-[11px] tracking-widest uppercase text-white/40 mb-1">Current File</p>
+                  <p className="font-medium truncate max-w-[200px] md:max-w-md">{models[0].name}</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <label className="cursor-pointer font-header text-[10px] tracking-widest uppercase bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl transition-all">
+                  Change
+                  <input type="file" accept=".stl,.3mf" onChange={handleFileUpload} className="hidden" />
+                </label>
+                <button onClick={() => setModels([])} className="font-header text-[10px] tracking-widest uppercase bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded-xl transition-all">
+                  Delete
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="aspect-square bg-neutral-900 border border-white/10 rounded-[2rem] overflow-hidden relative shadow-2xl sticky top-24">
             {models.length > 0 ? (
               <Canvas 
                 shadows 
@@ -238,7 +266,7 @@ export default function UploadPage() {
                 }}
               >
                 <Suspense fallback={null}>
-                  <Stage intensity={0.5} environment="city" adjustCamera={false}>
+                  <Stage intensity={0.5} environment="city" adjustCamera={true}>
                     <Center><Model url={models[0].url} fileName={models[0].name} /></Center>
                   </Stage>
                 </Suspense>
@@ -272,15 +300,15 @@ export default function UploadPage() {
           {models.length > 0 && (
             <div className="grid grid-cols-3 gap-6 bg-white/[0.02] p-10 rounded-[2.5rem] border border-white/5">
               <div className="text-center">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] opacity-30 mb-3">{t.upload.dimensions} X</p>
+                <p className="text-[11px] font-black uppercase tracking-tight opacity-30 mb-3">{t.upload.dimensions} X</p>
                 <p className="font-header text-3xl tracking-tighter">{models[0].dimensions.x.toFixed(1)} <span className="text-xs opacity-20 ml-1 uppercase">mm</span></p>
               </div>
               <div className="text-center border-x border-white/5">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] opacity-30 mb-3">{t.upload.dimensions} Y</p>
+                <p className="text-[11px] font-black uppercase tracking-tight opacity-30 mb-3">{t.upload.dimensions} Y</p>
                 <p className="font-header text-3xl tracking-tighter">{models[0].dimensions.y.toFixed(1)} <span className="text-xs opacity-20 ml-1 uppercase">mm</span></p>
               </div>
               <div className="text-center">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] opacity-30 mb-3">{t.upload.dimensions} Z</p>
+                <p className="text-[11px] font-black uppercase tracking-tight opacity-30 mb-3">{t.upload.dimensions} Z</p>
                 <p className="font-header text-3xl tracking-tighter">{models[0].dimensions.z.toFixed(1)} <span className="text-xs opacity-20 ml-1 uppercase">mm</span></p>
               </div>
             </div>
@@ -288,17 +316,17 @@ export default function UploadPage() {
         </div>
 
         <div className="lg:col-span-5 space-y-12">
-          <div className="flex justify-between items-end border-b border-white/5 pb-4">
+          <div className="border-b border-white/5 pb-4">
+            <span className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase block mb-2">Step 02</span>
             <h2 className="font-header text-3xl uppercase tracking-tighter leading-none">{t.upload.settings}</h2>
-            <span className="font-header text-[10px] tracking-[0.4em] opacity-30 uppercase">Step 02</span>
           </div>
 
           <div className="space-y-10">
             <div>
-              <label className="text-[12px] font-black uppercase tracking-[0.4em] opacity-30 mb-6 block">{t.upload.material}</label>
+              <label className="text-[12px] font-black uppercase tracking-tight opacity-30 mb-6 block">{t.upload.material} (วัสดุ)</label>
               <div className="grid grid-cols-3 gap-3">
                 {MATERIALS.map(m => (
-                  <button key={m} onClick={() => setMaterial(m)} className={`py-4 rounded-xl font-header text-[12px] uppercase tracking-[0.2em] border-2 transition-all ${material === m ? 'bg-white text-black border-white shadow-xl' : 'bg-transparent border-white/5 hover:border-white/20 text-white/40'}`}>
+                  <button key={m} onClick={() => setMaterial(m)} className={`py-4 rounded-xl font-header uppercase tracking-[0.2em] border-2 transition-all duration-200 cursor-pointer ${m.length > 8 ? 'text-[9px] sm:text-[10px]' : 'text-[12px]'} ${material === m ? 'bg-white text-black border-white shadow-xl' : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/40 text-white/40'}`}>
                     {m}
                   </button>
                 ))}
@@ -307,7 +335,7 @@ export default function UploadPage() {
 
             <div className="grid grid-cols-2 gap-8">
               <div>
-                <label className="text-[12px] font-black uppercase tracking-[0.4em] opacity-30 mb-6 block">{t.upload.layer}</label>
+                <label className="text-[12px] font-black uppercase tracking-tight opacity-30 mb-6 block">{t.upload.layer}</label>
                 <select value={layerHeight} onChange={(e) => setLayerHeight(Number(e.target.value))} className="w-full bg-white/[0.05] border-2 border-white/5 rounded-2xl px-6 py-4 font-header text-sm tracking-widest text-white focus:outline-none focus:border-white/20 transition-all">
                   <option value={0.12} className="bg-black">0.12mm (Fine)</option>
                   <option value={0.2} className="bg-black">0.20mm (Standard)</option>
@@ -315,7 +343,7 @@ export default function UploadPage() {
                 </select>
               </div>
               <div>
-                <label className="text-[12px] font-black uppercase tracking-[0.4em] opacity-30 mb-6 block">{t.upload.infill}</label>
+                <label className="text-[12px] font-black uppercase tracking-tight opacity-30 mb-6 block">{t.upload.infill}</label>
                 <select value={infill} onChange={(e) => setInfill(Number(e.target.value))} className="w-full bg-white/[0.05] border-2 border-white/5 rounded-2xl px-6 py-4 font-header text-sm tracking-widest text-white focus:outline-none focus:border-white/20 transition-all">
                   <option value={15} className="bg-black">15% (Standard)</option>
                   <option value={30} className="bg-black">30% (Functional)</option>
@@ -325,21 +353,21 @@ export default function UploadPage() {
             </div>
 
             <div>
-              <label className="text-[12px] font-black uppercase tracking-[0.4em] opacity-30 mb-6 block">{t.upload.color}</label>
+              <label className="text-[12px] font-black uppercase tracking-tight opacity-30 mb-6 block">{t.upload.color} (สี)</label>
               <div className="flex flex-wrap gap-4 bg-white/[0.02] p-6 rounded-3xl border border-white/5">
                 {COLORS.map(c => (
                   <button key={c.id} onClick={() => setColorId(c.id)} disabled={material === "CarbonFiber" && c.id !== "black"}
-                    className={`group relative w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center ${colorId === c.id ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-20 hover:opacity-100'} ${material === "CarbonFiber" && c.id !== "black" ? 'hidden' : ''}`}
+                    className={`group relative w-10 h-10 rounded-full border transition-all duration-200 cursor-pointer ${colorId === c.id ? 'border-white border-2 ring-2 ring-white ring-offset-2 ring-offset-black scale-110 shadow-lg' : 'border-white/20 opacity-40 hover:opacity-100'} ${material === "CarbonFiber" && c.id !== "black" ? 'hidden' : ''}`}
                     title={t.colors[c.id as keyof typeof t.colors]}
-                    style={{ background: c.hex }}>
+                    style={{ background: c.id === 'anyColor' ? 'linear-gradient(to bottom right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8f00ff)' : c.hex }}>
                     {colorId === c.id && <div className="w-2 h-2 bg-white rounded-full mix-blend-difference" />}
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] mt-4 opacity-40 font-black uppercase tracking-[0.3em]">{t.colors[colorId as keyof typeof t.colors]}</p>
+              <p className={`text-base mt-4 font-medium uppercase tracking-tight ${colorId === 'white' ? 'text-white' : 'opacity-40'}`}>{t.colors[colorId as keyof typeof t.colors]}</p>
             </div>
 
-            <button onClick={handleEstimate} disabled={loading || models.length === 0} className="w-full py-6 rounded-2xl bg-white text-black font-header text-sm uppercase tracking-[0.4em] transition-all disabled:opacity-10 shadow-2xl hover:bg-white/90 active:scale-[0.98]">
+            <button onClick={handleEstimate} disabled={loading || models.length === 0} className={`w-full py-6 rounded-2xl font-header text-sm uppercase tracking-[0.4em] transition-all duration-200 shadow-2xl active:scale-[0.98] ${result ? 'bg-transparent border border-white/40 hover:bg-white/10 text-white' : 'bg-white text-black hover:bg-white/90'}`}>
               {loading ? t.upload.calculating : (result ? t.upload.reestimate : t.upload.estimate)}
             </button>
           </div>
@@ -366,7 +394,7 @@ export default function UploadPage() {
                   setEstimateData({ models, technology, material, infill, layerHeight, colorId, quantity, result })
                   router.push('/quote')
                 }} 
-                className="w-full mt-4 py-7 bg-black text-white rounded-2xl font-header text-sm uppercase tracking-[0.4em] hover:opacity-90 transition-all shadow-xl active:scale-[0.98]">
+                className="w-full mt-4 py-7 bg-black text-white rounded-2xl font-header text-lg font-semibold uppercase tracking-tight hover:bg-gray-800 transition-all duration-200 shadow-xl active:scale-[0.98]">
                 Proceed to Quote
               </button>
             </div>

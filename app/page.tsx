@@ -40,28 +40,35 @@ const InteractiveBackground = () => {
 
 const ImageCarousel = () => {
   const images = [
-    "/media__1777430714628.png", 
-    "/media__1777429810223.png", 
-    "/media__1777429328508.png", 
-    "/media__1777365099190.png", 
-    "/media__1777363717739.png",
+    "/showcase/showcase_1.png",
+    "/showcase/showcase_2.png",
+    "/showcase/showcase_3.png",
+    "/showcase/showcase_4.png",
+    "/showcase/showcase_5.png",
+    "/showcase/showcase_6.png",
   ]
   return (
-    <div className="w-full overflow-hidden bg-white/5 py-32 border-y border-white/5 mt-40">
-      <div className="flex animate-marquee whitespace-nowrap">
-        {[...images, ...images, ...images].map((img, i) => (
-          <div key={i} className="inline-block px-6">
-            <div className="h-[400px] w-[500px] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl bg-white/10 group border border-white/10 flex items-center justify-center">
-              <img src={img} alt="PB3D Showcase" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-all duration-1000" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-            </div>
-          </div>
-        ))}
+    <div id="showcase" className="py-40 px-8">
+      <div className="max-w-7xl mx-auto mb-24">
+        <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-8">Showcase.</h2>
+        <p className="font-serif text-2xl md:text-3xl text-white/60 lowercase">High-quality 3D printing gallery</p>
       </div>
-      <style jsx>{`
-        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
-        .animate-marquee { display: flex; width: fit-content; animation: marquee 40s linear infinite; }
-        .animate-marquee:hover { animation-play-state: paused; }
-      `}</style>
+      <div className="w-full overflow-hidden bg-white/5 py-32 border-y border-white/5">
+        <div className="flex animate-marquee whitespace-nowrap">
+          {[...images, ...images, ...images].map((img, i) => (
+            <div key={i} className="inline-block px-6">
+              <div className="h-[400px] w-[500px] rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl bg-white/10 group border border-white/10 flex items-center justify-center">
+                <img src={img} alt="PB3D Showcase" className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-all duration-1000" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <style jsx>{`
+          @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
+          .animate-marquee { display: flex; width: fit-content; animation: marquee 40s linear infinite; }
+          .animate-marquee:hover { animation-play-state: paused; }
+        `}</style>
+      </div>
     </div>
   )
 }
@@ -252,7 +259,7 @@ export default function Home() {
         <TrustBar t={t} />
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-40 px-8">
+        <section id="how-it-works" className="pt-40 pb-20 px-8">
            <div className="max-w-7xl mx-auto">
               <div className="mb-24">
                 <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-8">{t.howItWorks.title}</h2>
@@ -303,11 +310,11 @@ export default function Home() {
                 <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#000000] to-transparent z-10 pointer-events-none" />
                 <div className="flex flex-col animate-marquee-vertical group-hover:[animation-play-state:paused]">
                   {[...t.shopee.reviews, ...t.shopee.reviews].map((rev: string, i: number) => (
-                    <div key={i} className="bg-white/5 p-8 rounded-3xl border border-white/5 hover:bg-white/10 transition-all mb-4 mx-2">
-                      <div className="flex gap-1 mb-4 text-orange-400">
+                    <div key={i} className="bg-white/5 p-12 rounded-[3rem] border border-white/5 hover:bg-white/10 transition-all mb-8 mx-2">
+                      <div className="flex gap-2 mb-8 text-orange-400 text-4xl">
                         {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
                       </div>
-                      <p className="font-serif italic text-xl text-white/80">"{rev}"</p>
+                      <p className="font-serif italic text-4xl md:text-5xl text-white/80 leading-snug">"{rev}"</p>
                     </div>
                   ))}
                 </div>
@@ -325,7 +332,7 @@ export default function Home() {
         </section>
 
         {/* MATERIALS */}
-        <section id="materials" className="py-60 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
+        <section id="materials" className="pt-20 pb-60 px-8 border-y border-white/5 bg-[#F2F2F2] text-black">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-10">
               <h2 className="font-header text-[clamp(2.5rem,6vw,5rem)] leading-none uppercase tracking-tighter">{t.materials.title}</h2>
@@ -341,7 +348,7 @@ export default function Home() {
                       <span className="text-3xl grayscale group-hover:grayscale-0 transition-all">{m.icon}</span>
                     </div>
                     <div className="text-left">
-                      <h3 className="font-header text-3xl uppercase mb-1 tracking-tighter leading-none">{m.name}</h3>
+                      <h3 className={`font-header uppercase mb-1 tracking-tighter leading-none ${m.name.length > 8 ? 'text-xl md:text-2xl' : 'text-3xl'}`}>{m.name}</h3>
                       <p className="font-body text-[9px] opacity-40 uppercase tracking-[0.1em] font-black">{m.desc}</p>
                     </div>
                   </button>
@@ -351,7 +358,7 @@ export default function Home() {
                 <div>
                   <div className="flex items-center gap-8 mb-12">
                     <div className="w-20 h-20 bg-black text-white flex items-center justify-center text-5xl rounded-[1.5rem] shadow-xl">{selectedMat.icon}</div>
-                    <h3 className="font-header text-6xl uppercase tracking-tighter leading-none">{selectedMat.name}</h3>
+                    <h3 className={`font-header uppercase tracking-tighter leading-none ${selectedMat.name.length > 8 ? 'text-4xl md:text-6xl' : 'text-5xl md:text-6xl'}`}>{selectedMat.name}</h3>
                   </div>
                   <div className="space-y-12">
                     <div>
@@ -376,22 +383,19 @@ export default function Home() {
         <ImageCarousel />
 
         {/* CTA */}
-        <section className="py-80 px-8 text-center flex flex-col items-center">
-          <h2 className="font-header text-[clamp(4.5rem,15vw,14rem)] leading-[0.8] uppercase tracking-tighter mb-32 max-w-5xl">
+        <section className="pt-60 pb-20 px-8 text-center flex flex-col items-center">
+          <h2 className="font-header text-3xl md:text-3xl uppercase tracking-tighter mb-12 max-w-4xl">
             พร้อมหรือยังที่จะ<br/>
             <span className="font-serif italic tracking-normal text-white/10 lowercase block my-4">ทำให้</span>
             จินตนาการเป็นจริง.
           </h2>
-          <Link href="/upload" className="group flex flex-col items-center gap-6">
-            <div className="w-32 h-32 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all duration-700 shadow-2xl">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 5v14M5 12l7 7 7-7" /></svg>
-            </div>
-            <span className="font-header text-[12px] tracking-[0.6em] uppercase opacity-30 group-hover:opacity-100 transition-opacity">{t.nav.order}</span>
+          <Link href="/upload" className="bg-white text-black px-12 py-6 rounded-2xl font-header text-2xl md:text-3xl font-bold tracking-[0.2em] uppercase hover:bg-[#9CA3AF] transition-all duration-300 shadow-[0_0_50px_rgba(255,255,255,0.1)] text-center active:scale-95">
+            {t.nav.order}
           </Link>
         </section>
       </main>
 
-      <footer className="py-20 px-8 border-t border-white/5 flex flex-col items-center gap-10 text-white/20">
+      <footer className="py-12 px-8 border-t border-white/5 flex flex-col items-center gap-10 text-white/20">
         <div className="flex flex-col items-center gap-4 text-center">
           <span className="font-header text-4xl tracking-tighter uppercase text-white">PB3D<span className="opacity-10">HUB</span></span>
           <p className="font-body text-[10px] uppercase tracking-[0.3em] font-bold">© 2025 ALL RIGHTS RESERVED.</p>
