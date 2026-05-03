@@ -4,11 +4,8 @@ import { persist } from 'zustand/middleware'
 interface EstimateData {
   models: any[];
   technology: string;
-  material: string;
   infill: number;
   layerHeight: number;
-  colorId: string;
-  quantity: number;
   result: any;
 }
 
