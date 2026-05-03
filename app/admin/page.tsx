@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useSession, signOut } from "next-auth/react"
 import { supabase, isPlaceholder } from '@/lib/supabase/client'
 
 interface Order {
@@ -29,6 +30,7 @@ function formatDate(iso: string) {
 
 export default function AdminPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter] = useState("all")
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -36,8 +38,7 @@ export default function AdminPage() {
   const [lastRefresh, setLastRefresh] = useState("")
 
   const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" })
-    router.push("/admin/login")
+    await signOut({ callbackUrl: "/admin/login" })
   }
 
   const loadOrders = useCallback(async () => {
@@ -140,6 +141,10 @@ export default function AdminPage() {
           PB3D<span className="text-white/20">HUB</span> <span className="text-[10px] ml-2 tracking-[0.3em] opacity-40">ADMIN</span>
         </Link>
         <div className="flex items-center gap-6 font-header text-[10px] tracking-[0.2em] uppercase">
+          <div className="flex flex-col items-end mr-4">
+            <span className="text-white/40 text-[9px] tracking-widest">Logged in as</span>
+            <span className="text-violet-400">{session?.user?.email}</span>
+          </div>
           <span className="opacity-20 hidden md:inline">SYNCED {lastRefresh}</span>
           <button onClick={loadOrders} className="hover:opacity-50 transition border border-white/10 px-4 py-1.5 rounded-full">Refresh</button>
           <button onClick={handleLogout} className="text-red-400 border border-red-400/20 px-4 py-1.5 rounded-full hover:bg-red-400 hover:text-black transition">Logout</button>

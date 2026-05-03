@@ -1,31 +1,24 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { jwtVerify } from "jose"
-
-const PUBLIC_PATHS = ["/admin/login", "/admin/forgot-password", "/admin/reset-password"]
+import { getToken } from "next-auth/jwt"
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   if (!pathname.startsWith("/admin")) return NextResponse.next()
-  if (PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + "?"))) {
-    return NextResponse.next()
-  }
+  if (pathname === "/admin/login") return NextResponse.next()
 
-  const token = req.cookies.get("admin_token")?.value
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET 
+  })
+
   if (!token) {
-    return NextResponse.redirect(new URL("/admin/login", req.url))
+    const url = new URL("/admin/login", req.url)
+    return NextResponse.redirect(url)
   }
 
-  try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "pb3d-secret-change-me")
-    await jwtVerify(token, secret)
-    return NextResponse.next()
-  } catch {
-    const res = NextResponse.redirect(new URL("/admin/login", req.url))
-    res.cookies.delete("admin_token")
-    return res
-  }
+  return NextResponse.next()
 }
 
 export const config = { matcher: ["/admin/:path*"] }

@@ -48,7 +48,7 @@ const ImageCarousel = () => {
     "/showcase/showcase_6.png",
   ]
   return (
-    <div id="showcase" className="py-20 px-8">
+    <div id="showcase" className="pt-20 pb-10 px-8">
       <div className="max-w-7xl mx-auto mb-12">
         <h2 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-none uppercase tracking-tighter mb-8">Showcase.</h2>
         <p className="font-serif text-2xl md:text-3xl text-white/60 lowercase">High-quality 3D printing gallery</p>
@@ -75,19 +75,19 @@ const ImageCarousel = () => {
 
 const TrustBar = ({ t }: { t: any }) => (
   <div className="border-y border-white/5 py-20 flex flex-wrap justify-center items-center gap-12 md:gap-32">
-    <div className="flex flex-col items-center gap-4">
-      <span className="font-header text-6xl md:text-7xl tracking-tighter">4.9/5.0</span>
-      <span className="font-header text-lg md:text-xl tracking-[0.5em] uppercase opacity-30">{t.trust.rating}</span>
+    <div className="flex flex-col items-center gap-8">
+      <span className="font-header text-[clamp(8rem,20vw,14rem)] tracking-tighter leading-none">4.9/5.0</span>
+      <span className="font-header text-[clamp(2.5rem,5vw,4rem)] tracking-[0.3em] uppercase opacity-30">{t.trust.rating}</span>
     </div>
-    <div className="hidden md:block w-px h-24 bg-white/5" />
-    <div className="flex flex-col items-center gap-4">
-      <span className="font-header text-6xl md:text-7xl tracking-tighter">10+</span>
-      <span className="font-header text-lg md:text-xl tracking-[0.5em] uppercase opacity-30">{t.trust.years}</span>
+    <div className="hidden md:block w-px h-64 bg-white/5" />
+    <div className="flex flex-col items-center gap-8">
+      <span className="font-header text-[clamp(8rem,20vw,14rem)] tracking-tighter leading-none">10+</span>
+      <span className="font-header text-[clamp(2.5rem,5vw,4rem)] tracking-[0.3em] uppercase opacity-30">{t.trust.years}</span>
     </div>
-    <div className="hidden md:block w-px h-24 bg-white/5" />
-    <div className="flex flex-col items-center gap-4">
-      <span className="font-header text-6xl md:text-7xl tracking-tighter">1,000+</span>
-      <span className="font-header text-lg md:text-xl tracking-[0.5em] uppercase opacity-30">{t.trust.orders}</span>
+    <div className="hidden md:block w-px h-64 bg-white/5" />
+    <div className="flex flex-col items-center gap-8">
+      <span className="font-header text-[clamp(8rem,20vw,14rem)] tracking-tighter leading-none">1,000+</span>
+      <span className="font-header text-[clamp(2.5rem,5vw,4rem)] tracking-[0.3em] uppercase opacity-30">{t.trust.orders}</span>
     </div>
   </div>
 )
@@ -222,33 +222,32 @@ export default function Home() {
               <span className="w-12 h-px bg-white/40"></span>
               {t.hero.subtitle}
             </div>
-            <h1 className="font-header text-[clamp(4rem,15vw,10rem)] leading-[0.8] uppercase tracking-tighter mix-blend-difference relative">
-              Digital<br/>
-              <span className="font-serif italic text-[0.4em] normal-case tracking-normal text-white/60 ml-4 md:ml-12">
-                {lang === 'TH' ? 'เข้าสู่' : 'into'}
+            <h1 className="font-header text-[clamp(3.5rem,10vw,8rem)] leading-[0.9] uppercase tracking-tighter mix-blend-difference relative mb-8">
+              The Future of Production —<br/>
+              <span className="font-serif italic text-[0.4em] normal-case tracking-normal text-white/60">
+                From Digital to Physical
               </span>
-              Physical
             </h1>
-            <p className="mt-8 font-header text-[1.2rem] md:text-[1.5rem] tracking-[0.1em] text-white/80 max-w-xl leading-relaxed">
-              {t.hero.copyTag}
+            <p className="mt-8 font-header text-[clamp(1.5rem,4vw,2.5rem)] tracking-[0.1em] text-white/80 max-w-3xl leading-tight">
+              If you can imagine it, we can print it.
             </p>
-            <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-8">
-              <Link href="/upload" className="w-full sm:w-auto bg-white text-black px-16 py-8 rounded-xl font-header text-xl md:text-2xl font-semibold tracking-[0.3em] uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)] text-center">
+            <div className="mt-16 flex flex-col sm:flex-row items-start sm:items-center gap-10">
+              <Link href="/upload" className="w-full sm:w-auto bg-white text-black px-24 py-10 rounded-xl font-header text-3xl md:text-4xl font-semibold tracking-[0.2em] uppercase hover:scale-105 active:scale-95 transition-all shadow-[0_0_80px_rgba(255,255,255,0.15)] text-center">
                 📁 {t.hero.cta}
               </Link>
-              <button onClick={() => setShowFindFiles(true)} className="w-full sm:w-auto bg-white/10 border border-white/20 text-white px-14 py-8 rounded-xl font-header text-xl md:text-2xl font-semibold tracking-[0.3em] uppercase hover:bg-white/20 active:scale-95 transition-all text-center">
+              <button onClick={() => setShowFindFiles(true)} className="w-full sm:w-auto bg-white/5 border border-white/10 text-white px-20 py-10 rounded-xl font-header text-3xl md:text-4xl font-semibold tracking-[0.2em] uppercase hover:bg-white/10 active:scale-95 transition-all text-center">
                 🔍 {t.hero.ctaSearch}
               </button>
             </div>
             <div className="mt-20 flex flex-col md:flex-row justify-between items-start md:items-end gap-12 border-t border-white/10 pt-10">
               <p className="max-w-xl font-body text-white/40 text-sm md:text-base leading-relaxed tracking-wide">{t.hero.desc}</p>
-              <div className="flex gap-16 font-header text-[14px] md:text-[16px] tracking-[0.4em] uppercase font-bold">
+              <div className="flex gap-24 font-header text-[clamp(1.5rem,3vw,2rem)] tracking-[0.3em] uppercase font-bold">
                 <div className="flex flex-col gap-4">
-                  <span className="text-white/20">Studio</span>
+                  <span className="text-white/10">Studio</span>
                   <span>BKK — TH</span>
                 </div>
                 <div className="flex flex-col gap-4">
-                  <span className="text-white/20">System Status</span>
+                  <span className="text-white/10">System Status</span>
                   <span className="text-green-500">Online — Ships within 48 hrs</span>
                 </div>
               </div>
@@ -284,7 +283,7 @@ export default function Home() {
         </section>
 
         {/* MARKETPLACE INTEGRATION */}
-        <section className="py-40 px-8 overflow-hidden">
+        <section className="py-20 px-8 overflow-hidden">
            <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-20 items-center">
               <div>
                 <h2 className="font-header text-[clamp(1.75rem,5vw,4rem)] leading-none uppercase tracking-tighter mb-8">
@@ -310,11 +309,11 @@ export default function Home() {
                 <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#000000] to-transparent z-10 pointer-events-none" />
                 <div className="flex flex-col animate-marquee-vertical group-hover:[animation-play-state:paused]">
                   {[...t.shopee.reviews, ...t.shopee.reviews].map((rev: string, i: number) => (
-                    <div key={i} className="bg-white/5 p-12 rounded-[3rem] border border-white/5 hover:bg-white/10 transition-all mb-8 mx-2">
-                      <div className="flex gap-2 mb-6 text-orange-400 text-3xl">
+                    <div key={i} className="bg-white/5 p-12 rounded-[3.5rem] border border-white/5 hover:bg-white/10 transition-all mb-8 mx-2">
+                      <div className="flex gap-3 mb-6 text-orange-400 text-4xl">
                         {[...Array(5)].map((_, i) => <span key={i}>★</span>)}
                       </div>
-                      <p className="font-serif italic text-2xl md:text-3xl text-white/60 leading-relaxed">"{rev}"</p>
+                      <p className="font-serif italic text-xl md:text-2xl text-white/50 leading-relaxed">"{rev}"</p>
                     </div>
                   ))}
                 </div>
@@ -383,11 +382,11 @@ export default function Home() {
         <ImageCarousel />
 
         {/* CTA */}
-        <section className="pt-40 pb-20 px-8 text-center flex flex-col items-center">
-          <h2 className="font-header text-6xl md:text-7xl uppercase tracking-tighter mb-16 max-w-4xl">
+        <section className="pt-20 pb-20 px-8 text-center flex flex-col items-center">
+          <h2 className="font-header text-[clamp(4rem,10vw,8rem)] uppercase tracking-tighter mb-20 max-w-6xl leading-none">
             Ready to turn your imagination into reality?
           </h2>
-          <Link href="/upload" className="bg-white text-black px-16 py-8 rounded-xl font-header text-xl md:text-2xl font-semibold tracking-[0.2em] uppercase hover:bg-[#9CA3AF] transition-all duration-300 shadow-[0_0_50px_rgba(255,255,255,0.1)] text-center active:scale-95">
+          <Link href="/upload" className="bg-white text-black px-24 py-10 rounded-xl font-header text-3xl md:text-4xl font-semibold tracking-[0.2em] uppercase hover:bg-[#9CA3AF] transition-all duration-300 shadow-[0_0_80px_rgba(255,255,255,0.1)] text-center active:scale-95">
             {t.nav.order}
           </Link>
         </section>
