@@ -31,5 +31,5 @@ export const authOptions: NextAuthOptions = {
     signIn: "/admin/login",
     error: "/admin/login",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "pb3d-hub-fallback-secret-yjMFxp52e4QJ5adoXkE4MTfOfm4tlp8bGIjcwUbXizQ",
 }
