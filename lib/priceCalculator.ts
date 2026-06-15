@@ -1,64 +1,169 @@
-export type Technology = "FDM" | "RESIN"
-export type Material = "PLA" | "ABS" | "PETG" | "ASA" | "TPU" | "Resin Standard" | "CarbonFiber" | "Nylon"
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type Technology  = "FDM" | "RESIN"
+export type FDMMaterial = "PLA" | "PETG" | "ABS" | "ASA" | "TPU"
+export type Material    = FDMMaterial | "Resin Standard"
 export type InfillLevel = 10 | 25 | 50 | 80
-export type LayerHeight = 0.12 | 0.16 | 0.20 | 0.28
+export type LayerHeight = 0.08 | 0.16 | 0.24
+export type Shipping    = "pickup" | "postal"
+
+// Build volume limits (mm)
+export const BUILD_MAX = { x: 340, y: 320, z: 340 }
+export const BUILD_MIN = { x: 0.2,  y: 0.2,  z: 0.2  }
 
 export interface EstimateInput {
-  volumeCm3: number
-  technology: Technology
-  material: Material
-  infill: InfillLevel
+  volumeCm3:   number
+  dimensions:  { x: number; y: number; z: number }
+  technology:  Technology
+  material:    Material
+  infill:      InfillLevel
   layerHeight: LayerHeight
-  quantity: number
+  quantity:    number
+  shipping:    Shipping
   isAnyColor?: boolean
 }
 
 export interface EstimateResult {
-  weightG: number
-  printTimeMin: number
-  pricePerPc: number
-  totalPrice: number
+  weightG:      number       // grams
+  printTimeSec: number       // seconds
+  printTimeMin: number       // minutes (kept for backward compat)
+  pricePerPc:   number       // THB per piece
+  materialCost: number       // filament cost per pc
+  machineCost:  number       // machine time cost per pc
+  shippingCost: number       // flat shipping fee (total)
+  subtotal:     number       // pricePerPc × quantity
+  totalPrice:   number       // subtotal + shippingCost
 }
 
+// ─── Pricing tables ───────────────────────────────────────────────────────────
+
+// g/cm³
 const DENSITY: Record<Material, number> = {
-  PLA: 1.24, ABS: 1.04, PETG: 1.27,
-  ASA: 1.07, TPU: 1.20, "Resin Standard": 1.10,
-  CarbonFiber: 1.40, Nylon: 1.15,
+  PLA:            1.24,
+  PETG:           1.27,
+  ABS:            1.04,
+  ASA:            1.07,
+  TPU:            1.20,
+  "Resin Standard": 1.10,
 }
 
+// THB per gram of filament/resin
 const PRICE_PER_GRAM: Record<Material, number> = {
-  PLA: 1.5, ABS: 1.8, PETG: 2.0,
-  ASA: 2.2, TPU: 2.8, "Resin Standard": 3.5,
-  CarbonFiber: 5.0, Nylon: 4.5,
+  PLA:            2.0,
+  PETG:           2.5,
+  ABS:            2.2,
+  ASA:            2.8,
+  TPU:            3.5,
+  "Resin Standard": 4.0,
 }
 
-const MACHINE_RATE: Record<Technology, number> = { FDM: 40, RESIN: 60 }
-
-const LAYER_TIME_FACTOR: Record<number, number> = {
-  0.12: 1.5, 0.16: 1.0, 0.20: 0.75, 0.28: 0.55,
+// THB per hour of machine time
+const MACHINE_RATE: Record<Technology, number> = {
+  FDM:   45,
+  RESIN: 65,
 }
+
+// Print speed factor per layer height (lower = slower = finer)
+const LAYER_SPEED: Record<number, number> = {
+  0.08: 0.50,  // Fine   — slowest
+  0.16: 1.00,  // Normal — baseline
+  0.24: 1.60,  // Coarse — fastest
+}
+
+// Shipping cost (THB)
+const SHIPPING_COST: Record<Shipping, number> = {
+  pickup: 0,
+  postal: 45,
+}
+
+// ─── Utility ──────────────────────────────────────────────────────────────────
+
+/** Clamp model dimensions to build volume limits */
+export function clampDimensions(dims: { x: number; y: number; z: number }) {
+  return {
+    x: Math.min(Math.max(dims.x, BUILD_MIN.x), BUILD_MAX.x),
+    y: Math.min(Math.max(dims.y, BUILD_MIN.y), BUILD_MAX.y),
+    z: Math.min(Math.max(dims.z, BUILD_MIN.z), BUILD_MAX.z),
+  }
+}
+
+/** Check if dimensions fit in the build volume */
+export function fitsInBuildVolume(dims: { x: number; y: number; z: number }): boolean {
+  return dims.x <= BUILD_MAX.x && dims.y <= BUILD_MAX.y && dims.z <= BUILD_MAX.z
+}
+
+// ─── Core calculator ──────────────────────────────────────────────────────────
 
 export function calculate(input: EstimateInput): EstimateResult {
-  const { volumeCm3, technology, material, infill, layerHeight, quantity, isAnyColor } = input
-  const shellVolume = volumeCm3 * 0.15
-  const infillVolume = (volumeCm3 - shellVolume) * (infill / 100)
-  const actualVolume = shellVolume + infillVolume
-  const weightG = Math.round(actualVolume * DENSITY[material] * 10) / 10
-  const basePrintMin = (volumeCm3 / 2) * (infill / 25)
-  const printTimeMin = Math.round(basePrintMin * LAYER_TIME_FACTOR[layerHeight])
-  let materialPrice = PRICE_PER_GRAM[material] || 0
-  if (isAnyColor) materialPrice = Math.max(0.5, materialPrice - 2)
+  const {
+    volumeCm3, technology, material,
+    infill, layerHeight, quantity, shipping, isAnyColor
+  } = input
 
-  const filamentPrice = weightG * materialPrice
-  const machineCost = (printTimeMin / 60) * MACHINE_RATE[technology]
-  const pricePerPc = Math.round((filamentPrice + machineCost) * 1.2)
-  return { weightG, printTimeMin, pricePerPc, totalPrice: pricePerPc * quantity }
+  // --- Volume breakdown ---
+  // Shell wall = 20% of bounding volume, always solid
+  const shellVolume  = volumeCm3 * 0.20
+  const innerVolume  = (volumeCm3 - shellVolume) * (infill / 100)
+  const actualVolume = shellVolume + innerVolume   // cm³ of material used
+
+  // --- Weight ---
+  const weightG = Math.round(actualVolume * DENSITY[material] * 10) / 10
+
+  // --- Print time ---
+  // Base time: proportional to actual volume + layer height factor
+  // Formula: (actualVolume / speed_constant) / LAYER_SPEED × 60  → seconds
+  const baseMinutes   = (actualVolume / 1.8) / LAYER_SPEED[layerHeight]
+  const printTimeSec  = Math.round(baseMinutes * 60)
+  const printTimeMin  = Math.round(baseMinutes)
+
+  // --- Material cost ---
+  let pricePerGram = PRICE_PER_GRAM[material] ?? 2.0
+  if (isAnyColor) pricePerGram = Math.max(1.0, pricePerGram - 0.5) // slight discount for any-color
+  const materialCost = Math.round(weightG * pricePerGram)
+
+  // --- Machine cost ---
+  const machineCost = Math.round((baseMinutes / 60) * MACHINE_RATE[technology])
+
+  // --- Per-piece price with markup (20%) ---
+  const pricePerPc = Math.max(20, Math.round((materialCost + machineCost) * 1.20))
+
+  // --- Totals ---
+  const shippingCost = SHIPPING_COST[shipping]
+  const subtotal     = pricePerPc * quantity
+  const totalPrice   = subtotal + shippingCost
+
+  return {
+    weightG,
+    printTimeSec,
+    printTimeMin,
+    pricePerPc,
+    materialCost,
+    machineCost,
+    shippingCost,
+    subtotal,
+    totalPrice,
+  }
 }
 
+// ─── Formatters ───────────────────────────────────────────────────────────────
+
+/** Format seconds → "1h 32m 20s" (Chalawan-style) */
+export function formatTimeFull(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  const parts: string[] = []
+  if (h > 0) parts.push(`${h}h`)
+  if (m > 0) parts.push(`${m}m`)
+  if (s > 0 || parts.length === 0) parts.push(`${s}s`)
+  return parts.join(' ')
+}
+
+/** Format minutes → "1h 32m" (short, for backward compat) */
 export function formatTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
-  if (h > 0 && m > 0) return h + "h " + m + "m"
-  if (h > 0) return h + "h"
-  return m + "m"
+  if (h > 0 && m > 0) return `${h}h ${m}m`
+  if (h > 0) return `${h}h`
+  return `${m}m`
 }
