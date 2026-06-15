@@ -406,7 +406,7 @@ export default function UploadPage() {
 
                 <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#222 transparent' }}>
                   {models.map(model => {
-                    const mat = [...FDM_MATERIALS, ...RESIN_MATERIALS].find(m => m.id === model.material)
+                    const mat = FDM_MATERIALS.find(m => m.id === model.material)
                     return (
                       <div key={model.id} onClick={() => !model.error && setSelectedModelId(model.id)}
                         className={`group relative border rounded-2xl transition-all duration-200 cursor-pointer overflow-hidden
