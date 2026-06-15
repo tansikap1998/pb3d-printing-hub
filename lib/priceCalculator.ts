@@ -46,14 +46,17 @@ const DENSITY: Record<Material, number> = {
   TPU:  1.20,
 }
 
-// THB per gram of filament (+40% +20% = +68% total)
+// THB per gram of filament (PB3D balanced pricing)
 const PRICE_PER_GRAM: Record<Material, number> = {
-  PLA:  3.36,
-  PETG: 4.20,
-  ABS:  3.70,
-  ASA:  4.70,
-  TPU:  5.88,
+  PLA:  3.5,
+  PETG: 4.5,
+  ABS:  4.0,
+  ASA:  5.0,
+  TPU:  6.0,
 }
+
+// Minimum order per piece (covers electricity, machine time & handling)
+const MINIMUM_PRICE_PER_PC = 100
 
 // THB per hour of machine time
 const MACHINE_RATE: Record<Technology, number> = {
@@ -121,8 +124,8 @@ export function calculate(input: EstimateInput): EstimateResult {
   // --- Machine cost ---
   const machineCost = Math.round((baseMinutes / 60) * MACHINE_RATE[technology])
 
-  // --- Per-piece price with markup (20%) ---
-  const pricePerPc = Math.max(20, Math.round((materialCost + machineCost) * 1.20))
+  // --- Per-piece price with markup (20%) + minimum order ฿100 ---
+  const pricePerPc = Math.max(MINIMUM_PRICE_PER_PC, Math.round((materialCost + machineCost) * 1.20))
 
   // --- Totals ---
   const shippingCost = SHIPPING_COST[shipping]
