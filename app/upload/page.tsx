@@ -15,7 +15,7 @@ import {
   Trash2, Plus, Minus, FileText, UploadCloud, X,
   Loader2, RefreshCw, Box, Clock, Weight, Zap,
   CheckCircle2, AlertCircle, Layers, Settings2,
-  ArrowRight, Cpu, Truck, Store, AlertTriangle
+  ArrowRight, Truck, Store, AlertTriangle
 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -26,10 +26,6 @@ const FDM_MATERIALS = [
   { id: "ABS",  label: "ABS",  desc: "Heat resistant",      color: "#f59e0b" },
   { id: "ASA",  label: "ASA",  desc: "UV resistant",        color: "#10b981" },
   { id: "TPU",  label: "TPU",  desc: "Rubber-like flex",    color: "#ec4899" },
-]
-
-const RESIN_MATERIALS = [
-  { id: "Resin Standard", label: "Standard", desc: "High detail", color: "#a78bfa" },
 ]
 
 const COLORS = [
@@ -133,7 +129,7 @@ export default function UploadPage() {
 
   const [models, setModels] = useState<ModelInfo[]>([])
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
-  const [technology, setTechnology] = useState<"FDM" | "RESIN">("FDM")
+  const [technology] = useState<"FDM">("FDM")
   const [infill, setInfill] = useState(25)
   const [layerHeight, setLayerHeight] = useState(0.16)
   const [shipping, setShipping] = useState<Shipping>("pickup")
@@ -143,8 +139,8 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const selectedModel = models.find(m => m.id === selectedModelId) ?? models[0]
-  const canEstimate   = models.length > 0 && !models.some(m => m.uploading || m.error || m.oversize)
-  const materials     = technology === "FDM" ? FDM_MATERIALS : RESIN_MATERIALS
+  const canEstimate = models.length > 0 && !models.some(m => m.uploading || m.error || m.oversize)
+  const materials   = FDM_MATERIALS
 
   // Auto-recalculate when settings change and models are ready
   useEffect(() => {
@@ -162,7 +158,7 @@ export default function UploadPage() {
       url: URL.createObjectURL(file),
       volumeCm3: 0,
       dimensions: { x: 0, y: 0, z: 0 },
-      material: technology === "FDM" ? "PLA" : "Resin Standard",
+      material: "PLA",
       colorId: "white",
       quantity: 1,
       uploading: true,
@@ -505,20 +501,6 @@ export default function UploadPage() {
 
           {/* ── COL 3: Settings + Live Price ── */}
           <div className="xl:col-span-3 xl:sticky xl:top-24 space-y-4">
-
-            {/* Technology */}
-            <div className="bg-white/[0.02] border border-white/6 rounded-3xl p-4 space-y-3">
-              <p className="text-[9px] font-header tracking-[0.35em] uppercase text-white/25 flex items-center gap-1.5"><Cpu size={9} />Technology</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(["FDM", "RESIN"] as const).map(t => (
-                  <button key={t} onClick={() => { setTechnology(t); setModels(prev => prev.map(m => ({ ...m, material: t === "FDM" ? "PLA" : "Resin Standard" }))) }}
-                    className={`py-3 rounded-xl border text-center transition-all ${technology === t ? 'bg-white text-black border-white' : 'border-white/6 bg-white/[0.02] hover:border-white/15 text-white/50'}`}>
-                    <p className={`font-header text-[10px] tracking-widest uppercase ${technology === t ? 'text-black' : ''}`}>{t}</p>
-                    <p className={`text-[8px] mt-0.5 ${technology === t ? 'text-black/50' : 'text-white/20'}`}>{t === "FDM" ? "Filament" : "Resin"}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Print Settings */}
             <div className="bg-white/[0.02] border border-white/6 rounded-3xl p-4 space-y-4">

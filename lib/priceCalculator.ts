@@ -1,8 +1,8 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type Technology  = "FDM" | "RESIN"
+export type Technology  = "FDM"
 export type FDMMaterial = "PLA" | "PETG" | "ABS" | "ASA" | "TPU"
-export type Material    = FDMMaterial | "Resin Standard"
+export type Material    = FDMMaterial
 export type InfillLevel = 10 | 25 | 50 | 80
 export type LayerHeight = 0.08 | 0.16 | 0.24
 export type Shipping    = "pickup" | "postal"
@@ -39,28 +39,25 @@ export interface EstimateResult {
 
 // g/cm³
 const DENSITY: Record<Material, number> = {
-  PLA:            1.24,
-  PETG:           1.27,
-  ABS:            1.04,
-  ASA:            1.07,
-  TPU:            1.20,
-  "Resin Standard": 1.10,
+  PLA:  1.24,
+  PETG: 1.27,
+  ABS:  1.04,
+  ASA:  1.07,
+  TPU:  1.20,
 }
 
-// THB per gram of filament/resin
+// THB per gram of filament
 const PRICE_PER_GRAM: Record<Material, number> = {
-  PLA:            2.0,
-  PETG:           2.5,
-  ABS:            2.2,
-  ASA:            2.8,
-  TPU:            3.5,
-  "Resin Standard": 4.0,
+  PLA:  2.0,
+  PETG: 2.5,
+  ABS:  2.2,
+  ASA:  2.8,
+  TPU:  3.5,
 }
 
 // THB per hour of machine time
 const MACHINE_RATE: Record<Technology, number> = {
-  FDM:   45,
-  RESIN: 65,
+  FDM: 45,
 }
 
 // Print speed factor per layer height (lower = slower = finer)
