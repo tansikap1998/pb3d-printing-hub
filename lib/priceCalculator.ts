@@ -46,13 +46,13 @@ const DENSITY: Record<Material, number> = {
   TPU:  1.20,
 }
 
-// THB per gram of filament
+// THB per gram of filament (+40%)
 const PRICE_PER_GRAM: Record<Material, number> = {
-  PLA:  2.0,
-  PETG: 2.5,
-  ABS:  2.2,
-  ASA:  2.8,
-  TPU:  3.5,
+  PLA:  2.8,
+  PETG: 3.5,
+  ABS:  3.08,
+  ASA:  3.92,
+  TPU:  4.9,
 }
 
 // THB per hour of machine time
