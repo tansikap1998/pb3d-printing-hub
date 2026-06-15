@@ -61,7 +61,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={e => { setEmail(e.target.value); setError("") }}
-                placeholder="tansika.p1998@gmail.com"
+                placeholder="Admin Email"
                 required
                 autoComplete="email"
                 className="w-full bg-white/[0.04] border border-white/12 rounded-2xl pl-11 pr-4 py-4 text-sm text-white placeholder:text-white/20 outline-none focus:border-blue-400/50 focus:bg-blue-500/5 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] transition-all"
