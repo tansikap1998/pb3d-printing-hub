@@ -56,7 +56,7 @@ const PRICE_PER_GRAM: Record<Material, number> = {
 }
 
 // Minimum order per piece (covers electricity, machine time & handling)
-const MINIMUM_PRICE_PER_PC = 100
+const MINIMUM_PRICE_PER_PC = 59
 
 // THB per hour of machine time
 const MACHINE_RATE: Record<Technology, number> = {
