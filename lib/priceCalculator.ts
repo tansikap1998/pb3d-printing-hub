@@ -1,7 +1,7 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Technology  = "FDM"
-export type FDMMaterial = "PLA" | "PETG" | "ABS" | "ASA" | "TPU"
+export type FDMMaterial = "PLA" | "PETG" | "ABS" | "ASA" | "TPU" | "CarbonFiber" | "Nylon"
 export type Material    = FDMMaterial
 export type InfillLevel = 10 | 25 | 50 | 80
 export type LayerHeight = 0.08 | 0.16 | 0.24
@@ -39,20 +39,24 @@ export interface EstimateResult {
 
 // g/cm³
 const DENSITY: Record<Material, number> = {
-  PLA:  1.24,
-  PETG: 1.27,
-  ABS:  1.04,
-  ASA:  1.07,
-  TPU:  1.20,
+  PLA:         1.24,
+  PETG:        1.27,
+  ABS:         1.04,
+  ASA:         1.07,
+  TPU:         1.20,
+  CarbonFiber: 1.40,
+  Nylon:       1.15,
 }
 
 // THB per gram of filament (PB3D balanced pricing)
 const PRICE_PER_GRAM: Record<Material, number> = {
-  PLA:  3.5,
-  PETG: 4.5,
-  ABS:  4.0,
-  ASA:  5.0,
-  TPU:  6.0,
+  PLA:         3.5,
+  PETG:        4.5,
+  ABS:         4.0,
+  ASA:         5.0,
+  TPU:         6.0,
+  CarbonFiber: 12.0,
+  Nylon:       12.0,
 }
 
 // Minimum order per piece (covers electricity, machine time & handling)

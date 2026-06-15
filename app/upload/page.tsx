@@ -25,7 +25,9 @@ const FDM_MATERIALS = [
   { id: "PETG", label: "PETG", desc: "Flexible & durable",  color: "#8b5cf6" },
   { id: "ABS",  label: "ABS",  desc: "Heat resistant",      color: "#f59e0b" },
   { id: "ASA",  label: "ASA",  desc: "UV resistant",        color: "#10b981" },
-  { id: "TPU",  label: "TPU",  desc: "Rubber-like flex",    color: "#ec4899" },
+  { id: "TPU",         label: "TPU",          desc: "Rubber-like flex",    color: "#ec4899" },
+  { id: "CarbonFiber", label: "Carbon Fiber", desc: "Ultra strong",        color: "#94a3b8" },
+  { id: "Nylon",       label: "Nylon",        desc: "Industrial grade",    color: "#f97316" },
 ]
 
 const COLORS = [

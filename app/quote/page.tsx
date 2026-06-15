@@ -15,7 +15,7 @@ import {
 
 const MATERIAL_COLORS: Record<string, string> = {
   PLA: '#3b82f6', PETG: '#8b5cf6', ABS: '#f59e0b',
-  ASA: '#10b981', TPU: '#ec4899',
+  ASA: '#10b981', TPU: '#ec4899', CarbonFiber: '#94a3b8', Nylon: '#f97316',
 }
 
 function layerLabel(lh: number) {
