@@ -126,10 +126,11 @@ export default function WizardPage() {
   const orbitRef = useRef<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [step,       setStep]       = useState(1)
-  const [maxStep,    setMaxStep]    = useState(1)
-  const [models,     setModels]     = useState<ModelFile[]>([])
-  const [isDragging, setIsDragging] = useState(false)
+  const [step,            setStep]           = useState(1)
+  const [maxStep,         setMaxStep]        = useState(1)
+  const [models,          setModels]         = useState<ModelFile[]>([])
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
+  const [isDragging,      setIsDragging]     = useState(false)
 
   // Print settings
   const [material,    setMaterial]    = useState<Material>('PLA')
@@ -143,7 +144,7 @@ export default function WizardPage() {
   const [lockRatio,  setLockRatio]  = useState(true)
 
   // Reset customDims when primary model changes
-  const primary = models[0]
+  const primary = models.find(m => m.id === selectedModelId) ?? models[0]
   useEffect(() => {
     if (primary?.originalDimensions && primary.originalDimensions.x > 0) {
       setCustomDims({ ...primary.originalDimensions })
@@ -222,6 +223,8 @@ export default function WizardPage() {
       originalVolumeCm3: 0, quantity: 1, uploading: true,
     }))
     setModels(prev => [...prev, ...newModels])
+    // select first newly added model if none selected
+    setSelectedModelId(prev => prev ?? newModels[0]?.id ?? null)
 
     await Promise.all(fileArray.map(async (file, idx) => {
       const modelId = newModels[idx].id
@@ -424,6 +427,61 @@ export default function WizardPage() {
                 )}
               </div>
 
+              {/* Model thumbnails — shown when 2+ models uploaded */}
+              {models.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                  {models.map(model => {
+                    const isSel = (selectedModelId ?? models[0]?.id) === model.id
+                    return (
+                      <button key={model.id}
+                        onClick={() => { setSelectedModelId(model.id) }}
+                        className="shrink-0 flex flex-col items-start gap-1.5 p-2.5 rounded-xl wb-btn transition-all"
+                        style={{
+                          background: isSel ? T.accentDim : T.surface,
+                          border:     isSel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
+                          width: 130,
+                        }}>
+                        {/* mini canvas or placeholder */}
+                        <div className="w-full rounded-lg overflow-hidden relative"
+                          style={{ height: 80, background: T.surface2, border: `1px solid ${T.border}` }}>
+                          {model.uploading ? (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Loader2 size={16} className="animate-spin" style={{ color: T.accent }} />
+                            </div>
+                          ) : model.error ? (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <AlertTriangle size={16} style={{ color: '#ef4444' }} />
+                            </div>
+                          ) : model.url ? (
+                            <Canvas camera={{ position: [80, 60, 80], fov: 50 }}>
+                              <Suspense fallback={null}>
+                                <Stage intensity={0.5} environment="city" adjustCamera>
+                                  <Center>
+                                    {model.name.toLowerCase().endsWith('.3mf')
+                                      ? <Model3MF url={model.url} scale={[1,1,1]} />
+                                      : <ModelSTL url={model.url} scale={[1,1,1]} />}
+                                  </Center>
+                                </Stage>
+                              </Suspense>
+                              <OrbitControls makeDefault autoRotate autoRotateSpeed={1.5} enableZoom={false} enablePan={false} />
+                            </Canvas>
+                          ) : null}
+                        </div>
+                        <p className="text-[10px] font-semibold leading-tight truncate w-full"
+                          style={{ color: isSel ? T.accent : T.text }}>
+                          {model.name}
+                        </p>
+                        {!model.uploading && !model.error && (
+                          <p className="text-[9px] leading-tight" style={{ color: T.muted }}>
+                            {model.originalDimensions.x.toFixed(0)}×{model.originalDimensions.y.toFixed(0)}×{model.originalDimensions.z.toFixed(0)} mm
+                          </p>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
               {/* XYZ Dimension inputs — below preview, always visible when model loaded */}
               {primary && !primary.uploading && !primary.error && primary.originalDimensions.x > 0 && (
                 <div className="rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
@@ -480,6 +538,48 @@ export default function WizardPage() {
                   </div>
                 </div>
               )}
+
+              {/* Infill — moved here from right panel */}
+              <div className="rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>Infill</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {INFILL_OPTIONS.map(opt => {
+                    const sel = infill === opt.v
+                    return (
+                      <button key={opt.v} onClick={() => setInfill(opt.v)}
+                        className="p-2.5 rounded-xl text-center wb-btn"
+                        style={{
+                          background: sel ? T.accentDim : T.surface2,
+                          border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
+                        }}>
+                        <p className="text-[12px] font-semibold">{opt.label}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Layer Height — moved here from right panel */}
+              <div className="rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>Layer Height</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {LAYER_OPTIONS.map(opt => {
+                    const sel = layerHeight === opt.v
+                    return (
+                      <button key={opt.v} onClick={() => setLayerHeight(opt.v)}
+                        className="p-2.5 rounded-xl text-center wb-btn"
+                        style={{
+                          background: sel ? T.accentDim : T.surface2,
+                          border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
+                        }}>
+                        <p className="text-[12px] font-semibold">{opt.label}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: T.muted }}>{opt.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
               {/* Drop zone */}
               <button type="button" onClick={() => fileInputRef.current?.click()}
@@ -607,48 +707,6 @@ export default function WizardPage() {
                           transform:  colorId === c.id ? 'scale(1.2)' : 'scale(1)',
                         }} />
                     ))}
-                  </div>
-                </div>
-
-                {/* Infill */}
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>Infill</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {INFILL_OPTIONS.map(opt => {
-                      const sel = infill === opt.v
-                      return (
-                        <button key={opt.v} onClick={() => setInfill(opt.v)}
-                          className="p-2.5 rounded-xl text-left wb-btn"
-                          style={{
-                            background: sel ? T.accentDim : T.surface2,
-                            border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                          }}>
-                          <p className="text-[12px] font-semibold">{opt.label}</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Layer height */}
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>Layer Height</p>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {LAYER_OPTIONS.map(opt => {
-                      const sel = layerHeight === opt.v
-                      return (
-                        <button key={opt.v} onClick={() => setLayerHeight(opt.v)}
-                          className="p-2.5 rounded-xl text-center wb-btn"
-                          style={{
-                            background: sel ? T.accentDim : T.surface2,
-                            border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                          }}>
-                          <p className="text-[11px] font-semibold">{opt.label}</p>
-                          <p className="text-[9px] mt-0.5" style={{ color: T.muted }}>{opt.desc}</p>
-                        </button>
-                      )
-                    })}
                   </div>
                 </div>
 
