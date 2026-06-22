@@ -6,6 +6,8 @@ import { OrbitControls, Stage, Center } from "@react-three/drei"
 import * as THREE from "three"
 // @ts-ignore
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
+// @ts-ignore
+import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useOrderStore } from '@/lib/store'
@@ -15,7 +17,7 @@ import {
   Trash2, Plus, Minus, FileText, UploadCloud, X,
   Loader2, RefreshCw, Box, Clock, Weight, Zap,
   CheckCircle2, AlertCircle, Layers, Settings2,
-  ArrowRight, Truck, Store, AlertTriangle
+  ArrowRight, Truck, Store, AlertTriangle, Maximize2
 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -56,7 +58,7 @@ const LAYER_OPTIONS = [
   { v: 0.24, label: "Coarse", desc: "0.24 mm", quality: 2 },
 ]
 
-const SUPPORTED_FORMATS = ["STL", "Binary STL", "ASCII STL"]
+const SUPPORTED_FORMATS = ["STL", "3MF"]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +69,9 @@ interface ModelInfo {
   s3Key?: string
   volumeCm3: number
   dimensions: { x: number; y: number; z: number }
+  originalVolumeCm3: number
+  originalDimensions: { x: number; y: number; z: number }
+  scale: number
   material: string
   colorId: string
   quantity: number
@@ -78,13 +83,18 @@ interface ModelInfo {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Model({ url }: { url: string }) {
+function ModelSTL({ url, scale = 1 }: { url: string; scale?: number }) {
   const geometry = useLoader(STLLoader, url)
   return (
-    <mesh geometry={geometry} castShadow receiveShadow>
+    <mesh geometry={geometry} castShadow receiveShadow scale={[scale, scale, scale]}>
       <meshStandardMaterial color="#a0a0b0" metalness={0.3} roughness={0.6} />
     </mesh>
   )
+}
+
+function Model3MF({ url, scale = 1 }: { url: string; scale?: number }) {
+  const group = useLoader(ThreeMFLoader as any, url)
+  return <primitive object={group} scale={[scale, scale, scale]} />
 }
 
 function UploadZone({ onFiles, isDragging }: { onFiles: (f: FileList | File[]) => void; isDragging: boolean }) {
@@ -102,7 +112,7 @@ function UploadZone({ onFiles, isDragging }: { onFiles: (f: FileList | File[]) =
         </div>
         <div className="space-y-1.5">
           <p className="font-header text-lg tracking-tight text-white/80">
-            {isDragging ? 'Release to upload' : 'Drop STL files here'}
+            {isDragging ? 'Release to upload' : 'Drop files here'}
           </p>
           <p className="text-sm text-white/30">
             or <span className="text-blue-400">browse files</span> from your device
@@ -118,7 +128,7 @@ function UploadZone({ onFiles, isDragging }: { onFiles: (f: FileList | File[]) =
           </span>
         </div>
       </div>
-      <input ref={ref} type="file" multiple accept=".stl" onChange={e => e.target.files && onFiles(e.target.files)} className="hidden" />
+      <input ref={ref} type="file" multiple accept=".stl,.3mf" onChange={e => e.target.files && onFiles(e.target.files)} className="hidden" />
     </div>
   )
 }
@@ -150,7 +160,7 @@ export default function UploadPage() {
     const timer = setTimeout(() => { handleEstimate() }, 400)
     return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [models.map(m => `${m.id}-${m.material}-${m.colorId}-${m.quantity}`).join(), infill, layerHeight, technology, shipping])
+  }, [models.map(m => `${m.id}-${m.material}-${m.colorId}-${m.quantity}-${m.scale?.toFixed(3)}`).join(), infill, layerHeight, technology, shipping])
 
   const handleFileUpload = async (files: FileList | File[]) => {
     const fileArray = Array.from(files)
@@ -160,6 +170,9 @@ export default function UploadPage() {
       url: URL.createObjectURL(file),
       volumeCm3: 0,
       dimensions: { x: 0, y: 0, z: 0 },
+      originalVolumeCm3: 0,
+      originalDimensions: { x: 0, y: 0, z: 0 },
+      scale: 1,
       material: "PLA",
       colorId: "white",
       quantity: 1,
@@ -175,14 +188,30 @@ export default function UploadPage() {
       const modelId = newModels[index].id
       try {
         const url = URL.createObjectURL(file)
-        const loader = new STLLoader()
-        const geometry = await new Promise<THREE.BufferGeometry>((resolve) => loader.load(url, resolve))
-        geometry.computeBoundingBox()
-        const box = geometry.boundingBox!
-        const size = new THREE.Vector3()
-        box.getSize(size)
-        const volumeCm3 = Math.abs(size.x * size.y * size.z) / 1000
-        const dims = { x: size.x, y: size.y, z: size.z }
+        const is3mf = file.name.toLowerCase().endsWith('.3mf')
+        let volumeCm3 = 0
+        let dims = { x: 0, y: 0, z: 0 }
+
+        if (is3mf) {
+          const group = await new Promise<THREE.Group>((resolve, reject) => {
+            new (ThreeMFLoader as any)().load(url, resolve, undefined, reject)
+          })
+          const box = new THREE.Box3().setFromObject(group)
+          const size = new THREE.Vector3()
+          box.getSize(size)
+          volumeCm3 = Math.abs(size.x * size.y * size.z) / 1000
+          dims = { x: size.x, y: size.y, z: size.z }
+        } else {
+          const loader = new STLLoader()
+          const geometry = await new Promise<THREE.BufferGeometry>((resolve) => loader.load(url, resolve))
+          geometry.computeBoundingBox()
+          const box = geometry.boundingBox!
+          const size = new THREE.Vector3()
+          box.getSize(size)
+          volumeCm3 = Math.abs(size.x * size.y * size.z) / 1000
+          dims = { x: size.x, y: size.y, z: size.z }
+        }
+
         const oversize = !fitsInBuildVolume(dims)
 
         // Upload to S3
@@ -194,7 +223,16 @@ export default function UploadPage() {
         await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': 'application/octet-stream' } })
 
         setModels(prev => prev.map(m => m.id === modelId ? {
-          ...m, volumeCm3, dimensions: dims, s3Key: key, uploading: false, progress: 100, oversize
+          ...m,
+          volumeCm3,
+          dimensions: dims,
+          originalVolumeCm3: volumeCm3,
+          originalDimensions: dims,
+          scale: 1,
+          s3Key: key,
+          uploading: false,
+          progress: 100,
+          oversize
         } : m))
       } catch {
         setModels(prev => prev.map(m => m.id === modelId ? { ...m, uploading: false, error: true } : m))
@@ -230,13 +268,12 @@ export default function UploadPage() {
         printTimeSec: acc.printTimeSec + curr.printTimeSec,
         printTimeMin: acc.printTimeMin + curr.printTimeMin,
         subtotal:     acc.subtotal     + curr.subtotal,
-        shippingCost: curr.shippingCost,   // shipping is flat (last value wins)
+        shippingCost: curr.shippingCost,
         totalPrice:   acc.subtotal + curr.subtotal + curr.shippingCost,
         materialCost: acc.materialCost + curr.materialCost,
         machineCost:  acc.machineCost  + curr.machineCost,
       }), { weightG: 0, printTimeSec: 0, printTimeMin: 0, subtotal: 0, shippingCost: 0, totalPrice: 0, materialCost: 0, machineCost: 0 })
 
-      // Fix total: subtotal of all + one shipping
       total.totalPrice = total.subtotal + total.shippingCost
       setResult(total)
     } finally {
@@ -255,6 +292,22 @@ export default function UploadPage() {
 
   const updateModel = (id: string, updates: Partial<ModelInfo>) => {
     setModels(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m))
+  }
+
+  const updateScale = (id: string, scalePct: number) => {
+    const s = Math.max(1, Math.min(1000, scalePct)) / 100
+    setModels(prev => prev.map(m => {
+      if (m.id !== id) return m
+      const dims = {
+        x: m.originalDimensions.x * s,
+        y: m.originalDimensions.y * s,
+        z: m.originalDimensions.z * s,
+      }
+      const volumeCm3 = m.originalVolumeCm3 * s * s * s
+      const oversize = !fitsInBuildVolume(dims)
+      return { ...m, scale: s, dimensions: dims, volumeCm3, oversize }
+    }))
+    setResult(null)
   }
 
   const handleProceed = () => {
@@ -316,7 +369,12 @@ export default function UploadPage() {
                   <Canvas shadows camera={{ position: [100, 100, 100], fov: 45 }}>
                     <Suspense fallback={null}>
                       <Stage intensity={0.4} environment="city" adjustCamera>
-                        <Center><Model url={selectedModel.url} /></Center>
+                        <Center>
+                          {selectedModel.name.toLowerCase().endsWith('.3mf')
+                            ? <Model3MF url={selectedModel.url} scale={selectedModel.scale ?? 1} />
+                            : <ModelSTL url={selectedModel.url} scale={selectedModel.scale ?? 1} />
+                          }
+                        </Center>
                       </Stage>
                     </Suspense>
                     <OrbitControls makeDefault autoRotate autoRotateSpeed={0.8} />
@@ -337,6 +395,9 @@ export default function UploadPage() {
                         {selectedModel.dimensions.x.toFixed(1)} × {selectedModel.dimensions.y.toFixed(1)} × {selectedModel.dimensions.z.toFixed(1)} mm
                         <span className="mx-1.5 text-white/15">·</span>
                         {selectedModel.volumeCm3.toFixed(1)} cm³
+                        {selectedModel.scale !== 1 && (
+                          <span className="ml-1.5 text-blue-400/70">{Math.round(selectedModel.scale * 100)}%</span>
+                        )}
                       </p>
                     )}
                   </div>
@@ -387,7 +448,7 @@ export default function UploadPage() {
               className="w-full py-3.5 border border-dashed border-white/8 rounded-2xl font-header text-[10px] tracking-[0.4em] uppercase hover:bg-white/4 hover:border-white/15 transition-all text-white/30 flex items-center justify-center gap-2">
               <Plus size={12} /> Add more files
             </button>
-            <input type="file" multiple accept=".stl" ref={fileInputRef} onChange={e => e.target.files && handleFileUpload(e.target.files)} className="hidden" />
+            <input type="file" multiple accept=".stl,.3mf" ref={fileInputRef} onChange={e => e.target.files && handleFileUpload(e.target.files)} className="hidden" />
           </div>
 
           {/* ── COL 2: Upload + File Queue ── */}
@@ -441,6 +502,12 @@ export default function UploadPage() {
                                   <span className="text-[9px] font-header uppercase tracking-wider" style={{ color: mat?.color }}>
                                     {model.material}
                                   </span>
+                                  {model.scale !== 1 && (
+                                    <>
+                                      <span className="w-0.5 h-0.5 rounded-full bg-white/15" />
+                                      <span className="text-[9px] font-header text-blue-400/70">{Math.round(model.scale * 100)}%</span>
+                                    </>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -460,9 +527,10 @@ export default function UploadPage() {
                           </button>
                         </div>
 
-                        {/* Material + Color picker (expanded when selected) */}
+                        {/* Material + Color + Scale picker (expanded when selected) */}
                         {selectedModelId === model.id && !model.uploading && !model.error && !model.oversize && (
                           <div className="px-4 pb-4 pt-1 border-t border-white/5 space-y-4">
+                            {/* Material */}
                             <div>
                               <p className="text-[9px] font-header tracking-[0.35em] uppercase text-white/20 mb-2.5 flex items-center gap-1.5"><Layers size={9} />Material</p>
                               <div className="grid grid-cols-4 gap-1.5">
@@ -476,6 +544,8 @@ export default function UploadPage() {
                                 ))}
                               </div>
                             </div>
+
+                            {/* Color */}
                             <div>
                               <p className="text-[9px] font-header tracking-[0.35em] uppercase text-white/20 mb-2.5">Color</p>
                               <div className="flex flex-wrap gap-2">
@@ -487,6 +557,59 @@ export default function UploadPage() {
                                 ))}
                               </div>
                             </div>
+
+                            {/* Scale */}
+                            {model.originalDimensions.x > 0 && (
+                              <div>
+                                <p className="text-[9px] font-header tracking-[0.35em] uppercase text-white/20 mb-2.5 flex items-center gap-1.5">
+                                  <Maximize2 size={9} />Model Scale
+                                </p>
+                                <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                                  <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                                    <button
+                                      onClick={() => updateScale(model.id, Math.max(1, Math.round(model.scale * 100) - 10))}
+                                      className="text-white/30 hover:text-white transition-colors w-4 h-4 flex items-center justify-center">
+                                      <Minus size={10} />
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="1000"
+                                      step="1"
+                                      value={Math.round(model.scale * 100)}
+                                      onChange={e => updateScale(model.id, Number(e.target.value))}
+                                      className="w-14 bg-transparent text-center font-header text-sm text-white focus:outline-none"
+                                    />
+                                    <span className="text-[10px] text-white/40 font-header">%</span>
+                                    <button
+                                      onClick={() => updateScale(model.id, Math.min(1000, Math.round(model.scale * 100) + 10))}
+                                      className="text-white/30 hover:text-white transition-colors w-4 h-4 flex items-center justify-center">
+                                      <Plus size={10} />
+                                    </button>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-[9px] text-white/35 font-header">
+                                      {model.dimensions.x.toFixed(0)}×{model.dimensions.y.toFixed(0)}×{model.dimensions.z.toFixed(0)} mm
+                                    </p>
+                                    <p className="text-[8px] text-white/20 mt-0.5">
+                                      orig: {model.originalDimensions.x.toFixed(0)}×{model.originalDimensions.y.toFixed(0)}×{model.originalDimensions.z.toFixed(0)} mm
+                                    </p>
+                                  </div>
+                                </div>
+                                {/* Scale quick presets */}
+                                <div className="flex gap-1.5 mt-2">
+                                  {[50, 100, 150, 200].map(pct => (
+                                    <button key={pct} onClick={() => updateScale(model.id, pct)}
+                                      className={`flex-1 py-1 rounded-lg border text-[8px] font-header tracking-wider transition-all
+                                        ${Math.round(model.scale * 100) === pct
+                                          ? 'bg-white/15 border-white/30 text-white'
+                                          : 'border-white/6 text-white/30 hover:border-white/15 hover:text-white/60'}`}>
+                                      {pct}%
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
