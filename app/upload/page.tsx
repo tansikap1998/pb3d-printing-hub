@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, Suspense } from "react"
 import * as THREE from "three"
 // @ts-ignore
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
 // @ts-ignore
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader'
+import { Canvas, useLoader } from "@react-three/fiber"
+import { OrbitControls, Stage, Center } from "@react-three/drei"
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useOrderStore } from '@/lib/store'
@@ -13,8 +15,24 @@ import { formatTimeFull, fitsInBuildVolume, BUILD_MAX, calculate } from '@/lib/p
 import type { Shipping, Material, InfillLevel, LayerHeight } from '@/lib/priceCalculator'
 import {
   UploadCloud, X, FileText, Plus, Minus, ChevronRight, ChevronLeft,
-  Check, AlertTriangle, Loader2, Truck, Store,
+  Check, AlertTriangle, Loader2, Truck, Store, Box,
 } from 'lucide-react'
+
+// ─── 3D Preview components ────────────────────────────────────────────────────
+
+function ModelSTL({ url }: { url: string }) {
+  const geometry = useLoader(STLLoader, url)
+  return (
+    <mesh geometry={geometry} castShadow receiveShadow>
+      <meshStandardMaterial color="#a0a0b0" metalness={0.3} roughness={0.6} />
+    </mesh>
+  )
+}
+
+function Model3MF({ url }: { url: string }) {
+  const group = useLoader(ThreeMFLoader as any, url)
+  return <primitive object={group} />
+}
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -625,6 +643,47 @@ export default function WizardPage() {
 
         {/* ── Sidebar ──────────────────────────────────────────────── */}
         <aside className="w-[272px] shrink-0 sticky top-6 space-y-3">
+
+          {/* 3D Preview */}
+          <div className="rounded-xl overflow-hidden relative"
+            style={{ height: 200, background: T.surface, border: `1px solid ${T.border}` }}>
+            {primary && !primary.uploading && !primary.error && primary.url ? (
+              <>
+                <Canvas shadows camera={{ position: [80, 80, 80], fov: 45 }}>
+                  <Suspense fallback={null}>
+                    <Stage intensity={0.4} environment="city" adjustCamera>
+                      <Center>
+                        {primary.name.toLowerCase().endsWith('.3mf')
+                          ? <Model3MF url={primary.url} />
+                          : <ModelSTL url={primary.url} />}
+                      </Center>
+                    </Stage>
+                  </Suspense>
+                  <OrbitControls makeDefault autoRotate autoRotateSpeed={1.2} />
+                </Canvas>
+                {/* filename overlay */}
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-2"
+                  style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}>
+                  <p className="text-[10px] font-medium truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {primary.name}
+                  </p>
+                </div>
+              </>
+            ) : primary?.uploading ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <Loader2 size={22} className="animate-spin" style={{ color: T.accent }} />
+                <p className="text-[11px]" style={{ color: T.muted }}>กำลังโหลด…</p>
+              </div>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: T.surface2, border: `1px solid ${T.border}` }}>
+                  <Box size={20} style={{ color: T.muted }} />
+                </div>
+                <p className="text-[11px]" style={{ color: T.muted }}>3D Preview</p>
+              </div>
+            )}
+          </div>
 
           {/* Stats row */}
           <div className="rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
