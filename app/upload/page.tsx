@@ -539,45 +539,49 @@ export default function WizardPage() {
                 </div>
               )}
 
-              {/* Infill — moved here from right panel */}
+              {/* Infill + Layer Height — same row */}
               <div className="rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>Infill</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {INFILL_OPTIONS.map(opt => {
-                    const sel = infill === opt.v
-                    return (
-                      <button key={opt.v} onClick={() => setInfill(opt.v)}
-                        className="p-2.5 rounded-xl text-center wb-btn"
-                        style={{
-                          background: sel ? T.accentDim : T.surface2,
-                          border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                        }}>
-                        <p className="text-[12px] font-semibold">{opt.label}</p>
-                        <p className="text-[10px] mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Layer Height — moved here from right panel */}
-              <div className="rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>Layer Height</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {LAYER_OPTIONS.map(opt => {
-                    const sel = layerHeight === opt.v
-                    return (
-                      <button key={opt.v} onClick={() => setLayerHeight(opt.v)}
-                        className="p-2.5 rounded-xl text-center wb-btn"
-                        style={{
-                          background: sel ? T.accentDim : T.surface2,
-                          border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                        }}>
-                        <p className="text-[12px] font-semibold">{opt.label}</p>
-                        <p className="text-[10px] mt-0.5" style={{ color: T.muted }}>{opt.desc}</p>
-                      </button>
-                    )
-                  })}
+                <div className="grid grid-cols-2 gap-5">
+                  {/* Infill */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Infill</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {INFILL_OPTIONS.map(opt => {
+                        const sel = infill === opt.v
+                        return (
+                          <button key={opt.v} onClick={() => setInfill(opt.v)}
+                            className="py-2 px-1 rounded-xl text-center wb-btn"
+                            style={{
+                              background: sel ? T.accentDim : T.surface2,
+                              border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
+                            }}>
+                            <p className="text-[11px] font-semibold leading-tight">{opt.label}</p>
+                            <p className="text-[9px] mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  {/* Layer Height */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Layer Height</p>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {LAYER_OPTIONS.map(opt => {
+                        const sel = layerHeight === opt.v
+                        return (
+                          <button key={opt.v} onClick={() => setLayerHeight(opt.v)}
+                            className="py-2 px-2.5 rounded-xl flex items-center justify-between wb-btn"
+                            style={{
+                              background: sel ? T.accentDim : T.surface2,
+                              border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
+                            }}>
+                            <p className="text-[11px] font-semibold">{opt.label}</p>
+                            <p className="text-[9px]" style={{ color: T.muted }}>{opt.desc}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -667,13 +671,12 @@ export default function WizardPage() {
             <div className="w-[300px] shrink-0 flex flex-col"
               style={{ borderLeft: `1px solid ${T.border}`, background: T.surface }}>
 
-              {/* Scrollable settings area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-5"
-                style={{ scrollbarWidth: 'thin', scrollbarColor: '#333 transparent' }}>
+              {/* Settings area — no scroll, tight spacing */}
+              <div className="p-4 space-y-3">
 
                 {/* Material */}
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>วัสดุ</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>วัสดุ</p>
                   <div className="grid grid-cols-3 gap-1.5">
                     {MATERIALS.map(m => {
                       const sel = material === m.id
@@ -695,7 +698,7 @@ export default function WizardPage() {
 
                 {/* Color */}
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>สี</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>สี</p>
                   <div className="flex flex-wrap gap-2">
                     {COLOR_SWATCHES.map(c => (
                       <button key={c.id} onClick={() => setColorId(c.id)} title={c.id}
@@ -710,22 +713,22 @@ export default function WizardPage() {
                   </div>
                 </div>
 
-                {/* Qty row */}
+                {/* Qty row — compact inline */}
                 {models.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: T.muted }}>จำนวน</p>
-                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                      style={{ background: T.surface2, border: `1px solid ${T.border}`, width: 'fit-content' }}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: T.muted }}>จำนวน</p>
+                    <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
+                      style={{ background: T.surface2, border: `1px solid ${T.border}` }}>
                       <button onClick={() => models[0] && updateQty(models[0].id, models[0].quantity - 1)}
-                        className="w-6 h-6 flex items-center justify-center" style={{ color: T.muted }}>
-                        <Minus size={13} />
+                        className="w-5 h-5 flex items-center justify-center" style={{ color: T.muted }}>
+                        <Minus size={11} />
                       </button>
-                      <span className="w-6 text-center text-[15px] font-bold">{totalQty}</span>
+                      <span className="w-5 text-center text-[14px] font-bold">{totalQty}</span>
                       <button onClick={() => models[0] && updateQty(models[0].id, models[0].quantity + 1)}
-                        className="w-6 h-6 flex items-center justify-center" style={{ color: T.muted }}>
-                        <Plus size={13} />
+                        className="w-5 h-5 flex items-center justify-center" style={{ color: T.muted }}>
+                        <Plus size={11} />
                       </button>
-                      <span className="text-[11px]" style={{ color: T.muted }}>ชิ้น</span>
+                      <span className="text-[10px]" style={{ color: T.muted }}>ชิ้น</span>
                     </div>
                   </div>
                 )}
