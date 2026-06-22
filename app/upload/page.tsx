@@ -73,6 +73,12 @@ const STEPS = ['อัปโหลด & ตั้งค่า', 'จัดส่
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface SubPiece {
+  id: string
+  volumeCm3: number
+  dimensions: { x: number; y: number; z: number }
+}
+
 interface ModelFile {
   id: string
   name: string
@@ -83,9 +89,13 @@ interface ModelFile {
   quantity: number
   uploading: boolean
   error?: boolean
+  subPieces?: SubPiece[]
+  autoSplit?: boolean
 }
 
 interface CustomDims { x: number; y: number; z: number }
+
+const AUTO_SPLIT_THRESHOLD = 250 // mm
 
 // ─── Three.js sub-components ──────────────────────────────────────────────────
 
@@ -161,11 +171,35 @@ export default function WizardPage() {
 
   const scaledVolume = (primary?.originalVolumeCm3 ?? 0) * sx * sy * sz
   const totalQty     = models.reduce((a, m) => a + m.quantity, 0)
-  const isOversize   = !fitsInBuildVolume(customDims)
+  // Auto-split models are not oversize — pieces are estimated individually
+  const isOversize   = primary?.autoSplit ? false : !fitsInBuildVolume(customDims)
 
   const estimate = (() => {
     if (!primary || primary.uploading || primary.error || primary.originalVolumeCm3 === 0 || isOversize) return null
     try {
+      if (primary.autoSplit && primary.subPieces && primary.subPieces.length > 0) {
+        // Estimate each sub-piece separately, apply global scale factors, sum up
+        const pieceCalcs = primary.subPieces.map(p => calculate({
+          volumeCm3: p.volumeCm3 * sx * sy * sz,
+          dimensions: { x: p.dimensions.x * sx, y: p.dimensions.y * sy, z: p.dimensions.z * sz },
+          technology: 'FDM', material, infill, layerHeight,
+          quantity: 1,
+          shipping: 'pickup', // no per-piece shipping
+        }))
+        const SHIPPING_FEE = shipping === 'pickup' ? 0 : 45
+        const subtotal = pieceCalcs.reduce((a, e) => a + e.pricePerPc, 0) * totalQty
+        return {
+          weightG:      pieceCalcs.reduce((a, e) => a + e.weightG, 0) * totalQty,
+          printTimeSec: pieceCalcs.reduce((a, e) => a + e.printTimeSec, 0) * totalQty,
+          printTimeMin: pieceCalcs.reduce((a, e) => a + (e as any).printTimeMin, 0) * totalQty,
+          materialCost: pieceCalcs.reduce((a, e) => a + e.materialCost, 0) * totalQty,
+          machineCost:  pieceCalcs.reduce((a, e) => a + e.machineCost,  0) * totalQty,
+          pricePerPc:   pieceCalcs.reduce((a, e) => a + e.pricePerPc,   0),
+          subtotal,
+          shippingCost: SHIPPING_FEE,
+          totalPrice:   subtotal + SHIPPING_FEE,
+        } as ReturnType<typeof calculate>
+      }
       return calculate({
         volumeCm3: scaledVolume,
         dimensions: customDims,
@@ -237,10 +271,43 @@ export default function WizardPage() {
           const group = await new Promise<THREE.Group>((res, rej) =>
             new (ThreeMFLoader as any)().load(blobUrl, res, undefined, rej)
           )
-          const size = new THREE.Vector3()
-          new THREE.Box3().setFromObject(group).getSize(size)
-          volumeCm3 = Math.abs(size.x * size.y * size.z) / 1000
-          dims = { x: size.x, y: size.y, z: size.z }
+          const totalSize = new THREE.Vector3()
+          new THREE.Box3().setFromObject(group).getSize(totalSize)
+          volumeCm3 = Math.abs(totalSize.x * totalSize.y * totalSize.z) / 1000
+          dims = { x: totalSize.x, y: totalSize.y, z: totalSize.z }
+
+          // Auto-split: if total BB exceeds threshold and group has multiple meshes
+          const meshes: THREE.Mesh[] = []
+          group.traverse(obj => { if ((obj as any).isMesh) meshes.push(obj as THREE.Mesh) })
+
+          if (
+            meshes.length > 1 &&
+            (totalSize.x > AUTO_SPLIT_THRESHOLD || totalSize.y > AUTO_SPLIT_THRESHOLD || totalSize.z > AUTO_SPLIT_THRESHOLD)
+          ) {
+            const subPieces: SubPiece[] = meshes
+              .map((mesh, i) => {
+                const sz = new THREE.Vector3()
+                new THREE.Box3().setFromObject(mesh).getSize(sz)
+                const vol = Math.abs(sz.x * sz.y * sz.z) / 1000
+                return { id: `piece-${i}`, volumeCm3: vol, dimensions: { x: sz.x, y: sz.y, z: sz.z } }
+              })
+              .filter(p => p.volumeCm3 > 0)
+
+            if (subPieces.length > 0) {
+              const totalVol = subPieces.reduce((a, p) => a + p.volumeCm3, 0)
+              // Use largest piece as representative dims for the primary entry
+              const largest = subPieces.reduce((a, b) => b.volumeCm3 > a.volumeCm3 ? b : a)
+              setModels(prev => prev.map(m => m.id === modelId ? {
+                ...m,
+                originalDimensions: largest.dimensions,
+                originalVolumeCm3: totalVol,
+                s3Key: undefined, uploading: false,
+                subPieces, autoSplit: true,
+              } : m))
+              // upload file in background still (no s3 upload needed for split display, skip s3 for now)
+              return
+            }
+          }
         } else {
           const geo = await new Promise<THREE.BufferGeometry>(res =>
             new STLLoader().load(blobUrl, res)
@@ -409,6 +476,19 @@ export default function WizardPage() {
                         </p>
                       </div>
                     )}
+
+                    {/* Auto-split badge */}
+                    {primary?.autoSplit && primary.subPieces && (
+                      <div className="absolute top-3 left-3 px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                        style={{ background: 'rgba(91,143,255,0.18)', border: '1px solid rgba(91,143,255,0.4)' }}>
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                          <path d="M7 1v5M7 8v5M1 7h5M8 7h5" stroke="#5b8fff" strokeWidth="1.8" strokeLinecap="round"/>
+                        </svg>
+                        <span className="text-[11px] font-semibold" style={{ color: T.accent }}>
+                          แบ่งอัตโนมัติ {primary.subPieces.length} ชิ้น
+                        </span>
+                      </div>
+                    )}
                   </>
                 ) : primary?.uploading ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -535,6 +615,51 @@ export default function WizardPage() {
                       {((sx + sy + sz) / 3 * 100).toFixed(0)}% ขนาดเฉลี่ย
                       {sx === sy && sy === sz ? '' : ' (ไม่สม่ำเสมอ)'}
                     </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Auto-split sub-pieces breakdown */}
+              {primary?.autoSplit && primary.subPieces && primary.subPieces.length > 0 && (
+                <div className="rounded-xl p-4 space-y-2.5" style={{ background: T.surface, border: `1px solid rgba(91,143,255,0.3)` }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                      <path d="M7 1v5M7 8v5M1 7h5M8 7h5" stroke="#5b8fff" strokeWidth="1.8" strokeLinecap="round"/>
+                    </svg>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: T.accent }}>
+                      แบ่งอัตโนมัติ — {primary.subPieces.length} ชิ้น
+                    </p>
+                  </div>
+                  <p className="text-[10px]" style={{ color: T.muted }}>
+                    โมเดลเกิน {AUTO_SPLIT_THRESHOLD}mm — ระบบแยกชิ้นงานแต่ละส่วนให้อัตโนมัติ
+                  </p>
+                  <div className="space-y-1.5">
+                    {primary.subPieces.map((p, i) => {
+                      let pieceEst: ReturnType<typeof calculate> | null = null
+                      try {
+                        pieceEst = calculate({
+                          volumeCm3: p.volumeCm3 * sx * sy * sz,
+                          dimensions: { x: p.dimensions.x * sx, y: p.dimensions.y * sy, z: p.dimensions.z * sz },
+                          technology: 'FDM', material, infill, layerHeight,
+                          quantity: 1, shipping: 'pickup',
+                        })
+                      } catch { /* ignore */ }
+                      return (
+                        <div key={p.id} className="flex items-center justify-between px-3 py-2 rounded-lg"
+                          style={{ background: T.surface2, border: `1px solid ${T.border}` }}>
+                          <div>
+                            <p className="text-[11px] font-semibold">ชิ้นที่ {i + 1}</p>
+                            <p className="text-[10px] mt-0.5" style={{ color: T.muted }}>
+                              {(p.dimensions.x * sx).toFixed(0)}×{(p.dimensions.y * sy).toFixed(0)}×{(p.dimensions.z * sz).toFixed(0)} mm
+                              &nbsp;·&nbsp;{(p.volumeCm3 * sx * sy * sz).toFixed(2)} cm³
+                            </p>
+                          </div>
+                          <p className="text-[12px] font-bold" style={{ color: T.accent }}>
+                            {pieceEst ? `฿${pieceEst.pricePerPc.toFixed(0)}` : '—'}
+                          </p>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}
