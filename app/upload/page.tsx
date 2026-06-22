@@ -238,10 +238,20 @@ export default function WizardPage() {
 
   // ── Sub-piece delete ────────────────────────────────────────────────────────
   const deleteSubPiece = (pieceId: string) => {
-    setModels(prev => prev.map(m => m.id === primary?.id
-      ? { ...m, subPieces: (m.subPieces ?? []).filter(p => p.id !== pieceId) }
-      : m
-    ))
+    setModels(prev => {
+      const updated = prev.map(m => m.id === primary?.id
+        ? { ...m, subPieces: (m.subPieces ?? []).filter(p => p.id !== pieceId) }
+        : m
+      )
+      // ลบหมดทุกชิ้น → ลบโมเดลออกจาก list
+      const updatedPrimary = updated.find(m => m.id === primary?.id)
+      if (updatedPrimary?.autoSplit && (updatedPrimary.subPieces ?? []).length === 0) {
+        const remaining = updated.filter(m => m.id !== primary?.id)
+        setSelectedModelId(remaining[0]?.id ?? null)
+        return remaining
+      }
+      return updated
+    })
   }
 
   const activeChildIndices = primary?.autoSplit && primary.subPieces
@@ -599,10 +609,10 @@ export default function WizardPage() {
 
               {/* XYZ Dimension inputs + Infill + Layer Height — same row */}
               {primary && !primary.uploading && !primary.error && primary.originalDimensions.x > 0 && (
-                <div className="flex gap-3 items-start">
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
 
                   {/* Dims card */}
-                  <div className="flex-1 rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+                  <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 0 }}>
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: T.muted }}>
                         ปรับขนาด (mm)
@@ -653,7 +663,7 @@ export default function WizardPage() {
                   </div>
 
                   {/* Infill card */}
-                  <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 110 }}>
+                  <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 0 }}>
                     <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Infill</p>
                     <div className="grid grid-cols-2 gap-1">
                       {INFILL_OPTIONS.map(opt => {
@@ -665,7 +675,7 @@ export default function WizardPage() {
                               background: sel ? T.accentDim : T.surface2,
                               border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                             }}>
-                            <p className="text-[10px] font-semibold leading-tight">{opt.label}</p>
+                            <p className="text-[9px] font-semibold leading-tight truncate">{opt.label}</p>
                             <p className="text-[8px] mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
                           </button>
                         )
@@ -674,7 +684,7 @@ export default function WizardPage() {
                   </div>
 
                   {/* Layer Height card */}
-                  <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 100 }}>
+                  <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 0 }}>
                     <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Layer</p>
                     <div className="flex flex-col gap-1">
                       {LAYER_OPTIONS.map(opt => {
