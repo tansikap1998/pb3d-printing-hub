@@ -75,6 +75,7 @@ const STEPS = ['อัปโหลด & ตั้งค่า', 'จัดส่
 
 interface SubPiece {
   id: string
+  childIndex: number
   volumeCm3: number
   dimensions: { x: number; y: number; z: number }
 }
@@ -108,8 +109,17 @@ function ModelSTL({ url, scale }: { url: string; scale: [number, number, number]
   )
 }
 
-function Model3MF({ url, scale }: { url: string; scale: [number, number, number] }) {
+function Model3MF({ url, scale, activeChildIndices }: { url: string; scale: [number, number, number]; activeChildIndices?: number[] }) {
   const group = useLoader(ThreeMFLoader as any, url)
+  useEffect(() => {
+    if (activeChildIndices) {
+      group.children.forEach((child: THREE.Object3D, i: number) => {
+        child.visible = activeChildIndices.includes(i)
+      })
+    } else {
+      group.children.forEach((child: THREE.Object3D) => { child.visible = true })
+    }
+  }, [group, activeChildIndices?.join(',')])  // eslint-disable-line react-hooks/exhaustive-deps
   return <primitive object={group} scale={scale} />
 }
 
@@ -226,6 +236,18 @@ export default function WizardPage() {
     }
   }
 
+  // ── Sub-piece delete ────────────────────────────────────────────────────────
+  const deleteSubPiece = (pieceId: string) => {
+    setModels(prev => prev.map(m => m.id === primary?.id
+      ? { ...m, subPieces: (m.subPieces ?? []).filter(p => p.id !== pieceId) }
+      : m
+    ))
+  }
+
+  const activeChildIndices = primary?.autoSplit && primary.subPieces
+    ? primary.subPieces.map(p => p.childIndex)
+    : undefined
+
   // ── Zoom controls ───────────────────────────────────────────────────────────
   const zoomIn  = useCallback(() => {
     if (orbitRef.current) { orbitRef.current.dollyIn(1.3);  orbitRef.current.update() }
@@ -302,7 +324,7 @@ export default function WizardPage() {
                 const sz = new THREE.Vector3()
                 new THREE.Box3().setFromObject(obj).getSize(sz)
                 const vol = Math.abs(sz.x * sz.y * sz.z) / 1000
-                return { id: `piece-${i}`, volumeCm3: vol, dimensions: { x: sz.x, y: sz.y, z: sz.z } }
+                return { id: `piece-${i}`, childIndex: i, volumeCm3: vol, dimensions: { x: sz.x, y: sz.y, z: sz.z } }
               })
               .filter(p => p.volumeCm3 > 0)
 
@@ -434,7 +456,7 @@ export default function WizardPage() {
                         <Stage intensity={0.5} environment="city" adjustCamera>
                           <Center>
                             {primary.name.toLowerCase().endsWith('.3mf')
-                              ? <Model3MF url={primary.url} scale={meshScale} />
+                              ? <Model3MF url={primary.url} scale={meshScale} activeChildIndices={activeChildIndices} />
                               : <ModelSTL url={primary.url} scale={meshScale} />}
                           </Center>
                         </Stage>
@@ -575,77 +597,120 @@ export default function WizardPage() {
                 </div>
               )}
 
-              {/* XYZ Dimension inputs — below preview, always visible when model loaded */}
+              {/* XYZ Dimension inputs + Infill + Layer Height — same row */}
               {primary && !primary.uploading && !primary.error && primary.originalDimensions.x > 0 && (
-                <div className="rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: T.muted }}>
-                      ปรับขนาดโมเดล (mm)
-                    </p>
-                    <button onClick={() => setLockRatio(p => !p)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg wb-btn text-[11px] font-medium transition-all"
-                      style={{
-                        background: lockRatio ? T.accentDim : T.surface2,
-                        border:     lockRatio ? `1px solid ${T.accent}` : `1px solid ${T.border}`,
-                        color:      lockRatio ? T.accent : T.muted,
-                      }}>
-                      {lockRatio ? <Lock size={11} /> : <Unlock size={11} />}
-                      {lockRatio ? 'ล็อกสัดส่วน' : 'อิสระ'}
-                    </button>
-                  </div>
+                <div className="flex gap-3 items-start">
 
-                  <div className="grid grid-cols-3 gap-3">
-                    {(['x', 'y', 'z'] as const).map((ax, i) => {
-                      const colors = ['#ef4444', '#22c55e', '#3b82f6']
-                      const labels = ['X (กว้าง)', 'Y (สูง)', 'Z (ลึก)']
-                      return (
-                        <div key={ax} className="space-y-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full" style={{ background: colors[i] }} />
-                            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: colors[i] }}>
-                              {labels[i]}
+                  {/* Dims card */}
+                  <div className="flex-1 rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: T.muted }}>
+                        ปรับขนาด (mm)
+                      </p>
+                      <button onClick={() => setLockRatio(p => !p)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg wb-btn text-[10px] font-medium transition-all"
+                        style={{
+                          background: lockRatio ? T.accentDim : T.surface2,
+                          border:     lockRatio ? `1px solid ${T.accent}` : `1px solid ${T.border}`,
+                          color:      lockRatio ? T.accent : T.muted,
+                        }}>
+                        {lockRatio ? <Lock size={10} /> : <Unlock size={10} />}
+                        {lockRatio ? 'ล็อก' : 'อิสระ'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['x', 'y', 'z'] as const).map((ax, i) => {
+                        const colors = ['#ef4444', '#22c55e', '#3b82f6']
+                        const labels = ['X', 'Y', 'Z']
+                        return (
+                          <div key={ax} className="space-y-1.5">
+                            <div className="flex items-center gap-1">
+                              <div className="w-2 h-2 rounded-full" style={{ background: colors[i] }} />
+                              <p className="text-[10px] font-semibold" style={{ color: colors[i] }}>{labels[i]}</p>
+                            </div>
+                            <input
+                              type="number"
+                              className="dim-input"
+                              min={0.1} step={0.1}
+                              value={customDims[ax].toFixed(1)}
+                              onChange={e => handleDimChange(ax, parseFloat(e.target.value) || 0.1)}
+                            />
+                            <p className="text-[9px] text-center" style={{ color: T.muted }}>
+                              {primary.originalDimensions[ax].toFixed(1)}
                             </p>
                           </div>
-                          <input
-                            type="number"
-                            className="dim-input"
-                            min={0.1} step={0.1}
-                            value={customDims[ax].toFixed(1)}
-                            onChange={e => handleDimChange(ax, parseFloat(e.target.value) || 0.1)}
-                          />
-                          <p className="text-[9px] text-center" style={{ color: T.muted }}>
-                            orig: {primary.originalDimensions[ax].toFixed(1)}
-                          </p>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
+
+                    <div className="flex justify-center mt-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
+                        style={{ background: T.accentDim, color: T.accent, border: `1px solid ${T.accent}33` }}>
+                        {((sx + sy + sz) / 3 * 100).toFixed(0)}%{sx === sy && sy === sz ? '' : ' ≠'}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Scale % badge */}
-                  <div className="flex justify-center mt-3">
-                    <span className="px-3 py-1 rounded-full text-[11px] font-semibold"
-                      style={{ background: T.accentDim, color: T.accent, border: `1px solid ${T.accent}33` }}>
-                      {((sx + sy + sz) / 3 * 100).toFixed(0)}% ขนาดเฉลี่ย
-                      {sx === sy && sy === sz ? '' : ' (ไม่สม่ำเสมอ)'}
-                    </span>
+                  {/* Infill card */}
+                  <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 110 }}>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Infill</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {INFILL_OPTIONS.map(opt => {
+                        const sel = infill === opt.v
+                        return (
+                          <button key={opt.v} onClick={() => setInfill(opt.v)}
+                            className="py-1.5 px-1 rounded-lg text-center wb-btn"
+                            style={{
+                              background: sel ? T.accentDim : T.surface2,
+                              border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
+                            }}>
+                            <p className="text-[10px] font-semibold leading-tight">{opt.label}</p>
+                            <p className="text-[8px] mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
+
+                  {/* Layer Height card */}
+                  <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 100 }}>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Layer</p>
+                    <div className="flex flex-col gap-1">
+                      {LAYER_OPTIONS.map(opt => {
+                        const sel = layerHeight === opt.v
+                        return (
+                          <button key={opt.v} onClick={() => setLayerHeight(opt.v)}
+                            className="py-1.5 px-2 rounded-lg flex items-center justify-between wb-btn"
+                            style={{
+                              background: sel ? T.accentDim : T.surface2,
+                              border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
+                            }}>
+                            <p className="text-[10px] font-semibold">{opt.label}</p>
+                            <p className="text-[8px]" style={{ color: T.muted }}>{opt.desc}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                 </div>
               )}
 
               {/* Auto-split sub-pieces breakdown */}
               {primary?.autoSplit && primary.subPieces && primary.subPieces.length > 0 && (
                 <div className="rounded-xl p-4 space-y-2.5" style={{ background: T.surface, border: `1px solid rgba(91,143,255,0.3)` }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                      <path d="M7 1v5M7 8v5M1 7h5M8 7h5" stroke="#5b8fff" strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: T.accent }}>
-                      แบ่งอัตโนมัติ — {primary.subPieces.length} ชิ้น
-                    </p>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                        <path d="M7 1v5M7 8v5M1 7h5M8 7h5" stroke="#5b8fff" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: T.accent }}>
+                        แบ่งอัตโนมัติ — {primary.subPieces.length} ชิ้น
+                      </p>
+                    </div>
+                    <p className="text-[10px]" style={{ color: T.muted }}>กดลบเพื่อตัดออกจากการสั่ง</p>
                   </div>
-                  <p className="text-[10px]" style={{ color: T.muted }}>
-                    โมเดลเกิน {AUTO_SPLIT_THRESHOLD}mm — ระบบแยกชิ้นงานแต่ละส่วนให้อัตโนมัติ
-                  </p>
                   <div className="space-y-1.5">
                     {primary.subPieces.map((p, i) => {
                       let pieceEst: ReturnType<typeof calculate> | null = null
@@ -658,70 +723,30 @@ export default function WizardPage() {
                         })
                       } catch { /* ignore */ }
                       return (
-                        <div key={p.id} className="flex items-center justify-between px-3 py-2 rounded-lg"
+                        <div key={p.id} className="flex items-center gap-2 px-3 py-2 rounded-lg"
                           style={{ background: T.surface2, border: `1px solid ${T.border}` }}>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <p className="text-[11px] font-semibold">ชิ้นที่ {i + 1}</p>
                             <p className="text-[10px] mt-0.5" style={{ color: T.muted }}>
                               {(p.dimensions.x * sx).toFixed(0)}×{(p.dimensions.y * sy).toFixed(0)}×{(p.dimensions.z * sz).toFixed(0)} mm
                               &nbsp;·&nbsp;{(p.volumeCm3 * sx * sy * sz).toFixed(2)} cm³
                             </p>
                           </div>
-                          <p className="text-[12px] font-bold" style={{ color: T.accent }}>
+                          <p className="text-[12px] font-bold shrink-0" style={{ color: T.accent }}>
                             {pieceEst ? `฿${pieceEst.pricePerPc.toFixed(0)}` : '—'}
                           </p>
+                          <button onClick={() => deleteSubPiece(p.id)}
+                            className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center wb-btn transition-all"
+                            style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}
+                            title="ลบออกจากการสั่ง">
+                            <X size={11} />
+                          </button>
                         </div>
                       )
                     })}
                   </div>
                 </div>
               )}
-
-              {/* Infill + Layer Height — same row */}
-              <div className="rounded-xl p-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-                <div className="grid grid-cols-2 gap-5">
-                  {/* Infill */}
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Infill</p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {INFILL_OPTIONS.map(opt => {
-                        const sel = infill === opt.v
-                        return (
-                          <button key={opt.v} onClick={() => setInfill(opt.v)}
-                            className="py-2 px-1 rounded-xl text-center wb-btn"
-                            style={{
-                              background: sel ? T.accentDim : T.surface2,
-                              border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                            }}>
-                            <p className="text-[11px] font-semibold leading-tight">{opt.label}</p>
-                            <p className="text-[9px] mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                  {/* Layer Height */}
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Layer Height</p>
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {LAYER_OPTIONS.map(opt => {
-                        const sel = layerHeight === opt.v
-                        return (
-                          <button key={opt.v} onClick={() => setLayerHeight(opt.v)}
-                            className="py-2 px-2.5 rounded-xl flex items-center justify-between wb-btn"
-                            style={{
-                              background: sel ? T.accentDim : T.surface2,
-                              border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                            }}>
-                            <p className="text-[11px] font-semibold">{opt.label}</p>
-                            <p className="text-[9px]" style={{ color: T.muted }}>{opt.desc}</p>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* Drop zone */}
               <button type="button" onClick={() => fileInputRef.current?.click()}
