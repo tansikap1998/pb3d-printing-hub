@@ -148,7 +148,8 @@ export default function WizardPage() {
     if (primary?.originalDimensions && primary.originalDimensions.x > 0) {
       setCustomDims({ ...primary.originalDimensions })
     }
-  }, [primary?.id])  // eslint-disable-line react-hooks/exhaustive-deps
+  // re-run when id changes OR when dims arrive (async after parse)
+  }, [primary?.id, primary?.originalDimensions?.x])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scale factors (non-uniform allowed) ────────────────────────────────────
   const orig = primary?.originalDimensions ?? { x: 1, y: 1, z: 1 }
