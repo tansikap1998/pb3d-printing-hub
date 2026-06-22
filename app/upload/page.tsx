@@ -276,18 +276,31 @@ export default function WizardPage() {
           volumeCm3 = Math.abs(totalSize.x * totalSize.y * totalSize.z) / 1000
           dims = { x: totalSize.x, y: totalSize.y, z: totalSize.z }
 
-          // Auto-split: if total BB exceeds threshold and group has multiple meshes
-          const meshes: THREE.Mesh[] = []
-          group.traverse(obj => { if ((obj as any).isMesh) meshes.push(obj as THREE.Mesh) })
+          // Auto-split: if total BB exceeds threshold and the 3MF has multiple objects
+          // ThreeMFLoader wraps each <object> as a child of the root Group
+          // Strategy: use direct children first; fallback to traverse for Mesh nodes
+          let candidates: THREE.Object3D[] = group.children.filter(child => {
+            const sz = new THREE.Vector3()
+            new THREE.Box3().setFromObject(child).getSize(sz)
+            return sz.x > 0 || sz.y > 0 || sz.z > 0
+          })
+          if (candidates.length <= 1) {
+            // fallback: find individual Mesh nodes at any depth
+            const meshNodes: THREE.Object3D[] = []
+            group.traverse(obj => {
+              if (obj !== group && (obj.type === 'Mesh' || (obj as any).isMesh)) meshNodes.push(obj)
+            })
+            if (meshNodes.length > candidates.length) candidates = meshNodes
+          }
 
           if (
-            meshes.length > 1 &&
+            candidates.length > 1 &&
             (totalSize.x > AUTO_SPLIT_THRESHOLD || totalSize.y > AUTO_SPLIT_THRESHOLD || totalSize.z > AUTO_SPLIT_THRESHOLD)
           ) {
-            const subPieces: SubPiece[] = meshes
-              .map((mesh, i) => {
+            const subPieces: SubPiece[] = candidates
+              .map((obj, i) => {
                 const sz = new THREE.Vector3()
-                new THREE.Box3().setFromObject(mesh).getSize(sz)
+                new THREE.Box3().setFromObject(obj).getSize(sz)
                 const vol = Math.abs(sz.x * sz.y * sz.z) / 1000
                 return { id: `piece-${i}`, volumeCm3: vol, dimensions: { x: sz.x, y: sz.y, z: sz.z } }
               })
