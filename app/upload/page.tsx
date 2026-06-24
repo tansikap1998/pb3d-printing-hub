@@ -84,6 +84,7 @@ interface ModelFile {
   id: string
   name: string
   url: string
+  previewUrl?: string  // converted STL blob URL for STEP files
   s3Key?: string
   originalDimensions: { x: number; y: number; z: number }
   originalVolumeCm3: number
@@ -353,6 +354,24 @@ export default function WizardPage() {
               return
             }
           }
+        } else if (/\.(step|stp)$/i.test(file.name)) {
+          // STEP: convert server-side → get dims + STL binary for preview
+          const fd = new FormData(); fd.append('file', file)
+          const res = await fetch('/api/convert/step', { method: 'POST', body: fd })
+          if (!res.ok) throw new Error('STEP conversion failed')
+          const data = await res.json()
+          dims = data.dims
+          volumeCm3 = data.volumeCm3
+
+          // Decode base64 STL → blob URL for Three.js rendering
+          const stlBytes = Uint8Array.from(atob(data.stlBase64), c => c.charCodeAt(0))
+          const previewUrl = URL.createObjectURL(new Blob([stlBytes], { type: 'application/octet-stream' }))
+
+          setModels(prev => prev.map(m => m.id === modelId
+            ? { ...m, originalDimensions: dims, originalVolumeCm3: volumeCm3, previewUrl, uploading: false }
+            : m
+          ))
+          return  // skip S3 upload for now (STEP files use server-converted STL for preview)
         } else {
           const geo = await new Promise<THREE.BufferGeometry>(res =>
             new STLLoader().load(blobUrl, res)
@@ -459,7 +478,7 @@ export default function WizardPage() {
               <div className="relative rounded-2xl overflow-hidden"
                 style={{ height: 400, background: 'linear-gradient(135deg,#0f1117 0%,#14161e 100%)', border: `1px solid ${T.border}` }}>
 
-                {primary && !primary.uploading && !primary.error && primary.url ? (
+                {primary && !primary.uploading && !primary.error && (primary.url || primary.previewUrl) ? (
                   <>
                     <Canvas shadows camera={{ position: [120, 100, 120], fov: 40 }}>
                       <Suspense fallback={null}>
@@ -467,7 +486,7 @@ export default function WizardPage() {
                           <Center>
                             {primary.name.toLowerCase().endsWith('.3mf')
                               ? <Model3MF url={primary.url} scale={meshScale} activeChildIndices={activeChildIndices} />
-                              : <ModelSTL url={primary.url} scale={meshScale} />}
+                              : <ModelSTL url={primary.previewUrl ?? primary.url} scale={meshScale} />}
                           </Center>
                         </Stage>
                         <AxesLabels size={axisSize} />
@@ -584,7 +603,7 @@ export default function WizardPage() {
                                   <Center>
                                     {model.name.toLowerCase().endsWith('.3mf')
                                       ? <Model3MF url={model.url} scale={[1,1,1]} />
-                                      : <ModelSTL url={model.url} scale={[1,1,1]} />}
+                                      : <ModelSTL url={model.previewUrl ?? model.url} scale={[1,1,1]} />}
                                   </Center>
                                 </Stage>
                               </Suspense>
@@ -772,7 +791,7 @@ export default function WizardPage() {
                       {isDragging ? 'วางไฟล์ที่นี่' : 'ลากไฟล์มาวาง หรือคลิกเพื่อเลือก'}
                     </p>
                     <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                      {['STL', '3MF', 'MAX 100MB'].map(f => (
+                      {['STL', '3MF', 'STEP', 'MAX 100MB'].map(f => (
                         <span key={f} className="px-2 py-0.5 rounded-full text-[9px] font-medium uppercase tracking-wider"
                           style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}` }}>
                           {f}
@@ -785,7 +804,7 @@ export default function WizardPage() {
                     </div>
                   </div>
                 </div>
-                <input ref={fileInputRef} type="file" multiple accept=".stl,.3mf"
+                <input ref={fileInputRef} type="file" multiple accept=".stl,.3mf,.step,.stp"
                   onChange={e => e.target.files && handleFileUpload(e.target.files)} className="hidden" />
               </button>
 
