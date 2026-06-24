@@ -4,12 +4,6 @@ import path from 'path'
 export const maxDuration = 30
 export const runtime = 'nodejs'
 
-// Resolve WASM path explicitly so Vercel bundles it correctly
-const WASM_PATH = path.join(
-  path.dirname(require.resolve('occt-import-js')),
-  'occt-import-js.wasm'
-)
-
 function writeBinarySTL(meshes: any[]): Buffer {
   let triangleCount = 0
   for (const mesh of meshes) {
@@ -66,9 +60,14 @@ export async function POST(req: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const occtimportjs = require('occt-import-js')
+    // Resolve WASM path at runtime (not module-eval time) so Turbopack doesn't choke
+    const wasmPath = path.join(
+      path.dirname(require.resolve('occt-import-js')),
+      'occt-import-js.wasm'
+    )
     const occt = await occtimportjs({
       locateFile: (filename: string) =>
-        filename.endsWith('.wasm') ? WASM_PATH : filename,
+        filename.endsWith('.wasm') ? wasmPath : filename,
     })
 
     const result = occt.ReadStepFile(new Uint8Array(buffer), {
