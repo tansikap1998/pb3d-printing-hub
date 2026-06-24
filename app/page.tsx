@@ -191,12 +191,9 @@ export default function Home() {
   const selectedMaterial = MATERIALS.find(m => m.id === selectedMat) || MATERIALS[0]
 
   const showcaseImages = [
-    "/showcase/showcase_1.png",
-    "/showcase/showcase_2.png", 
-    "/showcase/showcase_3.png",
-    "/showcase/showcase_4.png",
-    "/showcase/showcase_5.png",
-    "/showcase/showcase_6.png",
+    "/showcase/showcase_1.webp",
+    "/showcase/showcase_2.webp",
+    "/showcase/showcase_3.webp",
   ]
 
   const MODEL_LIBRARIES = [

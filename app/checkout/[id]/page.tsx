@@ -3,18 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import generatePayload from 'promptpay-qr'
-import { Upload, CheckCircle, Copy, ArrowLeft, Download, Loader2 } from 'lucide-react'
+import { Upload, CheckCircle, Copy, ArrowLeft, Loader2 } from 'lucide-react'
 import { supabase, isPlaceholder } from '@/lib/supabase/client'
 import { Stepper } from '@/components/Stepper'
 
-// Replace this with the actual promptpay ID (Phone number or National ID)
-const PROMPTPAY_ID = "5440400032900" 
+const BANK_ACCOUNT = "5981153600"
+const ACCOUNT_NAME = "รัชณีย์กร บุญหล้า"
 
 export default function CheckoutPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [order, setOrder] = useState<any>(null)
-  const [qrPayload, setQrPayload] = useState("")
   const [slipFile, setSlipFile] = useState<File | null>(null)
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -57,9 +55,6 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
 
         if (fetchedOrder) {
           setOrder(fetchedOrder)
-          const amount = isPlaceholder ? fetchedOrder.pricing.total : fetchedOrder.total_price
-          const payload = generatePayload(PROMPTPAY_ID, { amount })
-          setQrPayload(payload)
         } else {
           router.push('/')
         }
@@ -169,58 +164,32 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Payment Details */}
           <div className="space-y-8">
-            <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 text-center flex flex-col items-center shadow-2xl">
-              <h2 className="font-header text-sm uppercase tracking-[0.3em] text-white/60 mb-8">PromptPay QR</h2>
-              <div className="bg-white p-6 rounded-[2rem] mb-8 shadow-2xl relative group">
-                {qrPayload && (
-                  <>
-                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrPayload}`} alt="PromptPay QR" className="w-56 h-56 md:w-64 md:h-64" />
-                    <a 
-                      href={`https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${qrPayload}`} 
-                      download="promptpay-qr.png"
-                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 rounded-[2rem] text-white"
-                    >
-                      <Download className="w-8 h-8" />
-                      <span className="font-header text-[10px] tracking-widest uppercase">Save QR Image</span>
-                    </a>
-                  </>
-                )}
-              </div>
-              <p className="font-header text-5xl md:text-6xl font-bold tracking-tighter mb-4">฿{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-              <div className="flex flex-col gap-4">
-                <p className="font-header text-sm tracking-widest uppercase opacity-40">Scan to pay instantly</p>
-                <button className="flex items-center justify-center gap-3 text-white/60 hover:text-white transition-colors text-base font-header uppercase tracking-widest mt-4 border border-white/10 px-6 py-3 rounded-xl">
-                  <Download className="w-4 h-4" />
-                  Download QR
-                </button>
-              </div>
-            </div>
-
             <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 shadow-xl">
-              <h2 className="font-header text-sm uppercase tracking-[0.3em] text-white/60 mb-8">Bank Transfer</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 font-medium">
-                <div className="space-y-1">
-                  <p className="text-xs text-white/60 uppercase tracking-tight">Bank</p>
-                  <p className="text-base font-semibold tracking-tight">Krungsri (กรุงศรี)</p>
+              <h2 className="font-header text-sm uppercase tracking-[0.3em] text-white/60 mb-2">โอนเงินผ่านบัญชีธนาคาร</h2>
+              <p className="font-header text-5xl md:text-6xl font-bold tracking-tighter mb-8">฿{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <div className="grid grid-cols-1 gap-6 font-medium">
+                <div className="flex items-center justify-between py-4 border-b border-white/10">
+                  <p className="text-sm text-white/60 uppercase tracking-widest">ธนาคาร</p>
+                  <p className="text-base font-semibold">กรุงศรีอยุธยา (Krungsri)</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-white/60 uppercase tracking-tight">Account Name</p>
-                  <p className="text-base font-semibold tracking-tight">รัชณีย์กร บุญหล้า</p>
+                <div className="flex items-center justify-between py-4 border-b border-white/10">
+                  <p className="text-sm text-white/60 uppercase tracking-widest">ชื่อบัญชี</p>
+                  <p className="text-base font-semibold">{ACCOUNT_NAME}</p>
                 </div>
-                <div className="space-y-1 group relative">
-                  <p className="text-xs text-white/60 uppercase tracking-tight">PromptPay / Account</p>
-                  <div className="flex items-center gap-3">
-                    <p className="text-base font-medium tracking-widest">5440400032900</p>
-                    <button 
-                      onClick={() => copyToClipboard("5440400032900", "account")}
+                <div className="flex items-center justify-between py-4">
+                  <p className="text-sm text-white/60 uppercase tracking-widest">เลขที่บัญชี</p>
+                  <div className="flex items-center gap-3 relative">
+                    <p className="text-xl font-bold tracking-widest">{BANK_ACCOUNT}</p>
+                    <button
+                      onClick={() => copyToClipboard(BANK_ACCOUNT, "account")}
                       className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
                     >
                       {copiedField === 'account' ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                     </button>
+                    {copiedField === 'account' && (
+                      <span className="absolute -top-8 right-0 bg-white text-black text-[10px] px-2 py-1 rounded font-header uppercase tracking-widest">Copied</span>
+                    )}
                   </div>
-                  {copiedField === 'account' && (
-                    <span className="absolute -top-8 right-0 bg-white text-black text-[10px] px-2 py-1 rounded font-header uppercase tracking-widest animate-in fade-in slide-in-from-bottom-1">Copied</span>
-                  )}
                 </div>
               </div>
             </div>
