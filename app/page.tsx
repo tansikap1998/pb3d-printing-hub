@@ -180,12 +180,12 @@ export default function Home() {
   }, [])
 
   const MATERIALS = [
-    { id: 'PLA', name: 'PLA', desc: lang === 'TH' ? 'มาตรฐาน · แม่นยำสูง' : 'Standard · High Detail', price: '฿3/g', details: tTH.materials.items.PLA.details, bestFor: tTH.materials.items.PLA.bestFor },
-    { id: 'PETG', name: 'PETG', desc: lang === 'TH' ? 'ทนทาน · กันน้ำ' : 'Durable · Waterproof', price: '฿4/g', details: tTH.materials.items.PETG.details, bestFor: tTH.materials.items.PETG.bestFor },
-    { id: 'ABS', name: 'ABS', desc: lang === 'TH' ? 'ทนร้อน · เหนียว' : 'Heat Resistant', price: '฿4/g', details: tTH.materials.items.ABS.details, bestFor: tTH.materials.items.ABS.bestFor },
-    { id: 'ASA', name: 'ASA', desc: lang === 'TH' ? 'ทน UV · กลางแจ้ง' : 'UV Resistant', price: '฿5/g', details: tTH.materials.items.ASA.details, bestFor: tTH.materials.items.ASA.bestFor },
-    { id: 'TPU', name: 'TPU', desc: lang === 'TH' ? 'ยืดหยุ่น · นุ่ม' : 'Flexible', price: '฿6/g', details: tTH.materials.items.TPU.details, bestFor: tTH.materials.items.TPU.bestFor },
-    { id: 'CarbonFiber', name: 'Carbon Fiber', desc: lang === 'TH' ? 'แข็งแรง · น้ำหนักเบา' : 'Strong · Lightweight', price: '฿10/g', details: tTH.materials.items.CarbonFiber.details, bestFor: tTH.materials.items.CarbonFiber.bestFor },
+    { id: 'PLA', name: 'PLA', desc: lang === 'TH' ? 'มาตรฐาน · แม่นยำสูง' : 'Standard · High Detail', price: '฿2.5/g', details: tTH.materials.items.PLA.details, bestFor: tTH.materials.items.PLA.bestFor },
+    { id: 'PETG', name: 'PETG', desc: lang === 'TH' ? 'ทนทาน · กันน้ำ' : 'Durable · Waterproof', price: '฿3/g', details: tTH.materials.items.PETG.details, bestFor: tTH.materials.items.PETG.bestFor },
+    { id: 'ABS', name: 'ABS', desc: lang === 'TH' ? 'ทนร้อน · เหนียว' : 'Heat Resistant', price: '฿3/g', details: tTH.materials.items.ABS.details, bestFor: tTH.materials.items.ABS.bestFor },
+    { id: 'ASA', name: 'ASA', desc: lang === 'TH' ? 'ทน UV · กลางแจ้ง' : 'UV Resistant', price: '฿4/g', details: tTH.materials.items.ASA.details, bestFor: tTH.materials.items.ASA.bestFor },
+    { id: 'TPU', name: 'TPU', desc: lang === 'TH' ? 'ยืดหยุ่น · นุ่ม' : 'Flexible', price: '฿4/g', details: tTH.materials.items.TPU.details, bestFor: tTH.materials.items.TPU.bestFor },
+    { id: 'CarbonFiber', name: 'Carbon Fiber', desc: lang === 'TH' ? 'แข็งแรง · น้ำหนักเบา' : 'Strong · Lightweight', price: '฿8/g', details: tTH.materials.items.CarbonFiber.details, bestFor: tTH.materials.items.CarbonFiber.bestFor },
   ]
 
   const selectedMaterial = MATERIALS.find(m => m.id === selectedMat) || MATERIALS[0]

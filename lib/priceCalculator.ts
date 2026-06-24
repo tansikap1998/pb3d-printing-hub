@@ -48,14 +48,14 @@ const DENSITY: Record<Material, number> = {
   Nylon:       1.15,
 }
 
-// THB per gram of filament (PB3D balanced pricing)
+// THB per gram of filament
 const PRICE_PER_GRAM: Record<Material, number> = {
-  PLA:         3.5,
-  PETG:        4.5,
-  ABS:         4.0,
-  ASA:         5.0,
-  TPU:         6.0,
-  CarbonFiber: 12.0,
+  PLA:         2.5,
+  PETG:        3.0,
+  ABS:         3.0,
+  ASA:         4.0,
+  TPU:         4.0,
+  CarbonFiber: 8.0,
   Nylon:       12.0,
 }
 
