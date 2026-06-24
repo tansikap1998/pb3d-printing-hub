@@ -103,7 +103,7 @@ const ParticleBackground = () => {
 }
 
 // Feature Card Component
-const FeatureCard = ({ step, title, description, icon: Icon }: { step: string, title: string, description: string, icon: React.ElementType }) => (
+const FeatureCard = ({ step, title, description, icon: Icon }: { step: string, title: string, description: string, icon: React.ComponentType<{ className?: string }> }) => (
   <motion.div 
     className="group relative p-8 rounded-2xl premium-card overflow-hidden"
     whileHover={{ y: -4 }}
