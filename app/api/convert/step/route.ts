@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import path from 'path'
+import fs from 'fs'
 
 export const maxDuration = 30
 export const runtime = 'nodejs'
@@ -55,20 +56,20 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
     if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 })
+    if (file.size === 0) return NextResponse.json({ error: 'Empty file' }, { status: 400 })
 
     const buffer = Buffer.from(await file.arrayBuffer())
 
+    // Read WASM binary directly via fs so Vercel doesn't need to resolve paths.
+    // process.cwd() is the project root on Vercel at runtime.
+    const wasmBinary = fs.readFileSync(
+      path.join(process.cwd(), 'node_modules', 'occt-import-js', 'dist', 'occt-import-js.wasm')
+    )
+
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const occtimportjs = require('occt-import-js')
-    // Resolve WASM path at runtime (not module-eval time) so Turbopack doesn't choke
-    const wasmPath = path.join(
-      path.dirname(require.resolve('occt-import-js')),
-      'occt-import-js.wasm'
-    )
-    const occt = await occtimportjs({
-      locateFile: (filename: string) =>
-        filename.endsWith('.wasm') ? wasmPath : filename,
-    })
+    // Pass wasmBinary directly — bypasses all locateFile / path-resolution issues
+    const occt = await occtimportjs({ wasmBinary })
 
     const result = occt.ReadStepFile(new Uint8Array(buffer), {
       linearUnit: 'millimeter',
@@ -87,12 +88,12 @@ export async function POST(req: NextRequest) {
     for (const mesh of result.meshes) {
       const pos: number[] = mesh.attributes.position.array
       for (let i = 0; i < pos.length; i += 3) {
-        if (pos[i]   < minX) minX = pos[i]
-        if (pos[i+1] < minY) minY = pos[i+1]
-        if (pos[i+2] < minZ) minZ = pos[i+2]
-        if (pos[i]   > maxX) maxX = pos[i]
-        if (pos[i+1] > maxY) maxY = pos[i+1]
-        if (pos[i+2] > maxZ) maxZ = pos[i+2]
+        if (pos[i]     < minX) minX = pos[i]
+        if (pos[i + 1] < minY) minY = pos[i + 1]
+        if (pos[i + 2] < minZ) minZ = pos[i + 2]
+        if (pos[i]     > maxX) maxX = pos[i]
+        if (pos[i + 1] > maxY) maxY = pos[i + 1]
+        if (pos[i + 2] > maxZ) maxZ = pos[i + 2]
       }
     }
 
@@ -105,7 +106,6 @@ export async function POST(req: NextRequest) {
 
     const stlBuf = writeBinarySTL(result.meshes)
 
-    // Return STL as base64 + dims in same JSON response
     return NextResponse.json({
       dims,
       volumeCm3,
@@ -114,6 +114,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     console.error('STEP convert error:', err)
-    return NextResponse.json({ error: 'Conversion failed' }, { status: 500 })
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
