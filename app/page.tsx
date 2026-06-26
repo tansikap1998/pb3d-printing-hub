@@ -194,6 +194,11 @@ export default function Home() {
     "/showcase/showcase_1.webp",
     "/showcase/showcase_2.webp",
     "/showcase/showcase_3.webp",
+    "/showcase/showcase_4.webp",
+    "/showcase/showcase_5.webp",
+    "/showcase/showcase_6.png",
+    "/showcase/showcase_7.png",
+    "/showcase/showcase_8.png",
   ]
 
   const MODEL_LIBRARIES = [
