@@ -1,9 +1,11 @@
 "use client" 
 
+import ThemeToggle from '@/components/ThemeToggle'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { translations, Language } from '@/lib/translations'
 import { motion, AnimatePresence } from 'framer-motion'
+import ShopeeProducts from '@/components/ShopeeProducts'
 import { ArrowRight, Globe, Menu, X, Star, Zap, Shield, Clock, Package, ExternalLink } from 'lucide-react'
 
 // Particle Background
@@ -54,8 +56,8 @@ const ParticleBackground = () => {
         }
       }
       
-      draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`
+      draw(ctx: CanvasRenderingContext2D, rgb: string) {
+        ctx.fillStyle = `rgba(${rgb}, ${this.opacity})`
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
         ctx.fill()
@@ -76,18 +78,21 @@ const ParticleBackground = () => {
     
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      // follow the theme: particles use the current foreground colour
+      const rgb = getComputedStyle(document.documentElement).getPropertyValue('--foreground').trim().split(/\s+/).join(',') || '255,255,255'
       particles.forEach(p => {
         p.update(canvas)
-        p.draw(ctx)
+        p.draw(ctx, rgb)
       })
       animationFrameId = requestAnimationFrame(animate)
     }
     
     window.addEventListener('resize', handleResize)
-    window.addEventListener('mousemove', (e) => {
+    const handleMouse = (e: MouseEvent) => {
       mouse.x = e.clientX
       mouse.y = e.clientY
-    })
+    }
+    window.addEventListener('mousemove', handleMouse)
     
     handleResize()
     init()
@@ -95,6 +100,7 @@ const ParticleBackground = () => {
     
     return () => {
       window.removeEventListener('resize', handleResize)
+      window.removeEventListener('mousemove', handleMouse)
       cancelAnimationFrame(animationFrameId)
     }
   }, [])
@@ -246,6 +252,7 @@ export default function Home() {
           </div>
 
           <div className="hidden lg:flex items-center gap-3">
+            <ThemeToggle />
             <button 
               onClick={() => setShowFindFiles(true)}
               className="text-sm px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -261,13 +268,17 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <button 
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden p-2 -mr-2"
-          >
-            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Mobile: theme + menu toggle */}
+          <div className="lg:hidden flex items-center gap-2 -mr-2">
+            <ThemeToggle />
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Menu"
+              className="p-2"
+            >
+              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
@@ -613,6 +624,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Shopee products with order button */}
+        <ShopeeProducts lang={lang} />
 
         {/* Showcase Gallery */}
         <section id="showcase" className="py-24 border-t border-border overflow-hidden">

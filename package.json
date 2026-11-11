@@ -6,26 +6,29 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.554.0",
+    "@aws-sdk/s3-request-presigner": "^3.554.0",
     "@react-three/drei": "^9.121.4",
     "@react-three/fiber": "^8.17.10",
     "@supabase/supabase-js": "^2.39.8",
+    "framer-motion": "^11.0.0",
     "jose": "^5.9.6",
     "lucide-react": "^0.364.0",
     "next": "14.2.13",
+    "next-auth": "^4.24.7",
+    "occt-import-js": "^0.0.23",
     "promptpay-qr": "^0.5.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "three": "^0.171.0",
-    "zustand": "^4.5.2",
-    "next-auth": "^4.24.7",
-    "@aws-sdk/client-s3": "^3.554.0",
-    "@aws-sdk/s3-request-presigner": "^3.554.0",
-    "framer-motion": "^11.0.0"
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "^20",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

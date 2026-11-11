@@ -1,4 +1,5 @@
 "use client"
+import ThemeToggle from '@/components/ThemeToggle'
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
@@ -36,27 +37,28 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080810] text-white flex items-center justify-center p-6">
+    <div className="relative min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+      <ThemeToggle className="absolute top-5 right-5" />
       <div className="w-full max-w-sm space-y-5">
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-white/5 border border-white/10 mb-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-foreground/5 border border-foreground/10 mb-4">
             <span className="text-2xl">🔐</span>
           </div>
-          <h1 className="font-header text-3xl tracking-tighter uppercase">
-            PB3D<span className="text-white/20">HUB</span>
+          <h1 className="font-semibold tracking-tight text-3xl">
+            PB3D<span className="text-foreground/20">HUB</span>
           </h1>
-          <p className="text-sm text-white/40 mt-1">Admin Portal</p>
+          <p className="text-sm text-foreground/40 mt-1">Admin Portal</p>
         </div>
 
         {/* Form Card */}
-        <form onSubmit={handleLogin} className="bg-white/[0.03] border border-white/10 rounded-3xl p-7 space-y-4 shadow-2xl">
+        <form onSubmit={handleLogin} className="bg-foreground/[0.03] border border-foreground/10 rounded-3xl p-7 space-y-4 shadow-2xl">
 
           <div>
-            <label className="text-sm font-medium text-white/50 mb-2 block">Email</label>
+            <label className="text-sm font-medium text-foreground/50 mb-2 block">Email</label>
             <div className="relative flex items-center">
-              <Mail size={15} className="absolute left-4 text-white/25 pointer-events-none" />
+              <Mail size={15} className="absolute left-4 text-foreground/25 pointer-events-none" />
               <input
                 type="email"
                 value={email}
@@ -64,15 +66,15 @@ export default function AdminLoginPage() {
                 placeholder="Admin Email"
                 required
                 autoComplete="email"
-                className="w-full bg-white/[0.04] border border-white/12 rounded-2xl pl-11 pr-4 py-4 text-sm text-white placeholder:text-white/20 outline-none focus:border-blue-400/50 focus:bg-blue-500/5 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] transition-all"
+                className="w-full bg-foreground/[0.04] border border-foreground/12 rounded-2xl pl-11 pr-4 py-4 text-sm text-foreground placeholder:text-foreground/20 outline-none focus:border-blue-400/50 focus:bg-blue-500/5 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium text-white/50 mb-2 block">Password</label>
+            <label className="text-sm font-medium text-foreground/50 mb-2 block">Password</label>
             <div className="relative flex items-center">
-              <Lock size={15} className="absolute left-4 text-white/25 pointer-events-none" />
+              <Lock size={15} className="absolute left-4 text-foreground/25 pointer-events-none" />
               <input
                 type="password"
                 value={password}
@@ -80,7 +82,7 @@ export default function AdminLoginPage() {
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
-                className="w-full bg-white/[0.04] border border-white/12 rounded-2xl pl-11 pr-4 py-4 text-sm text-white placeholder:text-white/20 outline-none focus:border-blue-400/50 focus:bg-blue-500/5 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] transition-all"
+                className="w-full bg-foreground/[0.04] border border-foreground/12 rounded-2xl pl-11 pr-4 py-4 text-sm text-foreground placeholder:text-foreground/20 outline-none focus:border-blue-400/50 focus:bg-blue-500/5 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] transition-all"
               />
             </div>
           </div>
@@ -95,7 +97,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading || !email || !password}
-            className="w-full py-4 bg-white text-black font-header text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-gray-100 transition-all disabled:opacity-30 flex items-center justify-center gap-2.5 shadow-lg active:scale-[0.98] mt-1"
+            className="w-full py-4 bg-foreground text-background font-header text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-foreground/90 transition-all disabled:opacity-30 flex items-center justify-center gap-2.5 shadow-lg active:scale-[0.98] mt-1"
           >
             {loading
               ? <><Loader2 size={15} className="animate-spin" />กำลังเข้าสู่ระบบ…</>
@@ -105,7 +107,7 @@ export default function AdminLoginPage() {
         </form>
 
         <div className="text-center">
-          <Link href="/" className="text-sm text-white/25 hover:text-white/60 transition-colors">
+          <Link href="/" className="text-sm text-foreground/25 hover:text-foreground/60 transition-colors">
             ← กลับหน้าหลัก
           </Link>
         </div>
