@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { translations, Language } from '@/lib/translations'
 import { motion, AnimatePresence } from 'framer-motion'
+import ShopeeProducts from '@/components/ShopeeProducts'
 import { ArrowRight, Globe, Menu, X, Star, Zap, Shield, Clock, Package, ExternalLink } from 'lucide-react'
 
 // Particle Background
@@ -613,6 +614,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Shopee products with order button */}
+        <ShopeeProducts lang={lang} />
 
         {/* Showcase Gallery */}
         <section id="showcase" className="py-24 border-t border-border overflow-hidden">

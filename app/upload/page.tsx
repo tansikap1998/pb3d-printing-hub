@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback, Suspense } from "react"
+import React, { useState, useRef, useEffect, useCallback, Suspense } from "react"
 import * as THREE from "three"
 // @ts-ignore
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
@@ -132,6 +132,31 @@ function AxesLabels({ size }: { size: number }) {
   )
 }
 
+/**
+ * Keeps a 3D preview failure from taking down the whole page.
+ * drei's <Stage environment="city"> downloads an HDR from a CDN; if that fails we
+ * retry with local lights only, and if WebGL itself fails we show `fallback`.
+ */
+class PreviewBoundary extends React.Component<
+  { onError?: () => void; fallback: React.ReactNode; children: React.ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  componentDidCatch(err: unknown) { console.warn('3D preview error:', err); this.props.onError?.() }
+  render() { return this.state.failed ? this.props.fallback : this.props.children }
+}
+
+function FallbackLights() {
+  return (
+    <>
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[100, 150, 100]} intensity={1.2} />
+      <directionalLight position={[-120, 60, -80]} intensity={0.4} />
+    </>
+  )
+}
+
 // Camera zoom controller via imperative ref
 function ZoomController({ controlsRef }: { controlsRef: React.MutableRefObject<any> }) {
   const { controls } = useThree()
@@ -152,6 +177,7 @@ export default function WizardPage() {
   const [models,          setModels]         = useState<ModelFile[]>([])
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [isDragging,      setIsDragging]     = useState(false)
+  const [envFailed,       setEnvFailed]      = useState(false)
 
   // Print settings
   const [material,    setMaterial]    = useState<Material>('PLA')
@@ -185,45 +211,48 @@ export default function WizardPage() {
   // Auto-split models are not oversize — pieces are estimated individually
   const isOversize   = primary?.autoSplit ? false : !fitsInBuildVolume(customDims)
 
+  // Every model is priced on its own geometry; only the selected (primary) model
+  // is affected by the XYZ resize inputs. Shipping is charged once per order.
+  const otherOversize = models.some(m =>
+    m.id !== primary?.id && !m.autoSplit && !m.uploading && !m.error &&
+    m.originalDimensions.x > 0 && !fitsInBuildVolume(m.originalDimensions))
+
   const estimate = (() => {
-    if (!primary || primary.uploading || primary.error || primary.originalVolumeCm3 === 0 || isOversize) return null
+    if (!primary || isOversize || otherOversize) return null
+    if (models.some(m => m.uploading || m.error || !(m.originalVolumeCm3 > 0))) return null
     try {
-      if (primary.autoSplit && primary.subPieces && primary.subPieces.length > 0) {
-        // Estimate each sub-piece separately, apply global scale factors, sum up
-        const pieceCalcs = primary.subPieces.map(p => calculate({
-          volumeCm3: p.volumeCm3 * sx * sy * sz,
-          dimensions: { x: p.dimensions.x * sx, y: p.dimensions.y * sy, z: p.dimensions.z * sz },
-          technology: 'FDM', material, infill, layerHeight,
-          quantity: 1,
-          shipping: 'pickup', // no per-piece shipping
-        }))
-        const SHIPPING_FEE = shipping === 'pickup' ? 0 : 45
-        const subtotal = pieceCalcs.reduce((a, e) => a + e.pricePerPc, 0) * totalQty
-        return {
-          weightG:      pieceCalcs.reduce((a, e) => a + e.weightG, 0) * totalQty,
-          printTimeSec: pieceCalcs.reduce((a, e) => a + e.printTimeSec, 0) * totalQty,
-          printTimeMin: pieceCalcs.reduce((a, e) => a + (e as any).printTimeMin, 0) * totalQty,
-          materialCost: pieceCalcs.reduce((a, e) => a + e.materialCost, 0) * totalQty,
-          machineCost:  pieceCalcs.reduce((a, e) => a + e.machineCost,  0) * totalQty,
-          pricePerPc:   pieceCalcs.reduce((a, e) => a + e.pricePerPc,   0),
-          subtotal,
-          shippingCost: SHIPPING_FEE,
-          totalPrice:   subtotal + SHIPPING_FEE,
-        } as ReturnType<typeof calculate>
+      let weightG = 0, printTimeSec = 0, printTimeMin = 0, materialCost = 0, machineCost = 0, subtotal = 0
+      for (const m of models) {
+        const [kx, ky, kz] = m.id === primary.id ? [sx, sy, sz] : [1, 1, 1]
+        const k = kx * ky * kz
+        const parts = m.autoSplit && m.subPieces && m.subPieces.length > 0
+          ? m.subPieces.map(p => ({ v: p.volumeCm3 * k, d: { x: p.dimensions.x * kx, y: p.dimensions.y * ky, z: p.dimensions.z * kz } }))
+          : [{ v: m.originalVolumeCm3 * k, d: { x: m.originalDimensions.x * kx, y: m.originalDimensions.y * ky, z: m.originalDimensions.z * kz } }]
+        for (const part of parts) {
+          const e = calculate({
+            volumeCm3: part.v, dimensions: part.d,
+            technology: 'FDM', material, infill, layerHeight,
+            quantity: 1, shipping: 'pickup',
+          })
+          weightG      += e.weightG      * m.quantity
+          printTimeSec += e.printTimeSec * m.quantity
+          printTimeMin += e.printTimeMin * m.quantity
+          materialCost += e.materialCost * m.quantity
+          machineCost  += e.machineCost  * m.quantity
+          subtotal     += e.pricePerPc   * m.quantity
+        }
       }
-      return calculate({
-        volumeCm3: scaledVolume,
-        dimensions: customDims,
-        technology: 'FDM',
-        material, infill, layerHeight,
-        quantity: totalQty,
-        shipping,
-      })
+      const shippingCost = shipping === 'pickup' ? 0 : 45
+      return {
+        weightG: Math.round(weightG * 10) / 10, printTimeSec, printTimeMin, materialCost, machineCost,
+        pricePerPc: totalQty > 0 ? Math.round(subtotal / totalQty) : 0,
+        subtotal, shippingCost, totalPrice: subtotal + shippingCost,
+      } as ReturnType<typeof calculate>
     } catch { return null }
   })()
 
   const canProceed = step === 1
-    ? models.length > 0 && !models.some(m => m.uploading || m.error) && !isOversize
+    ? models.length > 0 && !models.some(m => m.uploading || m.error) && !isOversize && !otherOversize && !!estimate
     : true
 
   // ── Dimension input handler ─────────────────────────────────────────────────
@@ -276,13 +305,18 @@ export default function WizardPage() {
   }
   const prevStep  = () => setStep(s => Math.max(1, s - 1))
   const handleOrder = () => {
-    setEstimateData({ models, technology: 'FDM', infill, layerHeight, result: estimate })
+    if (!estimate) return
+    // Stamp the chosen material/colour onto every model so the quote page,
+    // the order record and the admin dashboard all show what was selected.
+    const orderModels = models.map(m => ({ ...m, material, colorId }))
+    setEstimateData({ models: orderModels, technology: 'FDM', infill, layerHeight, shipping, result: estimate })
     router.push('/quote')
   }
 
   // ── File upload ─────────────────────────────────────────────────────────────
   const handleFileUpload = async (files: FileList | File[]) => {
-    const fileArray = Array.from(files)
+    const fileArray = Array.from(files).filter(f => /\.(stl|3mf|step|stp)$/i.test(f.name))
+    if (fileArray.length === 0) return
     const newModels: ModelFile[] = fileArray.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name, url: URL.createObjectURL(file),
@@ -373,21 +407,33 @@ export default function WizardPage() {
           ))
           return  // skip S3 upload for now (STEP files use server-converted STL for preview)
         } else {
-          const geo = await new Promise<THREE.BufferGeometry>(res =>
-            new STLLoader().load(blobUrl, res)
+          const geo = await new Promise<THREE.BufferGeometry>((res, rej) =>
+            new STLLoader().load(blobUrl, res, undefined, rej)
           )
+          if (!geo.attributes.position || geo.attributes.position.count === 0) throw new Error('Empty STL')
           geo.computeBoundingBox()
           const size = new THREE.Vector3(); geo.boundingBox!.getSize(size)
+          if (![size.x, size.y, size.z].every(Number.isFinite)) throw new Error('Invalid STL')
           volumeCm3 = Math.abs(size.x * size.y * size.z) / 1000
           dims = { x: size.x, y: size.y, z: size.z }
         }
 
-        const pr = await fetch('/api/upload/presigned', {
-          method: 'POST',
-          body: JSON.stringify({ fileName: file.name, fileType: 'application/octet-stream' }),
-        })
-        const { url: uploadUrl, key } = await pr.json()
-        await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': 'application/octet-stream' } })
+        // Upload the original file to S3 (best-effort). A storage failure must not
+        // block the customer from getting a quote — the model was already parsed.
+        let key: string | undefined
+        try {
+          const pr = await fetch('/api/upload/presigned', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName: file.name, fileType: 'application/octet-stream' }),
+          })
+          if (pr.ok) {
+            const data = await pr.json()
+            const put = await fetch(data.url, { method: 'PUT', body: file, headers: { 'Content-Type': 'application/octet-stream' } })
+            if (put.ok) key = data.key
+          }
+        } catch (e) { console.warn('S3 upload skipped:', e) }
+        if (!(volumeCm3 > 0)) throw new Error('Empty model')
 
         setModels(prev => prev.map(m => m.id === modelId
           ? { ...m, originalDimensions: dims, originalVolumeCm3: volumeCm3, s3Key: key, uploading: false }
@@ -480,9 +526,12 @@ export default function WizardPage() {
 
                 {primary && !primary.uploading && !primary.error && (primary.url || primary.previewUrl) ? (
                   <>
+                    <PreviewBoundary key={`main-${envFailed}`} onError={() => setEnvFailed(true)}
+                      fallback={<div className="absolute inset-0 flex items-center justify-center text-[12px]" style={{ color: T.muted }}>ไม่สามารถแสดงตัวอย่าง 3D ได้ — ยังสั่งพิมพ์ได้ตามปกติ</div>}>
                     <Canvas shadows camera={{ position: [120, 100, 120], fov: 40 }}>
+                      {envFailed && <FallbackLights />}
                       <Suspense fallback={null}>
-                        <Stage intensity={0.5} environment="city" adjustCamera>
+                        <Stage intensity={0.5} environment={envFailed ? null : "city"} adjustCamera>
                           <Center>
                             {primary.name.toLowerCase().endsWith('.3mf')
                               ? <Model3MF url={primary.url} scale={meshScale} activeChildIndices={activeChildIndices} />
@@ -493,6 +542,7 @@ export default function WizardPage() {
                       </Suspense>
                       <OrbitControls ref={orbitRef} makeDefault autoRotate autoRotateSpeed={0.8} enablePan enableZoom />
                     </Canvas>
+                    </PreviewBoundary>
 
                     {/* Zoom buttons */}
                     <div className="absolute top-3 right-3 flex flex-col gap-1.5">
@@ -597,9 +647,12 @@ export default function WizardPage() {
                               <AlertTriangle size={16} style={{ color: '#ef4444' }} />
                             </div>
                           ) : model.url ? (
+                            <PreviewBoundary key={`thumb-${envFailed}`} onError={() => setEnvFailed(true)}
+                              fallback={<div className="absolute inset-0 flex items-center justify-center"><FileText size={16} style={{ color: T.muted }} /></div>}>
                             <Canvas camera={{ position: [80, 60, 80], fov: 50 }}>
+                              {envFailed && <FallbackLights />}
                               <Suspense fallback={null}>
-                                <Stage intensity={0.5} environment="city" adjustCamera>
+                                <Stage intensity={0.5} environment={envFailed ? null : "city"} adjustCamera>
                                   <Center>
                                     {model.name.toLowerCase().endsWith('.3mf')
                                       ? <Model3MF url={model.url} scale={[1,1,1]} />
@@ -609,6 +662,7 @@ export default function WizardPage() {
                               </Suspense>
                               <OrbitControls makeDefault autoRotate autoRotateSpeed={1.5} enableZoom={false} enablePan={false} />
                             </Canvas>
+                            </PreviewBoundary>
                           ) : null}
                         </div>
                         <p className="text-[10px] font-semibold leading-tight truncate w-full"
@@ -1032,8 +1086,8 @@ export default function WizardPage() {
                 style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.muted }}>
                 <ChevronLeft size={16} /> ย้อนกลับ
               </button>
-              <button onClick={handleOrder}
-                className="flex-1 py-4 rounded-xl font-semibold text-[15px] wb-btn hover:opacity-90"
+              <button onClick={handleOrder} disabled={!estimate}
+                className="flex-1 py-4 rounded-xl font-semibold text-[15px] wb-btn hover:opacity-90 disabled:opacity-35 disabled:cursor-not-allowed"
                 style={{ background: T.accent, color: '#fff' }}>
                 ยืนยันสั่งซื้อ →
               </button>

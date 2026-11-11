@@ -98,7 +98,7 @@ export default function QuotePage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (_hasHydrated && !estimateData) router.replace('/upload')
+    if (_hasHydrated && (!estimateData || !estimateData.result)) router.replace('/upload')
   }, [estimateData, _hasHydrated, router])
 
   if (!_hasHydrated) return (
@@ -106,7 +106,7 @@ export default function QuotePage() {
       <Loader2 size={24} className="animate-spin text-white/30" />
     </div>
   )
-  if (!estimateData) return null
+  if (!estimateData || !estimateData.result) return null
 
   const { models, technology, infill, layerHeight, result } = estimateData
   const totalQty  = models.reduce((a: number, m: any) => a + m.quantity, 0)
@@ -136,26 +136,32 @@ export default function QuotePage() {
     try {
       let orderId = crypto.randomUUID()
       const fileNames = models.map((m: any) => m.name).join(', ')
-      const materials = models.map((m: any) => m.material).join(', ')
+      const uniq = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)))
+      const materials = uniq(models.map((m: any) => m.material)).join(', ') || 'PLA'
+      const colors    = uniq(models.map((m: any) => m.colorId)).join(', ') || 'various'
+      const shippingLabel = (estimateData.shipping ?? (shippingCost > 0 ? 'postal' : 'pickup')) === 'postal'
+        ? `ส่งไปรษณีย์ (+฿${shippingCost})` : 'รับเอง (ฟรี)'
+      const notes = `จัดส่ง: ${shippingLabel}`
+      const printTimeMin = result.printTimeMin ?? Math.round((result.printTimeSec ?? 0) / 60)
 
       if (!isPlaceholder) {
         const { data, error: dbErr } = await supabase.from('orders').insert({
           customer_name: customer.name, customer_email: customer.email,
           customer_phone: customer.phone, customer_address: customer.address,
           file_name: fileNames.slice(0, 255), technology,
-          material: materials.slice(0, 255), color: models[0]?.colorId || 'various',
-          infill, layer_height: layerHeight, quantity: totalQty,
-          volume_cm3: models.reduce((a: number, m: any) => a + m.volumeCm3, 0),
-          weight_g: weightG, total_price: totalPrice,
-          base_price: totalPrice, status: 'pending'
+          material: materials.slice(0, 255), color: colors.slice(0, 255),
+          infill, layer_height: layerHeight, quantity: totalQty, notes,
+          volume_cm3: models.reduce((a: number, m: any) => a + (m.originalVolumeCm3 ?? m.volumeCm3 ?? 0), 0),
+          weight_g: weightG, print_time_min: printTimeMin, total_price: totalPrice,
+          base_price: subtotal, status: 'pending'
         }).select().single()
         if (dbErr) throw dbErr
         orderId = data.id
       } else {
         const localOrder = {
           id: orderId, createdAt: new Date().toISOString(), status: 'pending', customer,
-          items: { fileName: fileNames, technology, material: materials, color: 'various', infill, layerHeight, quantity: totalQty },
-          pricing: { total: totalPrice, subtotal, shippingCost, weightG },
+          items: { fileName: fileNames, technology, material: materials, color: colors, infill, layerHeight, quantity: totalQty, notes },
+          pricing: { total: totalPrice, subtotal, shippingCost, weightG, printTimeMin },
           delivery: { trackingNumber: null }
         }
         const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
@@ -234,7 +240,7 @@ export default function QuotePage() {
                         <div className="bg-white/8 border border-white/12 rounded-xl px-3 py-1.5">
                           <p className="font-header text-sm">×{model.quantity}</p>
                         </div>
-                        <p className="text-xs text-white/30 mt-1">{model.volumeCm3?.toFixed(1)} cm³</p>
+                        <p className="text-xs text-white/30 mt-1">{(model.originalVolumeCm3 ?? model.volumeCm3 ?? 0).toFixed(1)} cm³</p>
                       </div>
                     </div>
                   )

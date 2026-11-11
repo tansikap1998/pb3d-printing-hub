@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Upload, CheckCircle, Copy, ArrowLeft, Loader2 } from 'lucide-react'
@@ -19,6 +19,10 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
   const [submitting, setSubmitting] = useState(false)
   const [timeLeft, setTimeLeft] = useState(30 * 60)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [slipError, setSlipError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const MAX_SLIP_BYTES = 5 * 1024 * 1024
+  const isPdf = slipFile?.type === 'application/pdf'
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -70,7 +74,17 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = '' // allow choosing the same file again after delete
     if (file) {
+      if (file.size > MAX_SLIP_BYTES) {
+        setSlipError('ไฟล์ใหญ่เกิน 5MB กรุณาเลือกไฟล์ใหม่')
+        return
+      }
+      if (!/^image\//.test(file.type) && file.type !== 'application/pdf') {
+        setSlipError('รองรับเฉพาะไฟล์รูปภาพหรือ PDF')
+        return
+      }
+      setSlipError('')
       setSlipFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -91,7 +105,7 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
         const fileName = `${params.id}.${fileExt}`
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('payment_slips')
-          .upload(fileName, slipFile!)
+          .upload(fileName, slipFile!, { upsert: true, contentType: slipFile!.type })
           
         if (uploadError) throw uploadError
 
@@ -109,7 +123,7 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
         const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
         const updated = existing.map((o: any) => {
           if (o.id === params.id) {
-            return { ...o, status: 'awaiting_verification', payment: { slip: slipPreview } }
+            return { ...o, status: 'awaiting_verification', payment: { slip: slipPreview, slipName: slipFile?.name ?? null, submittedAt: new Date().toISOString() } }
           }
           return o
         })
@@ -128,7 +142,8 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
   if (loading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>
   if (!order) return null
 
-  const amount = order.pricing?.total || order.total_price
+  const amount = Number(order.pricing?.total ?? order.total_price ?? 0)
+  const alreadySubmitted = order.status && order.status !== 'pending'
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F2F2F2] font-sans selection:bg-white/20 pb-32">
@@ -201,13 +216,20 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
             <p className="font-body text-xs text-white/40 mb-8">JPG, PNG, PDF • Max 5MB</p>
             
             <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-[2rem] p-8 relative overflow-hidden group hover:border-white/30 transition-all duration-300">
-              <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />
+              <input ref={fileInputRef} data-testid="slip-input" type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />
               
               {slipPreview ? (
                 <div className="absolute inset-0 bg-neutral-900">
-                  <img src={slipPreview} alt="Slip preview" className="w-full h-full object-contain" />
+                  {isPdf ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white/70">
+                      <Upload className="w-10 h-10" />
+                      <span className="text-sm break-all px-6 text-center">{slipFile?.name}</span>
+                    </div>
+                  ) : (
+                    <img src={slipPreview} alt="Slip preview" className="w-full h-full object-contain" />
+                  )}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 z-30">
-                    <button className="font-header text-base tracking-widest uppercase bg-white text-black px-6 py-3 rounded-xl">Replace</button>
+                    <button onClick={(e) => { e.preventDefault(); fileInputRef.current?.click() }} className="font-header text-base tracking-widest uppercase bg-white text-black px-6 py-3 rounded-xl">Replace</button>
                     <button onClick={(e) => { e.preventDefault(); setSlipFile(null); setSlipPreview(null); }} className="font-header text-base tracking-widest uppercase bg-red-500 text-white px-6 py-3 rounded-xl">Delete</button>
                   </div>
                   <div className="absolute top-4 right-4 bg-green-500 rounded-full p-1 shadow-lg">
@@ -225,6 +247,12 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
             </div>
 
             <div className="mt-auto pt-8">
+              {slipError && (
+                <p role="alert" className="text-red-400 text-xs mb-4">{slipError}</p>
+              )}
+              {alreadySubmitted && (
+                <p className="text-emerald-400 text-xs mb-4">ได้รับสลิปของคำสั่งซื้อนี้แล้ว — อัปโหลดใหม่ได้หากต้องการเปลี่ยน</p>
+              )}
               {!slipPreview && (
                 <p className="text-orange-500 text-[10px] font-header uppercase tracking-widest mb-4 flex items-center gap-2">
                   <span className="w-1 h-1 bg-orange-500 rounded-full" />

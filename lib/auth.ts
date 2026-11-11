@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { AUTH_SECRET } from "./authSecret"
 
 export const ALLOWED_EMAILS = [
   "supapol_111213@hotmail.com",
@@ -35,5 +36,5 @@ export const authOptions: NextAuthOptions = {
     signIn: "/admin/login",
     error:  "/admin/login",
   },
-  secret: process.env.NEXTAUTH_SECRET || "pb3d-hub-fallback-secret-yjMFxp52e4QJ5adoXkE4MTfOfm4tlp8bGIjcwUbXizQ",
+  secret: AUTH_SECRET,
 }

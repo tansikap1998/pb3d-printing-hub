@@ -6,6 +6,7 @@ interface EstimateData {
   technology: string;
   infill: number;
   layerHeight: number;
+  shipping?: string;
   result: any;
 }
 
