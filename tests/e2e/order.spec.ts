@@ -151,7 +151,12 @@ test.describe("Full order: upload → quote → checkout → success", () => {
     await expect(confirm).toBeDisabled()
     // wrong type is rejected
     await page.getByTestId("slip-input").setInputFiles({ name: "x.txt", mimeType: "text/plain", buffer: Buffer.from("x") })
-    await expect(page.locator('p[role="alert"]')).toContainText("รูปภาพหรือ PDF")
+    await expect(page.locator('p[role="alert"]')).toContainText("JPG, PNG, WEBP, HEIC หรือ PDF")
+    // image types the server does not accept are rejected up front, not after upload
+    await page.getByTestId("slip-input").setInputFiles({ name: "slip.gif", mimeType: "image/gif", buffer: Buffer.from("GIF89a") })
+    await expect(page.locator('p[role="alert"]')).toContainText("JPG, PNG, WEBP, HEIC หรือ PDF")
+    await expect(confirm).toBeDisabled()
+    expect(await page.getByTestId("slip-input").getAttribute("accept")).toBe("image/jpeg,image/png,image/webp,image/heic,application/pdf")
     // valid slip
     await page.getByTestId("slip-input").setInputFiles({ name: "slip.png", mimeType: "image/png", buffer: PNG_1PX })
     await expect(page.getByAltText("Slip preview")).toBeVisible()

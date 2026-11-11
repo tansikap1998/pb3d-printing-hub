@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Upload, CheckCircle, Copy, ArrowLeft, Loader2 } from 'lucide-react'
 import { isPlaceholder } from '@/lib/supabase/client'
+import { MAX_SLIP_BYTES, SLIP_TYPES, validateSlip } from '@/lib/orderInput'
 import { Stepper } from '@/components/Stepper'
 
 const BANK_ACCOUNT = "5981153600"
@@ -22,7 +23,8 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [slipError, setSlipError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const MAX_SLIP_BYTES = 5 * 1024 * 1024
+  // Same rules as the server (/api/orders/[id]/slip) so the picker never accepts a file the upload will reject
+  const SLIP_ACCEPT = Object.keys(SLIP_TYPES).join(',')
   const isPdf = slipFile?.type === 'application/pdf'
 
   useEffect(() => {
@@ -77,12 +79,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
     const file = e.target.files?.[0]
     e.target.value = '' // allow choosing the same file again after delete
     if (file) {
-      if (file.size > MAX_SLIP_BYTES) {
-        setSlipError('ไฟล์ใหญ่เกิน 5MB กรุณาเลือกไฟล์ใหม่')
-        return
-      }
-      if (!/^image\//.test(file.type) && file.type !== 'application/pdf') {
-        setSlipError('รองรับเฉพาะไฟล์รูปภาพหรือ PDF')
+      const check = validateSlip(file)
+      if (!check.ok) {
+        setSlipError(file.size > MAX_SLIP_BYTES ? 'ไฟล์ใหญ่เกิน 5MB กรุณาเลือกไฟล์ใหม่' : 'รองรับเฉพาะไฟล์ JPG, PNG, WEBP, HEIC หรือ PDF')
         return
       }
       setSlipError('')
@@ -206,10 +205,10 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
           {/* Slip Upload */}
           <div className="bg-foreground/[0.02] border border-foreground/10 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 flex flex-col shadow-2xl">
             <h2 className="font-semibold tracking-tight text-2xl mb-2">Upload Slip</h2>
-            <p className="font-body text-xs text-foreground/40 mb-8">JPG, PNG, PDF • Max 5MB</p>
+            <p className="font-body text-xs text-foreground/40 mb-8">JPG, PNG, WEBP, HEIC, PDF • Max 5MB</p>
             
             <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-foreground/10 rounded-[2rem] p-8 relative overflow-hidden group hover:border-foreground/30 transition-all duration-300">
-              <input ref={fileInputRef} data-testid="slip-input" type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />
+              <input ref={fileInputRef} data-testid="slip-input" type="file" accept={SLIP_ACCEPT} onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />
               
               {slipPreview ? (
                 <div className="absolute inset-0 bg-neutral-900">
