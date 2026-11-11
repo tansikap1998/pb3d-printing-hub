@@ -1,5 +1,6 @@
 "use client"
 
+import ThemeToggle from '@/components/ThemeToggle'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -64,27 +65,30 @@ export default function PrivacyPolicyPage() {
   const t = content[lang]
 
   return (
-    <div className="min-h-screen bg-[#000000] text-[#F2F2F2] font-sans selection:bg-white/20 pb-32">
-      <nav className="px-8 py-8 flex items-center justify-between border-b border-white/5">
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-foreground/20 pb-32">
+      <nav className="px-8 py-8 flex items-center justify-between border-b border-foreground/5">
         <Link href="/" className="font-header text-4xl tracking-tighter uppercase leading-none">
-          PB3D<span className="text-white/20">HUB</span>
+          PB3D<span className="text-foreground/20">HUB</span>
         </Link>
-        <button onClick={() => setLang(lang === 'TH' ? 'EN' : 'TH')} className="font-header text-[10px] tracking-[0.4em] uppercase hover:opacity-50 border border-white/10 px-4 py-2 rounded-full">
+        <div className="flex items-center gap-3">
+        <ThemeToggle />
+        <button onClick={() => setLang(lang === 'TH' ? 'EN' : 'TH')} className="font-header text-2xs tracking-[0.4em] uppercase hover:opacity-50 border border-foreground/10 px-4 py-2 rounded-full">
           {lang === 'TH' ? 'ENGLISH' : 'ภาษาไทย'}
         </button>
+        </div>
       </nav>
 
       <main className="max-w-3xl mx-auto px-6 pt-16">
         <div className="mb-12">
           <h1 className="font-header text-4xl uppercase tracking-tighter mb-4">{t.title}</h1>
-          <p className="font-header text-[10px] tracking-[0.3em] uppercase opacity-40">{t.lastUpdated}</p>
+          <p className="font-header text-2xs tracking-[0.3em] uppercase opacity-40">{t.lastUpdated}</p>
         </div>
 
         <div className="space-y-12">
           {t.sections.map((section, idx) => (
-            <div key={idx} className="bg-white/[0.02] border border-white/5 rounded-3xl p-8">
-              <h2 className="font-header text-xl uppercase tracking-widest text-white mb-6">{section.title}</h2>
-              <div className="font-body text-white/60 leading-relaxed space-y-4 whitespace-pre-wrap text-sm">
+            <div key={idx} className="bg-foreground/[0.02] border border-foreground/5 rounded-3xl p-8">
+              <h2 className="font-header text-xl uppercase tracking-widest text-foreground mb-6">{section.title}</h2>
+              <div className="font-body text-foreground/60 leading-relaxed space-y-4 whitespace-pre-wrap text-sm">
                 {section.body}
               </div>
             </div>

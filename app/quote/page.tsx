@@ -1,5 +1,6 @@
 "use client"
 
+import ThemeToggle from '@/components/ThemeToggle'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -35,22 +36,22 @@ function InputField({ label, icon: Icon, type = 'text', value, onChange, placeho
   return (
     <div>
       {/* Normal case label — easier to read */}
-      <label className={`text-sm font-medium mb-2 block transition-colors ${focused ? 'text-blue-400' : 'text-white/55'}`}>
+      <label className={`text-sm font-medium mb-2 block transition-colors ${focused ? 'text-blue-400' : 'text-foreground/55'}`}>
         {label}{required && <span className="text-blue-400/60 ml-1">*</span>}
       </label>
       <div className={`relative flex items-center border rounded-2xl transition-all duration-200
         ${focused
           ? 'border-blue-400/50 bg-blue-500/8 shadow-[0_0_0_3px_rgba(59,130,246,0.1)]'
           : filled
-            ? 'border-white/20 bg-white/[0.05]'
-            : 'border-white/12 bg-white/[0.03] hover:border-white/20'
+            ? 'border-foreground/20 bg-foreground/[0.05]'
+            : 'border-foreground/12 bg-foreground/[0.03] hover:border-foreground/20'
         }`}>
-        <Icon size={15} className={`absolute left-4 transition-colors ${focused ? 'text-blue-400' : 'text-white/30'}`} />
+        <Icon size={15} className={`absolute left-4 transition-colors ${focused ? 'text-blue-400' : 'text-foreground/30'}`} />
         <input type={type} value={value}
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           placeholder={placeholder}
-          className="w-full bg-transparent pl-11 pr-10 py-4 text-sm text-white placeholder:text-white/20 outline-none" />
+          className="w-full bg-transparent pl-11 pr-10 py-4 text-sm text-foreground placeholder:text-foreground/20 outline-none" />
         {filled && (
           <div className="absolute right-3.5 w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
             <CheckCircle2 size={11} className="text-emerald-400" />
@@ -67,22 +68,22 @@ function TextareaField({ label, icon: Icon, value, onChange, placeholder, requir
   const [focused, setFocused] = useState(false)
   return (
     <div>
-      <label className={`text-sm font-medium mb-2 block transition-colors ${focused ? 'text-blue-400' : 'text-white/55'}`}>
+      <label className={`text-sm font-medium mb-2 block transition-colors ${focused ? 'text-blue-400' : 'text-foreground/55'}`}>
         {label}{required && <span className="text-blue-400/50 ml-1">*</span>}
       </label>
       <div className={`relative border rounded-2xl transition-all duration-200
         ${focused
           ? 'border-blue-400/50 bg-blue-500/8 shadow-[0_0_0_3px_rgba(59,130,246,0.1)]'
           : value
-            ? 'border-white/20 bg-white/[0.05]'
-            : 'border-white/12 bg-white/[0.03] hover:border-white/20'
+            ? 'border-foreground/20 bg-foreground/[0.05]'
+            : 'border-foreground/12 bg-foreground/[0.03] hover:border-foreground/20'
         }`}>
-        <Icon size={15} className={`absolute left-4 top-4 transition-colors ${focused ? 'text-blue-400' : 'text-white/30'}`} />
+        <Icon size={15} className={`absolute left-4 top-4 transition-colors ${focused ? 'text-blue-400' : 'text-foreground/30'}`} />
         <textarea rows={3} value={value}
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           placeholder={placeholder}
-          className="w-full bg-transparent pl-11 pr-4 py-4 text-sm text-white placeholder:text-white/20 outline-none resize-none" />
+          className="w-full bg-transparent pl-11 pr-4 py-4 text-sm text-foreground placeholder:text-foreground/20 outline-none resize-none" />
       </div>
     </div>
   )
@@ -102,8 +103,8 @@ export default function QuotePage() {
   }, [estimateData, _hasHydrated, router])
 
   if (!_hasHydrated) return (
-    <div className="min-h-screen bg-[#080810] flex items-center justify-center">
-      <Loader2 size={24} className="animate-spin text-white/30" />
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 size={24} className="animate-spin text-foreground/30" />
     </div>
   )
   if (!estimateData || !estimateData.result) return null
@@ -176,30 +177,32 @@ export default function QuotePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080810] text-white font-body selection:bg-blue-500/20 pb-32">
+    <div className="min-h-screen bg-background text-foreground font-body selection:bg-blue-500/20 pb-32">
 
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 h-16 px-6 md:px-10 flex items-center justify-between bg-[#080810]/85 backdrop-blur-xl border-b border-white/[0.06]">
-        <Link href="/upload" className="flex items-center gap-2 text-sm text-white/40 hover:text-white/80 transition-colors">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-16 px-6 md:px-10 flex items-center justify-between bg-background/85 backdrop-blur-xl border-b border-foreground/[0.06]">
+        <Link href="/upload" className="flex items-center gap-2 text-sm text-foreground/40 hover:text-foreground/80 transition-colors">
           <ChevronLeft size={15} /> Back
         </Link>
         <Link href="/" className="font-header text-xl tracking-tighter uppercase">
-          PB3D<span className="text-white/15">HUB</span>
+          PB3D<span className="text-foreground/15">HUB</span>
         </Link>
-        <div className="hidden md:flex items-center gap-2 text-xs text-white/30">
+        <div className="hidden md:flex items-center gap-2 text-xs text-foreground/30">
           <span className="flex items-center gap-1.5"><CheckCircle2 size={10} className="text-emerald-400/70" />Upload</span>
-          <span className="text-white/10 mx-1">›</span>
+          <span className="text-foreground/10 mx-1">›</span>
           <span className="text-blue-400 flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />Quote</span>
-          <span className="text-white/10 mx-1">›</span>
+          <span className="text-foreground/10 mx-1">›</span>
           <span>Checkout</span>
+          <ThemeToggle className="ml-3" />
         </div>
+        <ThemeToggle className="md:hidden" />
       </nav>
 
       <main className="max-w-[1200px] mx-auto px-4 md:px-8 pt-24">
 
         <div className="py-8">
           <h1 className="font-header text-[clamp(1.8rem,5vw,3rem)] tracking-tighter leading-[0.9]">Confirm Order</h1>
-          <p className="text-white/40 text-sm mt-2">Review your parts and fill in shipping details</p>
+          <p className="text-foreground/40 text-sm mt-2">Review your parts and fill in shipping details</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -209,14 +212,14 @@ export default function QuotePage() {
 
             {/* Parts list */}
             <section className="space-y-3">
-              <p className="text-sm font-medium text-white/40 flex items-center gap-2">
+              <p className="text-sm font-medium text-foreground/40 flex items-center gap-2">
                 <Package size={14} /> Parts · {models.length} {models.length === 1 ? 'file' : 'files'} · {totalQty} pcs
               </p>
               <div className="space-y-2">
                 {models.map((model: any) => {
                   const col = MATERIAL_COLORS[model.material] || '#fff'
                   return (
-                    <div key={model.id} className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex items-center gap-4">
+                    <div key={model.id} className="bg-foreground/[0.03] border border-foreground/10 rounded-2xl p-4 flex items-center gap-4">
                       <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
                         style={{ background: `${col}15`, border: `1px solid ${col}30` }}>
                         <FileText size={16} style={{ color: col, opacity: 0.8 }} />
@@ -228,19 +231,19 @@ export default function QuotePage() {
                             style={{ color: col, borderColor: `${col}35`, background: `${col}12` }}>
                             {model.material}
                           </span>
-                          <span className="text-xs text-white/35 capitalize">{model.colorId}</span>
+                          <span className="text-xs text-foreground/35 capitalize">{model.colorId}</span>
                           {model.dimensions?.x > 0 && (
-                            <span className="text-xs text-white/25">
+                            <span className="text-xs text-foreground/25">
                               {model.dimensions.x.toFixed(0)}×{model.dimensions.y.toFixed(0)}×{model.dimensions.z.toFixed(0)} mm
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="bg-white/8 border border-white/12 rounded-xl px-3 py-1.5">
+                        <div className="bg-foreground/8 border border-foreground/12 rounded-xl px-3 py-1.5">
                           <p className="font-header text-sm">×{model.quantity}</p>
                         </div>
-                        <p className="text-xs text-white/30 mt-1">{(model.originalVolumeCm3 ?? model.volumeCm3 ?? 0).toFixed(1)} cm³</p>
+                        <p className="text-xs text-foreground/30 mt-1">{(model.originalVolumeCm3 ?? model.volumeCm3 ?? 0).toFixed(1)} cm³</p>
                       </div>
                     </div>
                   )
@@ -255,25 +258,25 @@ export default function QuotePage() {
                 { icon: Weight, label: 'Weight',     value: `${weightG?.toFixed(0)}g` },
                 { icon: Layers, label: 'Resolution', value: layerLabel(layerHeight) },
               ].map(s => (
-                <div key={s.label} className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 text-center">
-                  <s.icon size={15} className="mx-auto mb-2.5 text-white/30" />
+                <div key={s.label} className="bg-foreground/[0.03] border border-foreground/10 rounded-2xl p-4 text-center">
+                  <s.icon size={15} className="mx-auto mb-2.5 text-foreground/30" />
                   <p className="font-header text-sm tracking-tight leading-tight">{s.value}</p>
-                  <p className="text-xs text-white/35 mt-1">{s.label}</p>
+                  <p className="text-xs text-foreground/35 mt-1">{s.label}</p>
                 </div>
               ))}
             </div>
 
             {/* Mobile price card */}
-            <div className="lg:hidden bg-white/[0.03] border border-white/10 rounded-3xl p-6 space-y-3">
-              <p className="text-sm font-medium text-white/40">Order Total</p>
+            <div className="lg:hidden bg-foreground/[0.03] border border-foreground/10 rounded-3xl p-6 space-y-3">
+              <p className="text-sm font-medium text-foreground/40">Order Total</p>
               <p className="font-header text-5xl tracking-tighter">฿{totalPrice?.toLocaleString()}</p>
-              <div className="space-y-2 pt-3 border-t border-white/10 text-sm">
-                <div className="flex justify-between text-white/50">
-                  <span>Subtotal</span><span className="text-white font-medium">฿{subtotal?.toLocaleString()}</span>
+              <div className="space-y-2 pt-3 border-t border-foreground/10 text-sm">
+                <div className="flex justify-between text-foreground/50">
+                  <span>Subtotal</span><span className="text-foreground font-medium">฿{subtotal?.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-white/50">
+                <div className="flex justify-between text-foreground/50">
                   <span>Shipping</span>
-                  <span className={shippingCost === 0 ? 'text-emerald-400 font-medium' : 'text-white font-medium'}>
+                  <span className={shippingCost === 0 ? 'text-emerald-400 font-medium' : 'text-foreground font-medium'}>
                     {shippingCost === 0 ? 'Free (Pickup)' : `฿${shippingCost}`}
                   </span>
                 </div>
@@ -281,11 +284,11 @@ export default function QuotePage() {
             </div>
 
             {/* Shipping form */}
-            <section className="space-y-4 pt-4 border-t border-white/8">
-              <p className="text-sm font-medium text-white/40 flex items-center gap-2">
+            <section className="space-y-4 pt-4 border-t border-foreground/8">
+              <p className="text-sm font-medium text-foreground/40 flex items-center gap-2">
                 <Truck size={14} /> Shipping Details
               </p>
-              <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-5 space-y-4">
+              <div className="bg-foreground/[0.02] border border-foreground/10 rounded-3xl p-5 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <InputField label="Full Name" icon={User} value={customer.name}
                     onChange={v => setCustomer(p => ({ ...p, name: v }))} placeholder="John Doe" required />
@@ -312,24 +315,24 @@ export default function QuotePage() {
           <div className="hidden lg:block lg:col-span-5 lg:sticky lg:top-20 space-y-4">
 
             {/* Price card */}
-            <div className="bg-white text-black rounded-3xl p-7 shadow-2xl space-y-5">
+            <div className="bg-foreground text-background rounded-3xl p-7 shadow-2xl space-y-5">
               <div>
-                <p className="text-xs font-medium text-black/40 mb-3 tracking-wide">Order Total</p>
+                <p className="text-xs font-medium text-background/40 mb-3 tracking-wide">Order Total</p>
                 <p className="font-header text-6xl tracking-tighter leading-none">฿{totalPrice?.toLocaleString()}</p>
               </div>
 
               {/* Cost breakdown with bars — 4px height */}
-              <div className="space-y-3 pt-4 border-t border-black/8">
-                <p className="text-xs font-medium text-black/40 flex items-center gap-1.5">
+              <div className="space-y-3 pt-4 border-t border-background/8">
+                <p className="text-xs font-medium text-background/40 flex items-center gap-1.5">
                   <BarChart3 size={12} /> Cost Breakdown
                 </p>
                 {breakdown.map(item => (
                   <div key={item.label}>
                     <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-sm text-black/60">{item.label}</span>
-                      <span className="font-header text-sm text-black">฿{item.value.toLocaleString()}</span>
+                      <span className="text-sm text-background/60">{item.label}</span>
+                      <span className="font-header text-sm text-background">฿{item.value.toLocaleString()}</span>
                     </div>
-                    <div className="h-1.5 bg-black/8 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-background/8 rounded-full overflow-hidden">
                       <div className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${item.pct}%`, background: item.color }} />
                     </div>
@@ -338,19 +341,19 @@ export default function QuotePage() {
               </div>
 
               {/* Order summary */}
-              <div className="space-y-2 pt-4 border-t border-black/8">
+              <div className="space-y-2 pt-4 border-t border-background/8">
                 {models.map((model: any) => (
                   <div key={model.id} className="flex items-center justify-between">
-                    <span className="text-sm text-black/40 truncate max-w-[60%]">{model.name} ×{model.quantity}</span>
-                    <span className="text-sm font-medium text-black/60">{model.material}</span>
+                    <span className="text-sm text-background/40 truncate max-w-[60%]">{model.name} ×{model.quantity}</span>
+                    <span className="text-sm font-medium text-background/60">{model.material}</span>
                   </div>
                 ))}
-                <div className="flex justify-between pt-2 border-t border-black/8">
-                  <span className="text-sm text-black/40">Subtotal</span>
+                <div className="flex justify-between pt-2 border-t border-background/8">
+                  <span className="text-sm text-background/40">Subtotal</span>
                   <span className="font-header text-sm">฿{subtotal?.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-black/40 flex items-center gap-1.5">
+                  <span className="text-sm text-background/40 flex items-center gap-1.5">
                     {shippingCost === 0 ? <Store size={12} /> : <Truck size={12} />} Shipping
                   </span>
                   <span className={`font-header text-sm ${shippingCost === 0 ? 'text-emerald-600' : ''}`}>
@@ -358,29 +361,29 @@ export default function QuotePage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-black/40">Weight</span>
+                  <span className="text-sm text-background/40">Weight</span>
                   <span className="font-header text-sm">{weightG?.toFixed(1)}g</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-black/40">Print Time</span>
+                  <span className="text-sm text-background/40">Print Time</span>
                   <span className="font-header text-sm">{printDisplay}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-black/40">Infill</span>
+                  <span className="text-sm text-background/40">Infill</span>
                   <span className="font-header text-sm">{infill}%</span>
                 </div>
               </div>
 
               {/* CTA */}
               <button onClick={handleConfirm} disabled={!isValid || loading}
-                className="w-full py-5 rounded-2xl bg-black text-white font-header text-base uppercase tracking-[0.15em] transition-all disabled:opacity-25 hover:bg-neutral-800 active:scale-[0.98] flex items-center justify-center gap-3 shadow-xl">
+                className="w-full py-5 rounded-2xl bg-background text-foreground font-header text-base uppercase tracking-[0.15em] transition-all disabled:opacity-25 hover:bg-background/80 active:scale-[0.98] flex items-center justify-center gap-3 shadow-xl">
                 {loading
                   ? <><Loader2 size={17} className="animate-spin" />Processing…</>
                   : <><Zap size={17} />Place Order</>
                 }
               </button>
               {!isValid && (
-                <p className="text-center text-xs text-black/35">Complete required fields to continue</p>
+                <p className="text-center text-xs text-background/35">Complete required fields to continue</p>
               )}
             </div>
 
@@ -392,19 +395,19 @@ export default function QuotePage() {
                 { icon: CheckCircle2, label: 'QC Check', desc: 'Quality verified'   },
                 { icon: ArrowRight,   label: 'Fast',     desc: '3–7 business days'  },
               ].map(b => (
-                <div key={b.label} className="flex items-center gap-2.5 p-3 rounded-2xl bg-white/[0.03] border border-white/10">
-                  <div className="w-8 h-8 rounded-lg bg-white/8 border border-white/12 flex items-center justify-center shrink-0">
-                    <b.icon size={14} className="text-white/50" />
+                <div key={b.label} className="flex items-center gap-2.5 p-3 rounded-2xl bg-foreground/[0.03] border border-foreground/10">
+                  <div className="w-8 h-8 rounded-lg bg-foreground/8 border border-foreground/12 flex items-center justify-center shrink-0">
+                    <b.icon size={14} className="text-foreground/50" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white/70 leading-none">{b.label}</p>
-                    <p className="text-xs text-white/35 mt-0.5">{b.desc}</p>
+                    <p className="text-sm font-medium text-foreground/70 leading-none">{b.label}</p>
+                    <p className="text-xs text-foreground/35 mt-0.5">{b.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <p className="text-center text-xs text-white/20 px-4">
+            <p className="text-center text-xs text-foreground/20 px-4">
               By placing an order you agree to our terms & privacy policy
             </p>
           </div>
@@ -412,14 +415,14 @@ export default function QuotePage() {
       </main>
 
       {/* Mobile sticky CTA */}
-      <div className="fixed bottom-0 left-0 right-0 lg:hidden z-[100] bg-[#080810]/95 backdrop-blur-xl border-t border-white/10 px-4 py-4">
+      <div className="fixed bottom-0 left-0 right-0 lg:hidden z-[100] bg-background/95 backdrop-blur-xl border-t border-foreground/10 px-4 py-4">
         <div className="flex items-center gap-4 max-w-lg mx-auto">
           <div>
-            <p className="text-xs text-white/30 mb-0.5">Total</p>
+            <p className="text-xs text-foreground/30 mb-0.5">Total</p>
             <p className="font-header text-2xl tracking-tighter">฿{totalPrice?.toLocaleString()}</p>
           </div>
           <button onClick={handleConfirm} disabled={!isValid || loading}
-            className="flex-1 py-4 rounded-2xl font-header text-sm uppercase tracking-[0.15em] transition-all disabled:opacity-30 flex items-center justify-center gap-2 bg-white text-black shadow-2xl active:scale-[0.98]">
+            className="flex-1 py-4 rounded-2xl font-header text-sm uppercase tracking-[0.15em] transition-all disabled:opacity-30 flex items-center justify-center gap-2 bg-foreground text-background shadow-2xl active:scale-[0.98]">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={14} />}
             {loading ? 'Processing…' : isValid ? 'Place Order →' : 'Complete Form'}
           </button>

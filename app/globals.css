@@ -1,27 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Prompt:wght@400;700;900&family=Noto+Sans+Thai:wght@400;700;900&family=Inter:wght@400;700;900&family=Cormorant+Garamond:ital,wght@1,600&display=swap');
+/* ─── Theme tokens ─────────────────────────────────────────────────────────
+   One palette for the whole site. Dark is the original look and the default;
+   light is applied with <html class="light">. Values are "R G B" triplets. */
+:root,
+.dark {
+  color-scheme: dark;
+  --background: 8 8 16;          /* #080810 */
+  --foreground: 242 242 242;     /* #F2F2F2 */
+  --card: 20 20 28;
+  --muted: 34 34 44;
+  --muted-foreground: 161 161 175;
+  --border: 40 40 52;
+  --accent: 91 143 255;          /* #5b8fff */
+  --warning: 250 204 21;
+  --success: 52 211 153;
+  --danger: 248 113 113;
+  --preview-from: 15 17 23;
+  --preview-to: 20 22 30;
+}
 
-html { scroll-behavior: smooth; }
+.light {
+  color-scheme: light;
+  --background: 247 247 250;
+  --foreground: 17 17 26;
+  --card: 255 255 255;
+  --muted: 236 236 242;
+  --muted-foreground: 82 82 96;
+  --border: 222 222 230;
+  --accent: 37 99 235;
+  --warning: 202 138 4;
+  --success: 5 150 105;
+  --danger: 220 38 38;
+  --preview-from: 236 238 244;
+  --preview-to: 226 229 238;
+}
+
+/* ─── Fluid type: everything in rem scales with the screen ───────────────── */
+html {
+  scroll-behavior: smooth;
+  /* 15px on phones → 16px at ~1024px → 17px on large desktops */
+  font-size: clamp(15px, 0.75rem + 0.39vw, 17px);
+  -webkit-text-size-adjust: 100%;
+}
 
 * { box-sizing: border-box; }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-
 @layer base {
   body {
-    @apply antialiased min-h-screen bg-[#000000] text-[#F2F2F2];
-    font-family: 'Inter', 'Prompt', 'Noto Sans Thai', sans-serif;
+    @apply antialiased min-h-screen bg-background text-foreground font-sans;
+    transition: background-color .2s ease, color .2s ease;
+  }
+  ::selection { background: rgb(var(--foreground) / 0.15); }
+  /* iOS zooms into inputs smaller than 16px — keep form fields at 16px on phones */
+  @media (max-width: 640px) {
+    input, textarea, select { font-size: 16px !important; }
   }
 }
 
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--foreground) / 0.2); border-radius: 10px; }
+
 .font-header { font-family: 'Anton', 'Prompt', 'Noto Sans Thai', sans-serif; font-weight: 700; }
-.font-body { font-family: 'Inter', 'Prompt', 'Noto Sans Thai', sans-serif; }
+.font-body { font-family: 'Inter', 'Noto Sans Thai', 'Prompt', sans-serif; }
 .font-serif { font-family: 'Cormorant Garamond', serif; font-style: italic; }
+
+/* Home-page helpers that were referenced but never defined */
+.premium-card {
+  background: rgb(var(--card));
+  border: 1px solid rgb(var(--border));
+  transition: border-color .3s ease, box-shadow .3s ease;
+}
+.premium-card:hover { border-color: rgb(var(--foreground) / 0.25); }
+.glow { box-shadow: 0 0 40px rgb(var(--foreground) / 0.15); }
+.glow:hover { box-shadow: 0 0 60px rgb(var(--foreground) / 0.25); }
+.text-balance { text-wrap: balance; }
+.animate-marquee:hover, .animate-marquee-vertical:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee, .animate-marquee-vertical { animation: none; }
+}
+
+/* Status / accent colours: the bright -400 shades are tuned for dark
+   backgrounds; use deeper shades in light mode so text keeps its contrast. */
+.light .text-blue-400    { color: rgb(37 99 235); }
+.light .text-amber-400   { color: rgb(180 83 9); }
+.light .text-yellow-300  { color: rgb(161 98 7); }
+.light .text-purple-400  { color: rgb(126 34 206); }
+.light .text-orange-400,
+.light .text-orange-500  { color: rgb(194 65 12); }
+.light .text-emerald-400 { color: rgb(4 120 87); }
+.light .text-red-400     { color: rgb(220 38 38); }
+.light .text-green-500   { color: rgb(22 163 74); }
+.light .bg-blue-400      { background-color: rgb(37 99 235); }
 
 @keyframes float {
   0%, 100% { transform: perspective(500px) rotateX(20deg) rotateY(-30deg) translateY(0px); }
@@ -32,3 +107,11 @@ html { scroll-behavior: smooth; }
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
 }
+
+/* Light mode needs more contrast than dark for the same "faint" text styles */
+.light .text-foreground\/10, .light .text-foreground\/15, .light .text-foreground\/20,
+.light .placeholder\:text-foreground\/20::placeholder { color: rgb(var(--foreground) / 0.42); }
+.light .text-foreground\/25, .light .text-foreground\/30 { color: rgb(var(--foreground) / 0.52); }
+.light .text-foreground\/35, .light .text-foreground\/40, .light .text-foreground\/45 { color: rgb(var(--foreground) / 0.6); }
+.light .shadow-2xl { box-shadow: 0 12px 32px -12px rgb(17 17 26 / 0.18); }
+.light .shadow-xl  { box-shadow: 0 8px 24px -10px rgb(17 17 26 / 0.15); }

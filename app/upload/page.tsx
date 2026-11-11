@@ -1,5 +1,6 @@
 "use client"
 
+import ThemeToggle from '@/components/ThemeToggle'
 import React, { useState, useRef, useEffect, useCallback, Suspense } from "react"
 import * as THREE from "three"
 // @ts-ignore
@@ -21,15 +22,17 @@ import {
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
 const T = {
-  bg:        '#0d0d0f',
-  surface:   '#18181c',
-  surface2:  '#222228',
-  border:    'rgba(255,255,255,0.08)',
-  accent:    '#5b8fff',
-  accentDim: '#0e1a33',
-  text:      '#f0f0f0',
-  muted:     'rgba(255,255,255,0.4)',
-  green:     '#22c55e',
+  // Theme-aware: these resolve to the CSS variables in app/globals.css
+  bg:        'rgb(var(--background))',
+  surface:   'rgb(var(--card))',
+  surface2:  'rgb(var(--muted))',
+  border:    'rgb(var(--foreground) / 0.08)',
+  accent:    'rgb(var(--accent))',
+  accentDim: 'rgb(var(--accent) / 0.14)',
+  text:      'rgb(var(--foreground))',
+  muted:     'rgb(var(--foreground) / 0.5)',
+  green:     'rgb(var(--success))',
+  overlay:   'rgb(var(--background) / 0.7)',
 } as const
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -459,7 +462,7 @@ export default function WizardPage() {
   return (
     <div
       className="min-h-screen"
-      style={{ background: T.bg, color: T.text, fontFamily: 'system-ui,-apple-system,sans-serif' }}
+      style={{ background: T.bg, color: T.text, fontFamily: 'inherit' }}
       onDragOver={e  => { e.preventDefault(); setIsDragging(true) }}
       onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false) }}
       onDrop={e      => { e.preventDefault(); setIsDragging(false); handleFileUpload(e.dataTransfer.files) }}
@@ -477,13 +480,16 @@ export default function WizardPage() {
       {/* ── Top bar ── */}
       <header className="flex items-center justify-between px-6 py-4 sticky top-0 z-50"
         style={{ background: T.surface, borderBottom: `1px solid ${T.border}` }}>
-        <Link href="/" className="text-[18px] font-semibold tracking-tight select-none">
+        <Link href="/" className="text-lg font-semibold tracking-tight select-none">
           PB3D<span style={{ color: T.accent }}>HUB</span>
         </Link>
-        <Link href="/" className="flex items-center gap-1.5 text-[13px] hover:opacity-60 transition-opacity"
-          style={{ color: T.muted }}>
-          <X size={14} /> ออก
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link href="/" className="flex items-center gap-1.5 text-sm hover:opacity-60 transition-opacity"
+            style={{ color: T.muted }}>
+            <X size={14} /> ออก
+          </Link>
+        </div>
       </header>
 
       {/* ── Progress ── */}
@@ -495,11 +501,11 @@ export default function WizardPage() {
               <div key={n} className="flex items-center" style={{ flex: i < STEPS.length - 1 ? 1 : 'none' }}>
                 <button onClick={() => goToStep(n)} className="flex items-center gap-2.5 wb-btn"
                   style={{ opacity: n <= maxStep ? 1 : 0.35, cursor: n <= maxStep ? 'pointer' : 'default' }}>
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold shrink-0"
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
                     style={{ background: done ? T.green : curr ? T.accent : T.surface2, color: '#fff' }}>
                     {done ? <Check size={13} strokeWidth={2.5} /> : n}
                   </div>
-                  <span className="text-[13px] hidden sm:block"
+                  <span className="text-sm hidden sm:block"
                     style={{ color: curr ? T.text : T.muted, fontWeight: curr ? 500 : 400 }}>
                     {label}
                   </span>
@@ -512,22 +518,22 @@ export default function WizardPage() {
       </div>
 
       {/* ── Body ── */}
-      <div className="flex gap-0 max-w-[1400px] mx-auto" style={{ minHeight: 'calc(100vh - 112px)' }}>
+      <div className="flex flex-col lg:flex-row gap-0 max-w-[1400px] mx-auto" style={{ minHeight: 'calc(100vh - 112px)' }}>
 
         {/* ════════════════ STEP 1 ════════════════ */}
         {step === 1 && (
           <>
             {/* ── Left: Preview + Upload ── */}
-            <div className="flex-1 min-w-0 p-5 space-y-4 border-r" style={{ borderColor: T.border }}>
+            <div className="flex-1 min-w-0 p-4 sm:p-5 space-y-4 lg:border-r" style={{ borderColor: T.border }}>
 
               {/* 3D Preview — large */}
-              <div className="relative rounded-2xl overflow-hidden"
-                style={{ height: 400, background: 'linear-gradient(135deg,#0f1117 0%,#14161e 100%)', border: `1px solid ${T.border}` }}>
+              <div className="relative rounded-2xl overflow-hidden h-[280px] sm:h-[400px]"
+                style={{ background: 'linear-gradient(135deg,rgb(var(--preview-from)) 0%,rgb(var(--preview-to)) 100%)', border: `1px solid ${T.border}` }}>
 
                 {primary && !primary.uploading && !primary.error && (primary.url || primary.previewUrl) ? (
                   <>
                     <PreviewBoundary key={`main-${envFailed}`} onError={() => setEnvFailed(true)}
-                      fallback={<div className="absolute inset-0 flex items-center justify-center text-[12px]" style={{ color: T.muted }}>ไม่สามารถแสดงตัวอย่าง 3D ได้ — ยังสั่งพิมพ์ได้ตามปกติ</div>}>
+                      fallback={<div className="absolute inset-0 flex items-center justify-center text-xs" style={{ color: T.muted }}>ไม่สามารถแสดงตัวอย่าง 3D ได้ — ยังสั่งพิมพ์ได้ตามปกติ</div>}>
                     <Canvas shadows camera={{ position: [120, 100, 120], fov: 40 }}>
                       {envFailed && <FallbackLights />}
                       <Suspense fallback={null}>
@@ -548,34 +554,34 @@ export default function WizardPage() {
                     <div className="absolute top-3 right-3 flex flex-col gap-1.5">
                       <button onClick={zoomIn}
                         className="w-9 h-9 rounded-xl flex items-center justify-center wb-btn hover:opacity-80"
-                        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', border: `1px solid ${T.border}`, color: T.text }}>
+                        style={{ background: T.overlay, backdropFilter: 'blur(8px)', border: `1px solid ${T.border}`, color: T.text }}>
                         <ZoomIn size={16} />
                       </button>
                       <button onClick={zoomOut}
                         className="w-9 h-9 rounded-xl flex items-center justify-center wb-btn hover:opacity-80"
-                        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', border: `1px solid ${T.border}`, color: T.text }}>
+                        style={{ background: T.overlay, backdropFilter: 'blur(8px)', border: `1px solid ${T.border}`, color: T.text }}>
                         <ZoomOut size={16} />
                       </button>
                     </div>
 
                     {/* Axes legend */}
                     <div className="absolute top-3 left-3 flex flex-col gap-1 px-2.5 py-2 rounded-xl"
-                      style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', border: `1px solid ${T.border}` }}>
+                      style={{ background: T.overlay, backdropFilter: 'blur(8px)', border: `1px solid ${T.border}` }}>
                       {[['X', '#ef4444'], ['Y', '#22c55e'], ['Z', '#3b82f6']].map(([ax, col]) => (
                         <div key={ax} className="flex items-center gap-1.5">
                           <div className="w-3 h-0.5 rounded-full" style={{ background: col }} />
-                          <span className="text-[10px] font-bold" style={{ color: col }}>{ax}</span>
+                          <span className="text-2xs font-bold" style={{ color: col }}>{ax}</span>
                         </div>
                       ))}
                     </div>
 
                     {/* Bottom info bar */}
                     <div className="absolute bottom-0 left-0 right-0 px-4 py-2.5 flex items-center justify-between"
-                      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
-                      <p className="text-[11px] font-medium truncate max-w-[60%]" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      style={{ background: T.overlay, backdropFilter: 'blur(8px)' }}>
+                      <p className="text-xs font-medium truncate max-w-[60%]" style={{ color: T.muted }}>
                         {primary.name}
                       </p>
-                      <p className="text-[11px] font-semibold" style={{ color: T.accent }}>
+                      <p className="text-xs font-semibold" style={{ color: T.accent }}>
                         {customDims.x.toFixed(1)} × {customDims.y.toFixed(1)} × {customDims.z.toFixed(1)} mm
                       </p>
                     </div>
@@ -585,7 +591,7 @@ export default function WizardPage() {
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2.5 rounded-xl flex items-center gap-2"
                         style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)' }}>
                         <AlertTriangle size={14} style={{ color: '#f59e0b' }} />
-                        <p className="text-[12px] font-semibold" style={{ color: '#f59e0b' }}>
+                        <p className="text-xs font-semibold" style={{ color: '#f59e0b' }}>
                           เกินขนาด Build Volume {BUILD_MAX.x}×{BUILD_MAX.y}×{BUILD_MAX.z} mm
                         </p>
                       </div>
@@ -594,11 +600,11 @@ export default function WizardPage() {
                     {/* Auto-split badge */}
                     {primary?.autoSplit && primary.subPieces && (
                       <div className="absolute top-3 left-3 px-3 py-1.5 rounded-lg flex items-center gap-1.5"
-                        style={{ background: 'rgba(91,143,255,0.18)', border: '1px solid rgba(91,143,255,0.4)' }}>
+                        style={{ background: 'rgb(var(--accent) / 0.18)', border: '1px solid rgb(var(--accent) / 0.4)', color: T.accent }}>
                         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                          <path d="M7 1v5M7 8v5M1 7h5M8 7h5" stroke="#5b8fff" strokeWidth="1.8" strokeLinecap="round"/>
+                          <path d="M7 1v5M7 8v5M1 7h5M8 7h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                         </svg>
-                        <span className="text-[11px] font-semibold" style={{ color: T.accent }}>
+                        <span className="text-xs font-semibold" style={{ color: T.accent }}>
                           แบ่งอัตโนมัติ {primary.subPieces.length} ชิ้น
                         </span>
                       </div>
@@ -607,16 +613,16 @@ export default function WizardPage() {
                 ) : primary?.uploading ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                     <Loader2 size={32} className="animate-spin" style={{ color: T.accent }} />
-                    <p className="text-[13px]" style={{ color: T.muted }}>กำลังวิเคราะห์โมเดล…</p>
+                    <p className="text-sm" style={{ color: T.muted }}>กำลังวิเคราะห์โมเดล…</p>
                   </div>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                     {/* Placeholder 3D box visual */}
                     <svg width="72" height="72" viewBox="0 0 72 72" fill="none" opacity={0.2}>
-                      <path d="M36 8 L64 22 L64 50 L36 64 L8 50 L8 22 Z" stroke="white" strokeWidth="1.5" fill="none"/>
-                      <path d="M36 8 L36 36 M64 22 L36 36 M8 22 L36 36 M36 36 L36 64" stroke="white" strokeWidth="1" strokeDasharray="3 3"/>
+                      <path d="M36 8 L64 22 L64 50 L36 64 L8 50 L8 22 Z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                      <path d="M36 8 L36 36 M64 22 L36 36 M8 22 L36 36 M36 36 L36 64" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3"/>
                     </svg>
-                    <p className="text-[13px]" style={{ color: T.muted }}>อัปโหลดไฟล์เพื่อดูตัวอย่างโมเดล</p>
+                    <p className="text-sm" style={{ color: T.muted }}>อัปโหลดไฟล์เพื่อดูตัวอย่างโมเดล</p>
                   </div>
                 )}
               </div>
@@ -665,12 +671,12 @@ export default function WizardPage() {
                             </PreviewBoundary>
                           ) : null}
                         </div>
-                        <p className="text-[10px] font-semibold leading-tight truncate w-full"
+                        <p className="text-2xs font-semibold leading-tight truncate w-full"
                           style={{ color: isSel ? T.accent : T.text }}>
                           {model.name}
                         </p>
                         {!model.uploading && !model.error && (
-                          <p className="text-[9px] leading-tight" style={{ color: T.muted }}>
+                          <p className="text-2xs leading-tight" style={{ color: T.muted }}>
                             {model.originalDimensions.x.toFixed(0)}×{model.originalDimensions.y.toFixed(0)}×{model.originalDimensions.z.toFixed(0)} mm
                           </p>
                         )}
@@ -682,16 +688,16 @@ export default function WizardPage() {
 
               {/* XYZ Dimension inputs + Infill + Layer Height — same row */}
               {primary && !primary.uploading && !primary.error && primary.originalDimensions.x > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
+                <div className="grid grid-cols-2 sm:grid-cols-[2fr_1fr_1fr] gap-2.5 [&>*:first-child]:col-span-2 sm:[&>*:first-child]:col-span-1">
 
                   {/* Dims card */}
                   <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 0 }}>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: T.muted }}>
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: T.muted }}>
                         ปรับขนาด (mm)
                       </p>
                       <button onClick={() => setLockRatio(p => !p)}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg wb-btn text-[10px] font-medium transition-all"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg wb-btn text-2xs font-medium transition-all"
                         style={{
                           background: lockRatio ? T.accentDim : T.surface2,
                           border:     lockRatio ? `1px solid ${T.accent}` : `1px solid ${T.border}`,
@@ -710,7 +716,7 @@ export default function WizardPage() {
                           <div key={ax} className="space-y-1.5">
                             <div className="flex items-center gap-1">
                               <div className="w-2 h-2 rounded-full" style={{ background: colors[i] }} />
-                              <p className="text-[10px] font-semibold" style={{ color: colors[i] }}>{labels[i]}</p>
+                              <p className="text-2xs font-semibold" style={{ color: colors[i] }}>{labels[i]}</p>
                             </div>
                             <input
                               type="number"
@@ -719,7 +725,7 @@ export default function WizardPage() {
                               value={customDims[ax].toFixed(1)}
                               onChange={e => handleDimChange(ax, parseFloat(e.target.value) || 0.1)}
                             />
-                            <p className="text-[9px] text-center" style={{ color: T.muted }}>
+                            <p className="text-2xs text-center" style={{ color: T.muted }}>
                               {primary.originalDimensions[ax].toFixed(1)}
                             </p>
                           </div>
@@ -728,7 +734,7 @@ export default function WizardPage() {
                     </div>
 
                     <div className="flex justify-center mt-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
+                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-semibold"
                         style={{ background: T.accentDim, color: T.accent, border: `1px solid ${T.accent}33` }}>
                         {((sx + sy + sz) / 3 * 100).toFixed(0)}%{sx === sy && sy === sz ? '' : ' ≠'}
                       </span>
@@ -737,7 +743,7 @@ export default function WizardPage() {
 
                   {/* Infill card */}
                   <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 0 }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Infill</p>
+                    <p className="text-2xs font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Infill</p>
                     <div className="grid grid-cols-2 gap-1">
                       {INFILL_OPTIONS.map(opt => {
                         const sel = infill === opt.v
@@ -748,8 +754,8 @@ export default function WizardPage() {
                               background: sel ? T.accentDim : T.surface2,
                               border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                             }}>
-                            <p className="text-[9px] font-semibold leading-tight truncate">{opt.label}</p>
-                            <p className="text-[8px] mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
+                            <p className="text-2xs font-semibold leading-tight truncate">{opt.label}</p>
+                            <p className="text-2xs mt-0.5" style={{ color: T.muted }}>{opt.pct}</p>
                           </button>
                         )
                       })}
@@ -758,7 +764,7 @@ export default function WizardPage() {
 
                   {/* Layer Height card */}
                   <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 0 }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Layer</p>
+                    <p className="text-2xs font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Layer</p>
                     <div className="flex flex-col gap-1">
                       {LAYER_OPTIONS.map(opt => {
                         const sel = layerHeight === opt.v
@@ -769,8 +775,8 @@ export default function WizardPage() {
                               background: sel ? T.accentDim : T.surface2,
                               border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                             }}>
-                            <p className="text-[10px] font-semibold">{opt.label}</p>
-                            <p className="text-[8px]" style={{ color: T.muted }}>{opt.desc}</p>
+                            <p className="text-2xs font-semibold">{opt.label}</p>
+                            <p className="text-2xs" style={{ color: T.muted }}>{opt.desc}</p>
                           </button>
                         )
                       })}
@@ -782,17 +788,17 @@ export default function WizardPage() {
 
               {/* Auto-split sub-pieces breakdown */}
               {primary?.autoSplit && primary.subPieces && primary.subPieces.length > 0 && (
-                <div className="rounded-xl p-4 space-y-2.5" style={{ background: T.surface, border: `1px solid rgba(91,143,255,0.3)` }}>
+                <div className="rounded-xl p-4 space-y-2.5" style={{ background: T.surface, border: `1px solid rgb(var(--accent) / 0.3)` }}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                        <path d="M7 1v5M7 8v5M1 7h5M8 7h5" stroke="#5b8fff" strokeWidth="1.8" strokeLinecap="round"/>
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ color: T.accent }}>
+                        <path d="M7 1v5M7 8v5M1 7h5M8 7h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                       </svg>
-                      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: T.accent }}>
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: T.accent }}>
                         แบ่งอัตโนมัติ — {primary.subPieces.length} ชิ้น
                       </p>
                     </div>
-                    <p className="text-[10px]" style={{ color: T.muted }}>กดลบเพื่อตัดออกจากการสั่ง</p>
+                    <p className="text-2xs" style={{ color: T.muted }}>กดลบเพื่อตัดออกจากการสั่ง</p>
                   </div>
                   <div className="space-y-1.5">
                     {primary.subPieces.map((p, i) => {
@@ -809,13 +815,13 @@ export default function WizardPage() {
                         <div key={p.id} className="flex items-center gap-2 px-3 py-2 rounded-lg"
                           style={{ background: T.surface2, border: `1px solid ${T.border}` }}>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-semibold">ชิ้นที่ {i + 1}</p>
-                            <p className="text-[10px] mt-0.5" style={{ color: T.muted }}>
+                            <p className="text-xs font-semibold">ชิ้นที่ {i + 1}</p>
+                            <p className="text-2xs mt-0.5" style={{ color: T.muted }}>
                               {(p.dimensions.x * sx).toFixed(0)}×{(p.dimensions.y * sy).toFixed(0)}×{(p.dimensions.z * sz).toFixed(0)} mm
                               &nbsp;·&nbsp;{(p.volumeCm3 * sx * sy * sz).toFixed(2)} cm³
                             </p>
                           </div>
-                          <p className="text-[12px] font-bold shrink-0" style={{ color: T.accent }}>
+                          <p className="text-xs font-bold shrink-0" style={{ color: T.accent }}>
                             {pieceEst ? `฿${pieceEst.pricePerPc.toFixed(0)}` : '—'}
                           </p>
                           <button onClick={() => deleteSubPiece(p.id)}
@@ -841,17 +847,17 @@ export default function WizardPage() {
                     <UploadCloud size={18} style={{ color: isDragging ? T.accent : T.muted }} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[13px] font-medium" style={{ color: isDragging ? T.accent : T.text }}>
+                    <p className="text-sm font-medium" style={{ color: isDragging ? T.accent : T.text }}>
                       {isDragging ? 'วางไฟล์ที่นี่' : 'ลากไฟล์มาวาง หรือคลิกเพื่อเลือก'}
                     </p>
                     <div className="flex gap-1.5 mt-1.5 flex-wrap">
                       {['STL', '3MF', 'STEP', 'MAX 100MB'].map(f => (
-                        <span key={f} className="px-2 py-0.5 rounded-full text-[9px] font-medium uppercase tracking-wider"
+                        <span key={f} className="px-2 py-0.5 rounded-full text-2xs font-medium uppercase tracking-wider"
                           style={{ background: T.surface2, color: T.muted, border: `1px solid ${T.border}` }}>
                           {f}
                         </span>
                       ))}
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-medium"
+                      <span className="px-2 py-0.5 rounded-full text-2xs font-medium"
                         style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
                         MAX {BUILD_MAX.x}×{BUILD_MAX.y}×{BUILD_MAX.z}MM
                       </span>
@@ -874,8 +880,8 @@ export default function WizardPage() {
                        : <FileText size={16} style={{ color: T.muted }} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium truncate">{model.name}</p>
-                      <p className="text-[11px] mt-0.5" style={{ color: model.error ? '#ef4444' : T.muted }}>
+                      <p className="text-sm font-medium truncate">{model.name}</p>
+                      <p className="text-xs mt-0.5" style={{ color: model.error ? '#ef4444' : T.muted }}>
                         {model.error ? 'อัปโหลดล้มเหลว'
                          : model.uploading ? 'กำลังวิเคราะห์…'
                          : `${model.originalDimensions.x.toFixed(0)}×${model.originalDimensions.y.toFixed(0)}×${model.originalDimensions.z.toFixed(0)} mm · ${model.originalVolumeCm3.toFixed(1)} cm³`}
@@ -888,7 +894,7 @@ export default function WizardPage() {
                           className="w-5 h-5 flex items-center justify-center" style={{ color: T.muted }}>
                           <Minus size={11} />
                         </button>
-                        <span className="w-5 text-center text-[13px] font-semibold">{model.quantity}</span>
+                        <span className="w-5 text-center text-sm font-semibold">{model.quantity}</span>
                         <button onClick={() => updateQty(model.id, model.quantity + 1)}
                           className="w-5 h-5 flex items-center justify-center" style={{ color: T.muted }}>
                           <Plus size={11} />
@@ -906,7 +912,7 @@ export default function WizardPage() {
 
               {models.length > 0 && (
                 <button onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-3 rounded-xl border-dashed border text-[12px] font-medium flex items-center justify-center gap-2 hover:opacity-60 transition-opacity wb-btn"
+                  className="w-full py-3 rounded-xl border-dashed border text-xs font-medium flex items-center justify-center gap-2 hover:opacity-60 transition-opacity wb-btn"
                   style={{ borderColor: T.border, color: T.muted }}>
                   <Plus size={13} /> เพิ่มไฟล์อีก
                 </button>
@@ -914,15 +920,15 @@ export default function WizardPage() {
             </div>
 
             {/* ── Right: Settings + Quote ── */}
-            <div className="w-[300px] shrink-0 flex flex-col"
-              style={{ borderLeft: `1px solid ${T.border}`, background: T.surface }}>
+            <div className="w-full lg:w-[300px] shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l"
+              style={{ borderColor: T.border, background: T.surface }}>
 
               {/* Settings area — no scroll, tight spacing */}
               <div className="p-4 space-y-3">
 
                 {/* Material */}
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>วัสดุ</p>
+                  <p className="text-2xs font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>วัสดุ</p>
                   <div className="grid grid-cols-3 gap-1.5">
                     {MATERIALS.map(m => {
                       const sel = material === m.id
@@ -934,8 +940,8 @@ export default function WizardPage() {
                             border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                           }}>
                           <div className="w-2.5 h-2.5 rounded-full mb-1.5" style={{ background: m.dot }} />
-                          <p className="text-[11px] font-semibold leading-tight">{m.label}</p>
-                          <p className="text-[9px] mt-0.5 leading-tight" style={{ color: T.muted }}>{m.hint}</p>
+                          <p className="text-xs font-semibold leading-tight">{m.label}</p>
+                          <p className="text-2xs mt-0.5 leading-tight" style={{ color: T.muted }}>{m.hint}</p>
                         </button>
                       )
                     })}
@@ -944,7 +950,7 @@ export default function WizardPage() {
 
                 {/* Color */}
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>สี</p>
+                  <p className="text-2xs font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>สี</p>
                   <div className="flex flex-wrap gap-2">
                     {COLOR_SWATCHES.map(c => (
                       <button key={c.id} onClick={() => setColorId(c.id)} title={c.id}
@@ -962,19 +968,19 @@ export default function WizardPage() {
                 {/* Qty row — compact inline */}
                 {models.length > 0 && (
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: T.muted }}>จำนวน</p>
+                    <p className="text-2xs font-semibold uppercase tracking-widest" style={{ color: T.muted }}>จำนวน</p>
                     <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg"
                       style={{ background: T.surface2, border: `1px solid ${T.border}` }}>
                       <button onClick={() => models[0] && updateQty(models[0].id, models[0].quantity - 1)}
                         className="w-5 h-5 flex items-center justify-center" style={{ color: T.muted }}>
                         <Minus size={11} />
                       </button>
-                      <span className="w-5 text-center text-[14px] font-bold">{totalQty}</span>
+                      <span className="w-5 text-center text-sm font-bold">{totalQty}</span>
                       <button onClick={() => models[0] && updateQty(models[0].id, models[0].quantity + 1)}
                         className="w-5 h-5 flex items-center justify-center" style={{ color: T.muted }}>
                         <Plus size={11} />
                       </button>
-                      <span className="text-[10px]" style={{ color: T.muted }}>ชิ้น</span>
+                      <span className="text-2xs" style={{ color: T.muted }}>ชิ้น</span>
                     </div>
                   </div>
                 )}
@@ -992,27 +998,27 @@ export default function WizardPage() {
                       { l: 'Time',   v: formatTimeFull(estimate.printTimeSec), u: '' },
                     ].map(s => (
                       <div key={s.l} className="rounded-lg p-2 text-center" style={{ background: T.surface2 }}>
-                        <p className="text-[12px] font-bold leading-tight">{s.v}<span className="text-[9px] ml-0.5" style={{ color: T.muted }}>{s.u}</span></p>
-                        <p className="text-[9px] uppercase tracking-wider mt-0.5" style={{ color: T.muted }}>{s.l}</p>
+                        <p className="text-xs font-bold leading-tight">{s.v}<span className="text-2xs ml-0.5" style={{ color: T.muted }}>{s.u}</span></p>
+                        <p className="text-2xs uppercase tracking-wider mt-0.5" style={{ color: T.muted }}>{s.l}</p>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {/* White quote card */}
-                <div className="rounded-xl p-4" style={{ background: '#fff', color: '#111' }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#9ca3af' }}>Live Quote</p>
-                  <p className="text-[34px] font-bold leading-none tracking-tight mb-3">
+                <div className="rounded-xl p-4" style={{ background: T.text, color: T.bg }}>
+                  <p className="text-2xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgb(var(--background) / 0.5)' }}>Live Quote</p>
+                  <p className="text-4xl font-bold leading-none tracking-tight mb-3">
                     {estimate ? `฿${estimate.totalPrice.toLocaleString()}` : '—'}
                   </p>
-                  <div className="space-y-1.5 pt-2 border-t border-gray-100 text-[11px]">
+                  <div className="space-y-1.5 pt-2 border-t border-background/10 text-xs">
                     {[
-                      { l: `ชิ้นงาน (${totalQty} pcs)`, v: estimate ? `฿${estimate.subtotal.toLocaleString()}` : '—', c: '#111' },
+                      { l: `ชิ้นงาน (${totalQty} pcs)`, v: estimate ? `฿${estimate.subtotal.toLocaleString()}` : '—', c: T.bg },
                       { l: 'จัดส่ง', v: estimate ? (estimate.shippingCost === 0 ? 'ฟรี (รับเอง)' : `฿${estimate.shippingCost}`) : '—',
-                        c: estimate?.shippingCost === 0 ? '#16a34a' : '#111' },
+                        c: estimate?.shippingCost === 0 ? 'rgb(22 163 74)' : T.bg },
                     ].map(r => (
                       <div key={r.l} className="flex justify-between">
-                        <span style={{ color: '#9ca3af' }}>{r.l}</span>
+                        <span style={{ color: 'rgb(var(--background) / 0.5)' }}>{r.l}</span>
                         <span className="font-semibold" style={{ color: r.c }}>{r.v}</span>
                       </div>
                     ))}
@@ -1021,7 +1027,7 @@ export default function WizardPage() {
 
                 {/* Next button */}
                 <button onClick={nextStep} disabled={!canProceed}
-                  className="w-full py-3 rounded-xl font-semibold text-[14px] flex items-center justify-center gap-2 wb-btn hover:opacity-90 disabled:opacity-35"
+                  className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 wb-btn hover:opacity-90 disabled:opacity-35"
                   style={{ background: T.accent, color: '#fff' }}>
                   ถัดไป <ChevronRight size={16} />
                 </button>
@@ -1033,11 +1039,11 @@ export default function WizardPage() {
         {/* ════════════════ STEP 2: Delivery & Confirm ════════════════ */}
         {step === 2 && (
           <div className="flex-1 p-6 space-y-5 max-w-[640px]">
-            <h2 className="text-[20px] font-medium">จัดส่ง & ยืนยัน</h2>
+            <h2 className="text-xl font-medium">จัดส่ง & ยืนยัน</h2>
 
             {/* Delivery */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: T.muted }}>วิธีรับสินค้า</p>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: T.muted }}>วิธีรับสินค้า</p>
               <div className="grid grid-cols-2 gap-3">
                 {([
                   { id: 'pickup' as Shipping, Icon: Store,  label: 'รับเอง',       sub: 'ฟรี',   sc: T.green },
@@ -1052,8 +1058,8 @@ export default function WizardPage() {
                         border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                       }}>
                       <opt.Icon size={22} className="mb-3" style={{ color: sel ? T.accent : T.muted }} />
-                      <p className="font-semibold text-[15px]">{opt.label}</p>
-                      <p className="text-[13px] mt-1" style={{ color: opt.sc }}>{opt.sub}</p>
+                      <p className="font-semibold text-base">{opt.label}</p>
+                      <p className="text-sm mt-1" style={{ color: opt.sc }}>{opt.sub}</p>
                     </button>
                   )
                 })}
@@ -1062,7 +1068,7 @@ export default function WizardPage() {
 
             {/* Summary */}
             <div className="rounded-xl p-5" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-              <p className="text-[11px] font-semibold uppercase tracking-widest mb-4" style={{ color: T.muted }}>สรุปคำสั่งซื้อ</p>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: T.muted }}>สรุปคำสั่งซื้อ</p>
               {[
                 { l: 'จำนวน',       v: `${totalQty} ชิ้น` },
                 { l: 'วัสดุ',       v: MATERIALS.find(m => m.id === material)?.label ?? material },
@@ -1074,20 +1080,20 @@ export default function WizardPage() {
               ].map((row, i, arr) => (
                 <div key={row.l} className="flex justify-between py-3"
                   style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : 'none' }}>
-                  <span className="text-[13px]" style={{ color: T.muted }}>{row.l}</span>
-                  <span className="text-[13px] font-semibold">{row.v}</span>
+                  <span className="text-sm" style={{ color: T.muted }}>{row.l}</span>
+                  <span className="text-sm font-semibold">{row.v}</span>
                 </div>
               ))}
             </div>
 
             <div className="flex gap-3">
               <button onClick={prevStep}
-                className="flex-1 py-4 rounded-xl font-medium text-[14px] flex items-center justify-center gap-2 wb-btn hover:opacity-70"
+                className="flex-1 py-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 wb-btn hover:opacity-70"
                 style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.muted }}>
                 <ChevronLeft size={16} /> ย้อนกลับ
               </button>
               <button onClick={handleOrder} disabled={!estimate}
-                className="flex-1 py-4 rounded-xl font-semibold text-[15px] wb-btn hover:opacity-90 disabled:opacity-35 disabled:cursor-not-allowed"
+                className="flex-1 py-4 rounded-xl font-semibold text-base wb-btn hover:opacity-90 disabled:opacity-35 disabled:cursor-not-allowed"
                 style={{ background: T.accent, color: '#fff' }}>
                 ยืนยันสั่งซื้อ →
               </button>
