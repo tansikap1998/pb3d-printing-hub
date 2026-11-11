@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useOrderStore } from '@/lib/store'
-import { supabase, isPlaceholder } from '@/lib/supabase/client'
+import { isPlaceholder } from '@/lib/supabase/client'
 import { formatTimeFull, formatTime } from '@/lib/priceCalculator'
 import {
   FileText, ChevronLeft, User, MapPin, Phone, Mail,
@@ -146,17 +146,18 @@ export default function QuotePage() {
       const printTimeMin = result.printTimeMin ?? Math.round((result.printTimeSec ?? 0) / 60)
 
       if (!isPlaceholder) {
-        const { data, error: dbErr } = await supabase.from('orders').insert({
-          customer_name: customer.name, customer_email: customer.email,
-          customer_phone: customer.phone, customer_address: customer.address,
-          file_name: fileNames.slice(0, 255), technology,
-          material: materials.slice(0, 255), color: colors.slice(0, 255),
-          infill, layer_height: layerHeight, quantity: totalQty, notes,
-          volume_cm3: models.reduce((a: number, m: any) => a + (m.originalVolumeCm3 ?? m.volumeCm3 ?? 0), 0),
-          weight_g: weightG, print_time_min: printTimeMin, total_price: totalPrice,
-          base_price: subtotal, status: 'pending'
-        }).select().single()
-        if (dbErr) throw dbErr
+        // Orders are created on the server; the browser has no direct access to the table.
+        const res = await fetch('/api/orders', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer, fileName: fileNames, technology, material: materials, color: colors,
+            infill, layerHeight, quantity: totalQty, notes,
+            volumeCm3: models.reduce((a: number, m: any) => a + (m.originalVolumeCm3 ?? m.volumeCm3 ?? 0), 0),
+            weightG, printTimeMin, totalPrice, subtotal,
+          }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error || 'Failed to place order')
         orderId = data.id
       } else {
         const localOrder = {
@@ -169,8 +170,8 @@ export default function QuotePage() {
         localStorage.setItem('pb3d_orders', JSON.stringify([localOrder, ...existing]))
       }
       router.push(`/checkout/${orderId}`)
-    } catch {
-      setError('Failed to place order. Please try again.')
+    } catch (e: any) {
+      setError(e?.message && e.message !== 'Failed to fetch' ? e.message : 'Failed to place order. Please try again.')
     } finally {
       setLoading(false)
     }

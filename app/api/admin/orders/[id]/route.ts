@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isAdminRequest } from "@/lib/adminSession"
 import { supabaseAdmin, hasServiceRole } from "@/lib/supabaseAdmin"
+import { ORDER_STATUSES, isUuid } from "@/lib/orderInput"
 
 export const dynamic = "force-dynamic"
 
-const STATUSES = ["pending", "awaiting_verification", "confirmed", "printing", "shipped", "delivered", "cancelled"]
+const STATUSES: readonly string[] = ORDER_STATUSES
 
 // PATCH /api/admin/orders/:id  { status?, trackingNumber? }
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await isAdminRequest())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!isUuid(params.id)) return NextResponse.json({ error: "Not found" }, { status: 404 })
   if (!hasServiceRole) {
     return NextResponse.json({ error: "ยังไม่ได้ตั้งค่า SUPABASE_SERVICE_ROLE_KEY บนเซิร์ฟเวอร์" }, { status: 503 })
   }

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Upload, CheckCircle, Copy, ArrowLeft, Loader2 } from 'lucide-react'
-import { supabase, isPlaceholder } from '@/lib/supabase/client'
+import { isPlaceholder } from '@/lib/supabase/client'
 import { Stepper } from '@/components/Stepper'
 
 const BANK_ACCOUNT = "5981153600"
@@ -50,9 +50,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
         let fetchedOrder = null
 
         if (!isPlaceholder) {
-          const { data, error } = await supabase.from('orders').select('*').eq('id', params.id).single()
-          if (error) throw error
-          fetchedOrder = data
+          const res = await fetch(`/api/orders/${params.id}`, { cache: 'no-store' })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          fetchedOrder = (await res.json()).order
         } else {
           const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
           fetchedOrder = existing.find((o: any) => o.id === params.id)
@@ -101,24 +101,15 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
     
     try {
       if (!isPlaceholder) {
-        // 1. Upload to Supabase Storage
-        const fileExt = slipFile!.name.split('.').pop()
-        const fileName = `${params.id}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('payment_slips')
-          .upload(fileName, slipFile!, { upsert: true, contentType: slipFile!.type })
-          
-        if (uploadError) throw uploadError
-
-        const { data: { publicUrl } } = supabase.storage.from('payment_slips').getPublicUrl(fileName)
-
-        // 2. Update order status
-        const { error: updateError } = await supabase.from('orders').update({
-          status: 'awaiting_verification',
-          slip_url: publicUrl
-        }).eq('id', params.id)
-        
-        if (updateError) throw updateError
+        // The server checks the order is still awaiting payment, stores the slip in a
+        // private bucket and updates the order.
+        const fd = new FormData()
+        fd.append('file', slipFile!)
+        const res = await fetch(`/api/orders/${params.id}/slip`, { method: 'POST', body: fd })
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}))
+          throw new Error(d.error || `HTTP ${res.status}`)
+        }
       } else {
         // Fallback local update
         const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
@@ -132,9 +123,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
       }
 
       router.push(`/checkout/${params.id}/success`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting slip:', error)
-      alert('Failed to upload slip. Please try again.')
+      setSlipError(error?.message && error.message !== 'Failed to fetch' ? `อัปโหลดสลิปไม่สำเร็จ: ${error.message}` : 'อัปโหลดสลิปไม่สำเร็จ กรุณาลองใหม่')
     } finally {
       setSubmitting(false)
     }

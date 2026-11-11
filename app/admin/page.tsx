@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
-import { supabase, isPlaceholder } from '@/lib/supabase/client'
+import { isPlaceholder } from '@/lib/supabase/client'
 import ShopeeAdmin from "@/components/admin/ShopeeAdmin"
 import {
   RefreshCw, LogOut, Package, Clock, Printer, Truck,
@@ -106,13 +106,16 @@ export default function AdminPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [tab, setTab] = useState<"orders" | "shopee">("orders")
   const [savedTrackingId, setSavedTrackingId] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState("")
 
   const loadOrders = useCallback(async () => {
     setRefreshing(true)
     try {
       if (!isPlaceholder) {
-        const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
-        if (error) throw error
+        const res = await fetch('/api/admin/orders', { cache: 'no-store' })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
+        const data: any[] = body.orders
         const mapped: Order[] = data.map(o => ({
           id: o.id, createdAt: o.created_at, status: o.status,
           customer: { name: o.customer_name, email: o.customer_email || '', phone: o.customer_phone || '', address: o.customer_address || '' },
@@ -126,7 +129,8 @@ export default function AdminPage() {
         const raw = localStorage.getItem("pb3d_orders")
         setOrders(raw ? (JSON.parse(raw) as any[]).map(normalizeLocal) : [])
       }
-    } catch (e) { console.error(e) }
+      setLoadError("")
+    } catch (e: any) { console.error(e); setLoadError(e?.message || "โหลดคำสั่งซื้อไม่สำเร็จ") }
     setLastRefresh(new Date().toLocaleTimeString("th-TH"))
     setRefreshing(false)
   }, [])
@@ -281,6 +285,13 @@ export default function AdminPage() {
           <StatCard label="Delivered"  value={counts.delivered||0}  color="text-emerald-400"    active={filter==="delivered"}  onClick={()=>setFilter("delivered")} />
           <StatCard label="Cancelled"  value={counts.cancelled||0}  color="text-red-400"        active={filter==="cancelled"}  onClick={()=>setFilter("cancelled")} />
         </div>
+
+        {loadError && (
+          <div role="alert" className="flex items-center gap-3 px-5 py-3.5 bg-red-500/8 border border-red-500/25 rounded-2xl mb-6">
+            <AlertCircle size={15} className="text-red-400 shrink-0" />
+            <p className="text-sm text-red-400">โหลดคำสั่งซื้อไม่สำเร็จ: {loadError}</p>
+          </div>
+        )}
 
         {/* Pending alert */}
         {pendingCount > 0 && (
