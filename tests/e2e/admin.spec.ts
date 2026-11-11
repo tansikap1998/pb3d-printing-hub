@@ -158,10 +158,24 @@ test.describe("Admin orders", () => {
 })
 
 test("admin order API: rejects visitors, needs the service-role key on the server", async ({ page, request }) => {
-  expect((await request.patch("/api/admin/orders/abc", { data: { status: "delivered" } })).status()).toBe(401)
+  const id = "11111111-2222-4333-8444-555555555555"
+  expect((await request.patch(`/api/admin/orders/${id}`, { data: { status: "delivered" } })).status()).toBe(401)
+  expect((await request.get("/api/admin/orders")).status()).toBe(401)
   await loginAsAdmin(page)
-  const r = await page.request.patch("/api/admin/orders/abc", { data: { status: "delivered" } })
-  expect(r.status()).toBe(503) // test server runs without SUPABASE_SERVICE_ROLE_KEY
+  // test server runs without SUPABASE_SERVICE_ROLE_KEY
+  expect((await page.request.patch(`/api/admin/orders/${id}`, { data: { status: "delivered" } })).status()).toBe(503)
+  expect((await page.request.patch("/api/admin/orders/not-a-uuid", { data: { status: "delivered" } })).status()).toBe(404)
+  expect((await page.request.get("/api/admin/orders")).status()).toBe(503)
+})
+
+test("public order API: no listing, ids must be UUIDs, needs the service-role key", async ({ request }) => {
+  const id = "11111111-2222-4333-8444-555555555555"
+  expect((await request.get("/api/orders")).status()).toBe(405) // there is no "list all orders"
+  expect((await request.get("/api/orders/not-a-uuid")).status()).toBe(404)
+  expect((await request.get(`/api/orders/${id}`)).status()).toBe(503)
+  expect((await request.post(`/api/orders/not-a-uuid/slip`, { multipart: { file: { name: "s.png", mimeType: "image/png", buffer: Buffer.from("x") } } })).status()).toBe(404)
+  expect((await request.post(`/api/orders/${id}/slip`, { multipart: { file: { name: "s.png", mimeType: "image/png", buffer: Buffer.from("x") } } })).status()).toBe(503)
+  expect((await request.post("/api/orders", { data: {} })).status()).toBe(503)
 })
 
 // ─── Shopee products ─────────────────────────────────────────────────────────

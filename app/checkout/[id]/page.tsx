@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Upload, CheckCircle, Copy, ArrowLeft, Loader2 } from 'lucide-react'
-import { supabase, isPlaceholder } from '@/lib/supabase/client'
+import { isPlaceholder } from '@/lib/supabase/client'
+import { MAX_SLIP_BYTES, SLIP_TYPES, validateSlip } from '@/lib/orderInput'
 import { Stepper } from '@/components/Stepper'
 
 const BANK_ACCOUNT = "5981153600"
@@ -22,7 +23,8 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [slipError, setSlipError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const MAX_SLIP_BYTES = 5 * 1024 * 1024
+  // Same rules as the server (/api/orders/[id]/slip) so the picker never accepts a file the upload will reject
+  const SLIP_ACCEPT = Object.keys(SLIP_TYPES).join(',')
   const isPdf = slipFile?.type === 'application/pdf'
 
   useEffect(() => {
@@ -50,9 +52,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
         let fetchedOrder = null
 
         if (!isPlaceholder) {
-          const { data, error } = await supabase.from('orders').select('*').eq('id', params.id).single()
-          if (error) throw error
-          fetchedOrder = data
+          const res = await fetch(`/api/orders/${params.id}`, { cache: 'no-store' })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          fetchedOrder = (await res.json()).order
         } else {
           const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
           fetchedOrder = existing.find((o: any) => o.id === params.id)
@@ -77,12 +79,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
     const file = e.target.files?.[0]
     e.target.value = '' // allow choosing the same file again after delete
     if (file) {
-      if (file.size > MAX_SLIP_BYTES) {
-        setSlipError('ไฟล์ใหญ่เกิน 5MB กรุณาเลือกไฟล์ใหม่')
-        return
-      }
-      if (!/^image\//.test(file.type) && file.type !== 'application/pdf') {
-        setSlipError('รองรับเฉพาะไฟล์รูปภาพหรือ PDF')
+      const check = validateSlip(file)
+      if (!check.ok) {
+        setSlipError(file.size > MAX_SLIP_BYTES ? 'ไฟล์ใหญ่เกิน 5MB กรุณาเลือกไฟล์ใหม่' : 'รองรับเฉพาะไฟล์ JPG, PNG, WEBP, HEIC หรือ PDF')
         return
       }
       setSlipError('')
@@ -101,24 +100,15 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
     
     try {
       if (!isPlaceholder) {
-        // 1. Upload to Supabase Storage
-        const fileExt = slipFile!.name.split('.').pop()
-        const fileName = `${params.id}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('payment_slips')
-          .upload(fileName, slipFile!, { upsert: true, contentType: slipFile!.type })
-          
-        if (uploadError) throw uploadError
-
-        const { data: { publicUrl } } = supabase.storage.from('payment_slips').getPublicUrl(fileName)
-
-        // 2. Update order status
-        const { error: updateError } = await supabase.from('orders').update({
-          status: 'awaiting_verification',
-          slip_url: publicUrl
-        }).eq('id', params.id)
-        
-        if (updateError) throw updateError
+        // The server checks the order is still awaiting payment, stores the slip in a
+        // private bucket and updates the order.
+        const fd = new FormData()
+        fd.append('file', slipFile!)
+        const res = await fetch(`/api/orders/${params.id}/slip`, { method: 'POST', body: fd })
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}))
+          throw new Error(d.error || `HTTP ${res.status}`)
+        }
       } else {
         // Fallback local update
         const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
@@ -132,9 +122,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
       }
 
       router.push(`/checkout/${params.id}/success`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting slip:', error)
-      alert('Failed to upload slip. Please try again.')
+      setSlipError(error?.message && error.message !== 'Failed to fetch' ? `อัปโหลดสลิปไม่สำเร็จ: ${error.message}` : 'อัปโหลดสลิปไม่สำเร็จ กรุณาลองใหม่')
     } finally {
       setSubmitting(false)
     }
@@ -215,10 +205,10 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
           {/* Slip Upload */}
           <div className="bg-foreground/[0.02] border border-foreground/10 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 flex flex-col shadow-2xl">
             <h2 className="font-semibold tracking-tight text-2xl mb-2">Upload Slip</h2>
-            <p className="font-body text-xs text-foreground/40 mb-8">JPG, PNG, PDF • Max 5MB</p>
+            <p className="font-body text-xs text-foreground/40 mb-8">JPG, PNG, WEBP, HEIC, PDF • Max 5MB</p>
             
             <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-foreground/10 rounded-[2rem] p-8 relative overflow-hidden group hover:border-foreground/30 transition-all duration-300">
-              <input ref={fileInputRef} data-testid="slip-input" type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />
+              <input ref={fileInputRef} data-testid="slip-input" type="file" accept={SLIP_ACCEPT} onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />
               
               {slipPreview ? (
                 <div className="absolute inset-0 bg-neutral-900">

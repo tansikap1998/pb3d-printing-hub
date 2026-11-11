@@ -1,3 +1,8 @@
+-- ⚠️ SUPERSEDED by 03_orders_server_only.sql — always run 03 after this file.
+-- Review found that this policy still let any visitor mark another customer's
+-- order as paid / replace their slip, because order ids were publicly readable.
+-- 03 removes all browser access to orders and slips instead.
+--
 -- UPDATE rules for `orders`.
 --
 -- Admins sign in with NextAuth, not Supabase Auth, so to Supabase every browser
