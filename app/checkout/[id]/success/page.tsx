@@ -12,7 +12,7 @@ export default function CheckoutSuccessPage({ params }: { params: { id: string }
         <div className="absolute inset-0 bg-green-500 blur-3xl opacity-20 animate-pulse" />
         <CheckCircle className="w-32 h-32 text-green-500 relative z-10" />
       </div>
-      <h1 className="font-header text-5xl uppercase tracking-tighter mb-6">Payment Received</h1>
+      <h1 className="font-semibold tracking-tight text-4xl sm:text-5xl mb-6">Payment Received</h1>
       <div className="max-w-md space-y-4 mb-16">
         <p className="font-serif italic text-2xl text-foreground/80">
           "Thank you! Our team will verify your payment within 1 hour."

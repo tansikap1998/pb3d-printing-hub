@@ -254,7 +254,7 @@ export default function AdminPage() {
         {/* Header */}
         <div className="py-8 flex items-end justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="font-header text-[clamp(1.6rem,4vw,2.5rem)] tracking-tighter leading-none">Order Dashboard</h1>
+            <h1 className="font-semibold tracking-tight text-[clamp(1.6rem,4vw,2.5rem)] leading-none">Order Dashboard</h1>
             <p className="text-foreground/35 text-sm mt-1">จัดการคำสั่งซื้อ · อัปเดต real-time ทุก 15 วินาที</p>
           </div>
           <div className="text-right">

@@ -98,7 +98,7 @@ export default function ShopeeAdmin() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-header text-2xl tracking-tighter">Shopee Products</h2>
+        <h2 className="font-semibold tracking-tight text-2xl">Shopee Products</h2>
         <p className="text-foreground/35 text-sm mt-1">
           วางลิงก์สินค้าจาก Shopee → แสดงบนหน้าแรกพร้อมปุ่ม “สั่งซื้อ” ที่พาลูกค้าไปหน้าสินค้าใน Shopee
         </p>

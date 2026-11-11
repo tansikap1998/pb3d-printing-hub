@@ -80,14 +80,14 @@ export default function PrivacyPolicyPage() {
 
       <main className="max-w-3xl mx-auto px-6 pt-16">
         <div className="mb-12">
-          <h1 className="font-header text-4xl uppercase tracking-tighter mb-4">{t.title}</h1>
-          <p className="font-header text-2xs tracking-[0.3em] uppercase opacity-40">{t.lastUpdated}</p>
+          <h1 className="font-semibold tracking-tight text-4xl mb-4">{t.title}</h1>
+          <p className="text-xs text-foreground/40">{t.lastUpdated}</p>
         </div>
 
         <div className="space-y-12">
           {t.sections.map((section, idx) => (
             <div key={idx} className="bg-foreground/[0.02] border border-foreground/5 rounded-3xl p-8">
-              <h2 className="font-header text-xl uppercase tracking-widest text-foreground mb-6">{section.title}</h2>
+              <h2 className="font-semibold tracking-tight text-xl text-foreground mb-6">{section.title}</h2>
               <div className="font-body text-foreground/60 leading-relaxed space-y-4 whitespace-pre-wrap text-sm">
                 {section.body}
               </div>

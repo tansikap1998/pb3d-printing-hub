@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-foreground/5 border border-foreground/10 mb-4">
             <span className="text-2xl">🔐</span>
           </div>
-          <h1 className="font-header text-3xl tracking-tighter uppercase">
+          <h1 className="font-semibold tracking-tight text-3xl">
             PB3D<span className="text-foreground/20">HUB</span>
           </h1>
           <p className="text-sm text-foreground/40 mt-1">Admin Portal</p>

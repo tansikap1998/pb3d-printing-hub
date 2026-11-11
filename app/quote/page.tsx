@@ -201,7 +201,7 @@ export default function QuotePage() {
       <main className="max-w-[1200px] mx-auto px-4 md:px-8 pt-24">
 
         <div className="py-8">
-          <h1 className="font-header text-[clamp(1.8rem,5vw,3rem)] tracking-tighter leading-[0.9]">Confirm Order</h1>
+          <h1 className="font-semibold tracking-tight text-[clamp(1.8rem,5vw,3rem)] leading-[1.1]">Confirm Order</h1>
           <p className="text-foreground/40 text-sm mt-2">Review your parts and fill in shipping details</p>
         </div>
 

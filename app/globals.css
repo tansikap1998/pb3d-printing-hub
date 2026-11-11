@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -66,8 +66,8 @@ html {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgb(var(--foreground) / 0.2); border-radius: 10px; }
 
-.font-header { font-family: 'Anton', 'Prompt', 'Noto Sans Thai', sans-serif; font-weight: 700; }
-.font-body { font-family: 'Inter', 'Noto Sans Thai', 'Prompt', sans-serif; }
+.font-header { font-family: 'Inter', 'Noto Sans Thai', 'Prompt', system-ui, sans-serif; font-weight: 600; }
+.font-body { font-family: 'Inter', 'Noto Sans Thai', 'Prompt', system-ui, sans-serif; }
 .font-serif { font-family: 'Cormorant Garamond', serif; font-style: italic; }
 
 /* Home-page helpers that were referenced but never defined */

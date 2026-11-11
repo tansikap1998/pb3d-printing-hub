@@ -167,7 +167,7 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
             Back to edit order
           </Link>
           <div className="text-center">
-            <h1 className="font-header text-4xl uppercase tracking-tighter mb-2">Checkout</h1>
+            <h1 className="font-semibold tracking-tight text-4xl mb-2">Checkout</h1>
             <p className="font-header text-sm text-foreground/40 tracking-[0.2em] uppercase">Order #{params.id.split('-')[0]}</p>
           </div>
           <div className="bg-orange-500/10 border border-orange-500/20 px-6 py-3 rounded-2xl flex items-center gap-3">
@@ -214,7 +214,7 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
 
           {/* Slip Upload */}
           <div className="bg-foreground/[0.02] border border-foreground/10 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 flex flex-col shadow-2xl">
-            <h2 className="font-header text-2xl uppercase tracking-tighter mb-2">Upload Slip</h2>
+            <h2 className="font-semibold tracking-tight text-2xl mb-2">Upload Slip</h2>
             <p className="font-body text-xs text-foreground/40 mb-8">JPG, PNG, PDF • Max 5MB</p>
             
             <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-foreground/10 rounded-[2rem] p-8 relative overflow-hidden group hover:border-foreground/30 transition-all duration-300">

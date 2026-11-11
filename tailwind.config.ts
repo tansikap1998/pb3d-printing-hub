@@ -27,7 +27,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'Noto Sans Thai', 'Prompt', 'system-ui', 'sans-serif'],
-        header: ['Anton', 'Prompt', 'Noto Sans Thai', 'sans-serif'],
+        header: ['Inter', 'Noto Sans Thai', 'Prompt', 'system-ui', 'sans-serif'],
         serif: ['Cormorant Garamond', 'serif'],
       },
       fontSize: {

@@ -99,3 +99,24 @@ for (const theme of ["dark", "light"] as const) {
     await page.waitForURL(/quote/); await check("/quote")
   })
 }
+
+test("headings on every page use the same font as the home page", async ({ page }) => {
+  const id = await seedOrder(page)
+  const style = () => page.evaluate(() => {
+    const h = document.querySelector("h1, h2") as HTMLElement
+    const cs = getComputedStyle(h)
+    return { family: cs.fontFamily, weight: cs.fontWeight, transform: cs.textTransform }
+  })
+  await page.goto("/")
+  const home = await style()
+  expect(home.family).toMatch(/^Inter/)
+  for (const path of ["/privacy", "/admin/login", `/checkout/${id}`, `/checkout/${id}/success`]) {
+    await page.goto(path)
+    expect(await style(), path).toEqual(home)
+  }
+  await loginAsAdmin(page)
+  expect(await style(), "/admin").toEqual(home)
+  // nothing on the site still uses the old display font
+  const anton = await page.evaluate(() => [...document.querySelectorAll("*")].some(e => getComputedStyle(e).fontFamily.includes("Anton")))
+  expect(anton).toBe(false)
+})

@@ -66,7 +66,7 @@ export default function CookieBanner() {
         {!showPreferences ? (
           <>
             <div className="flex-1">
-              <h3 className="font-header text-xl uppercase tracking-widest text-foreground mb-2">🍪 We value your privacy</h3>
+              <h3 className="font-semibold tracking-tight text-xl text-foreground mb-2">🍪 We value your privacy</h3>
               <p className="font-body text-xs text-foreground/60 leading-relaxed max-w-3xl">
                 We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. 
                 Read our <Link href="/privacy" className="text-foreground underline hover:text-foreground/80">Privacy Policy</Link> for more information.
@@ -87,12 +87,12 @@ export default function CookieBanner() {
           </>
         ) : (
           <div className="w-full flex flex-col">
-            <h3 className="font-header text-xl uppercase tracking-widest text-foreground mb-6 border-b border-foreground/10 pb-4">Cookie Preferences</h3>
+            <h3 className="font-semibold tracking-tight text-xl text-foreground mb-6 border-b border-foreground/10 pb-4">Cookie Preferences</h3>
             
             <div className="space-y-4 mb-8">
               <div className="flex items-center justify-between p-4 bg-foreground/5 rounded-xl">
                 <div>
-                  <h4 className="font-header text-sm tracking-widest uppercase">Necessary</h4>
+                  <h4 className="font-semibold text-sm">Necessary</h4>
                   <p className="font-body text-2xs text-foreground/40 mt-1">Required for the website to function properly.</p>
                 </div>
                 <div className="w-12 h-6 bg-foreground/20 rounded-full relative cursor-not-allowed opacity-50">
@@ -102,7 +102,7 @@ export default function CookieBanner() {
               
               <div className="flex items-center justify-between p-4 bg-foreground/5 rounded-xl cursor-pointer" onClick={() => setPreferences(p => ({...p, analytics: !p.analytics}))}>
                 <div>
-                  <h4 className="font-header text-sm tracking-widest uppercase">Analytics</h4>
+                  <h4 className="font-semibold text-sm">Analytics</h4>
                   <p className="font-body text-2xs text-foreground/40 mt-1">Help us understand how visitors interact with the site.</p>
                 </div>
                 <div className={`w-12 h-6 rounded-full relative transition-colors ${preferences.analytics ? 'bg-foreground' : 'bg-foreground/20'}`}>
@@ -112,7 +112,7 @@ export default function CookieBanner() {
 
               <div className="flex items-center justify-between p-4 bg-foreground/5 rounded-xl cursor-pointer" onClick={() => setPreferences(p => ({...p, marketing: !p.marketing}))}>
                 <div>
-                  <h4 className="font-header text-sm tracking-widest uppercase">Marketing</h4>
+                  <h4 className="font-semibold text-sm">Marketing</h4>
                   <p className="font-body text-2xs text-foreground/40 mt-1">Used to deliver advertisements relevant to you.</p>
                 </div>
                 <div className={`w-12 h-6 rounded-full relative transition-colors ${preferences.marketing ? 'bg-foreground' : 'bg-foreground/20'}`}>

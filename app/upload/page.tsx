@@ -1039,7 +1039,7 @@ export default function WizardPage() {
         {/* ════════════════ STEP 2: Delivery & Confirm ════════════════ */}
         {step === 2 && (
           <div className="flex-1 p-6 space-y-5 max-w-[640px]">
-            <h2 className="text-xl font-medium">จัดส่ง & ยืนยัน</h2>
+            <h2 className="text-xl font-semibold tracking-tight">จัดส่ง & ยืนยัน</h2>
 
             {/* Delivery */}
             <div>
