@@ -149,19 +149,29 @@ export default function AdminPage() {
     setOrders(next.map(normalizeLocal))
   }
 
+  /** Admin writes go through the server (session check + service-role key), never the public key. */
+  const adminPatch = async (id: string, body: { status?: string; trackingNumber?: string | null }) => {
+    const r = await fetch(`/api/admin/orders/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    })
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}))
+      throw new Error(d.error || `HTTP ${r.status}`)
+    }
+  }
+
   const saveTracking = async (id: string) => {
     const value = (trackingInputs[id] ?? "").trim() || null
     try {
       if (!isPlaceholder) {
-        const { error } = await supabase.from('orders').update({ tracking_number: value }).eq('id', id)
-        if (error) throw error
+        await adminPatch(id, { trackingNumber: value })
         await loadOrders()
       } else {
         patchLocal(id, { trackingNumber: value })
       }
       setSavedTrackingId(id)
       setTimeout(() => setSavedTrackingId(p => p === id ? null : p), 2000)
-    } catch (e) { console.error(e); alert("บันทึกเลขพัสดุไม่สำเร็จ") }
+    } catch (e: any) { console.error(e); alert("บันทึกเลขพัสดุไม่สำเร็จ: " + (e?.message || "")) }
   }
 
   const sendEmail = (order: Order, newStatus: string, trackingOverride?: string | null) => {
@@ -186,16 +196,13 @@ export default function AdminPage() {
     setUpdatingId(id)
     try {
       if (!isPlaceholder) {
-        const upd: any = { status: newStatus }
-        if (tracking) upd.tracking_number = tracking
-        const { error } = await supabase.from('orders').update(upd).eq('id', id)
-        if (error) throw error
+        await adminPatch(id, { status: newStatus, ...(tracking ? { trackingNumber: tracking } : {}) })
         await loadOrders()
       } else {
         patchLocal(id, { status: newStatus, ...(tracking ? { trackingNumber: tracking } : {}) })
       }
       if (current) sendEmail(current, newStatus, tracking)
-    } catch (e) { console.error(e); alert("Failed to update status") }
+    } catch (e: any) { console.error(e); alert("อัปเดตสถานะไม่สำเร็จ: " + (e?.message || "")) }
     setUpdatingId(null)
   }
 
