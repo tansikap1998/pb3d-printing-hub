@@ -157,6 +157,13 @@ test.describe("Admin orders", () => {
   })
 })
 
+test("admin order API: rejects visitors, needs the service-role key on the server", async ({ page, request }) => {
+  expect((await request.patch("/api/admin/orders/abc", { data: { status: "delivered" } })).status()).toBe(401)
+  await loginAsAdmin(page)
+  const r = await page.request.patch("/api/admin/orders/abc", { data: { status: "delivered" } })
+  expect(r.status()).toBe(503) // test server runs without SUPABASE_SERVICE_ROLE_KEY
+})
+
 // ─── Shopee products ─────────────────────────────────────────────────────────
 test.describe("Shopee product links", () => {
   test.beforeAll(async () => { await fs.rm(DATA_FILE, { force: true }) })

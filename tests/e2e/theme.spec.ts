@@ -63,7 +63,7 @@ test("all pages share one font family and background", async ({ page }) => {
     expect(font, path).toMatch(/^Inter/)
     seen.add(rootBg)
   }
-  expect([...seen]).toEqual(["rgb(8, 8, 16)"])
+  expect(Array.from(seen)).toEqual(["rgb(8, 8, 16)"])
 })
 
 test("root font size scales with the screen width", async ({ page }) => {
@@ -117,6 +117,6 @@ test("headings on every page use the same font as the home page", async ({ page 
   await loginAsAdmin(page)
   expect(await style(), "/admin").toEqual(home)
   // nothing on the site still uses the old display font
-  const anton = await page.evaluate(() => [...document.querySelectorAll("*")].some(e => getComputedStyle(e).fontFamily.includes("Anton")))
+  const anton = await page.evaluate(() => Array.from(document.querySelectorAll("*")).some(e => getComputedStyle(e).fontFamily.includes("Anton")))
   expect(anton).toBe(false)
 })
