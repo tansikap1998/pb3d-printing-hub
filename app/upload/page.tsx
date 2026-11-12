@@ -7,7 +7,7 @@ import * as THREE from "three"
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
 // @ts-ignore
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader'
-import { Canvas, useLoader, useThree } from "@react-three/fiber"
+import { Canvas, useLoader } from "@react-three/fiber"
 import { OrbitControls, Stage, Center } from "@react-three/drei"
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -66,10 +66,9 @@ const INFILL_OPTIONS: { v: InfillLevel; label: string; pct: string }[] = [
   { v: 80, label: 'Very Strong', pct: '80%' },
 ]
 
+// The shop prints at 0.24 mm only (same as the -qe site)
 const LAYER_OPTIONS: { v: LayerHeight; label: string; desc: string }[] = [
-  { v: 0.08, label: 'Fine',   desc: '0.08 mm' },
-  { v: 0.16, label: 'Normal', desc: '0.16 mm' },
-  { v: 0.24, label: 'Coarse', desc: '0.24 mm' },
+  { v: 0.24, label: 'Standard', desc: '0.24 mm' },
 ]
 
 const STEPS = ['อัปโหลด & ตั้งค่า', 'จัดส่ง & ยืนยัน']
@@ -104,26 +103,29 @@ const AUTO_SPLIT_THRESHOLD = 250 // mm
 
 // ─── Three.js sub-components ──────────────────────────────────────────────────
 
-function ModelSTL({ url, scale }: { url: string; scale: [number, number, number] }) {
+function ModelSTL({ url, scale, color }: { url: string; scale: [number, number, number]; color: string }) {
   const geo = useLoader(STLLoader, url)
   return (
     <mesh geometry={geo} castShadow receiveShadow scale={scale}>
-      <meshStandardMaterial color="#b0b4c0" metalness={0.25} roughness={0.55} />
+      <meshStandardMaterial color={color} metalness={0.25} roughness={0.55} />
     </mesh>
   )
 }
 
-function Model3MF({ url, scale, activeChildIndices }: { url: string; scale: [number, number, number]; activeChildIndices?: number[] }) {
+function Model3MF({ url, scale, color, activeChildIndices }: { url: string; scale: [number, number, number]; color: string; activeChildIndices?: number[] }) {
   const group = useLoader(ThreeMFLoader as any, url)
   useEffect(() => {
-    if (activeChildIndices) {
-      group.children.forEach((child: THREE.Object3D, i: number) => {
-        child.visible = activeChildIndices.includes(i)
-      })
-    } else {
-      group.children.forEach((child: THREE.Object3D) => { child.visible = true })
-    }
-  }, [group, activeChildIndices?.join(',')])  // eslint-disable-line react-hooks/exhaustive-deps
+    group.children.forEach((child: THREE.Object3D, i: number) => {
+      child.visible = activeChildIndices ? activeChildIndices.includes(i) : true
+    })
+    // show the model in the colour the customer picked
+    group.traverse((obj: THREE.Object3D) => {
+      const mesh = obj as THREE.Mesh
+      if (!mesh.isMesh) return
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      mats.forEach(m => { (m as THREE.MeshStandardMaterial).color?.set(color); m.needsUpdate = true })
+    })
+  }, [group, color, activeChildIndices?.join(',')])  // eslint-disable-line react-hooks/exhaustive-deps
   return <primitive object={group} scale={scale} />
 }
 
@@ -160,12 +162,6 @@ function FallbackLights() {
   )
 }
 
-// Camera zoom controller via imperative ref
-function ZoomController({ controlsRef }: { controlsRef: React.MutableRefObject<any> }) {
-  const { controls } = useThree()
-  useEffect(() => { controlsRef.current = controls }, [controls, controlsRef])
-  return null
-}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -185,8 +181,9 @@ export default function WizardPage() {
   // Print settings
   const [material,    setMaterial]    = useState<Material>('PLA')
   const [colorId,     setColorId]     = useState('white')
+  const modelColor = COLOR_SWATCHES.find(c => c.id === colorId)?.hex ?? '#b0b4c0'
   const [infill,      setInfill]      = useState<InfillLevel>(25)
-  const [layerHeight, setLayerHeight] = useState<LayerHeight>(0.16)
+  const [layerHeight, setLayerHeight] = useState<LayerHeight>(0.24)
   const [shipping,    setShipping]    = useState<Shipping>('pickup')
 
   // Dimension / scale state
@@ -292,11 +289,20 @@ export default function WizardPage() {
     : undefined
 
   // ── Zoom controls ───────────────────────────────────────────────────────────
+  // OrbitControls' dollyIn/dollyOut became private in three r16x, so move the
+  // camera along its line to the target instead (factor < 1 = closer).
+  const zoomBy = (factor: number) => {
+    const controls = orbitRef.current
+    if (!controls?.object || !controls?.target) return
+    const cam = controls.object as THREE.Camera
+    cam.position.sub(controls.target).multiplyScalar(factor).add(controls.target)
+    controls.update()
+  }
   const zoomIn  = useCallback(() => {
-    if (orbitRef.current) { orbitRef.current.dollyIn(1.3);  orbitRef.current.update() }
+    zoomBy(0.75)
   }, [])
   const zoomOut = useCallback(() => {
-    if (orbitRef.current) { orbitRef.current.dollyOut(1.3); orbitRef.current.update() }
+    zoomBy(1.33)
   }, [])
 
   // ── Navigation ──────────────────────────────────────────────────────────────
@@ -540,8 +546,8 @@ export default function WizardPage() {
                         <Stage intensity={0.5} environment={envFailed ? null : "city"} adjustCamera>
                           <Center>
                             {primary.name.toLowerCase().endsWith('.3mf')
-                              ? <Model3MF url={primary.url} scale={meshScale} activeChildIndices={activeChildIndices} />
-                              : <ModelSTL url={primary.previewUrl ?? primary.url} scale={meshScale} />}
+                              ? <Model3MF url={primary.url} scale={meshScale} color={modelColor} activeChildIndices={activeChildIndices} />
+                              : <ModelSTL url={primary.previewUrl ?? primary.url} scale={meshScale} color={modelColor} />}
                           </Center>
                         </Stage>
                         <AxesLabels size={axisSize} />
@@ -661,8 +667,8 @@ export default function WizardPage() {
                                 <Stage intensity={0.5} environment={envFailed ? null : "city"} adjustCamera>
                                   <Center>
                                     {model.name.toLowerCase().endsWith('.3mf')
-                                      ? <Model3MF url={model.url} scale={[1,1,1]} />
-                                      : <ModelSTL url={model.previewUrl ?? model.url} scale={[1,1,1]} />}
+                                      ? <Model3MF url={model.url} scale={[1,1,1]} color={modelColor} />
+                                      : <ModelSTL url={model.previewUrl ?? model.url} scale={[1,1,1]} color={modelColor} />}
                                   </Center>
                                 </Stage>
                               </Suspense>

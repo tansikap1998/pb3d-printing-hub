@@ -7,7 +7,7 @@ const SMALL = { name: "small20.stl", mimeType: "model/stl", buffer: boxStl(20, 2
 
 const price = (o: Partial<Parameters<typeof calculate>[0]>) => calculate({
   volumeCm3: 216, dimensions: { x: 60, y: 60, z: 60 }, technology: "FDM", material: "PLA",
-  infill: 25, layerHeight: 0.16, quantity: 1, shipping: "pickup", ...o,
+  infill: 25, layerHeight: 0.24, quantity: 1, shipping: "pickup", ...o,
 })
 const baht = (n: number) => `฿${n.toLocaleString()}`
 const liveQuote = (page: Page) => page.locator("p", { hasText: "Live Quote" }).locator("xpath=following-sibling::p[1]")
@@ -124,6 +124,7 @@ test.describe("Full order: upload → quote → checkout → success", () => {
     await page.getByPlaceholder("08x-xxx-xxxx").fill("0812345678")
     await expect(place).toBeDisabled() // address still missing
     await page.getByPlaceholder("john@example.com").fill("")
+    await page.getByPlaceholder("ช่วยให้เราจับคู่กับออเดอร์เดิมได้").fill("SPX-220101ABC")
     await page.getByPlaceholder("123 Street, Bangkok 10xxx").fill("99/1 ถนนทดสอบ กรุงเทพฯ 10110")
     await expect(place).toBeEnabled()
     await place.click()
@@ -131,8 +132,15 @@ test.describe("Full order: upload → quote → checkout → success", () => {
     // ── Checkout ──
     await expect(page).toHaveURL(/\/checkout\/[0-9a-f-]{36}$/)
     const orderId = page.url().split("/").pop()!
-    await expect(page.getByText(`฿${p.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}`)).toBeVisible()
+    await expect(page.getByText(`฿${p.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}`).first()).toBeVisible()
     await expect(page.getByText("5981153600")).toBeVisible()
+
+    // order summary before paying: details + name + masked phone, never the full phone or address
+    const summary = page.getByTestId("order-summary")
+    for (const t of ["ทดสอบ ระบบ", "081-xxx-5678", "cube60.stl", "PETG · black", "2 ชิ้น", "25% · 0.24 mm", "Shopee: SPX-220101ABC"])
+      await expect(summary).toContainText(t)
+    await expect(summary).not.toContainText("0812345678")
+    await expect(summary).not.toContainText("ถนนทดสอบ")
     const confirm = page.getByRole("button", { name: "Confirm Payment" })
     await expect(confirm).toBeDisabled()
 
@@ -145,6 +153,8 @@ test.describe("Full order: upload → quote → checkout → success", () => {
     expect(stored["สี"]).toBe("black")
     expect(stored["จำนวน"]).toBe(2)
     expect(stored["หมายเหตุ"]).toContain("ส่งไปรษณีย์")
+    expect(stored["หมายเหตุ"]).toContain("Shopee: SPX-220101ABC")
+    expect(stored["Layer (mm)"]).toBe(0.24)
     expect(stored["ยอดรวม (บาท)"]).toBe(p.totalPrice)
     expect(stored["สลิป (Drive file ID)"]).toBe("")
 
@@ -198,6 +208,58 @@ test.describe("Full order: upload → quote → checkout → success", () => {
   })
 })
 
+test.describe("Ported from the -qe site", () => {
+  test("only the 0.24 mm layer is offered", async ({ page }) => {
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles(CUBE)
+    const layerCard = page.locator("p", { hasText: /^Layer$/ }).locator("xpath=..")
+    await expect(layerCard.getByRole("button")).toHaveCount(1)
+    await expect(layerCard.getByRole("button")).toContainText("0.24 mm")
+  })
+
+  test("zoom buttons work without errors", async ({ page }) => {
+    const errors: string[] = []
+    page.on("pageerror", e => errors.push(e.message))
+    page.on("console", m => { if (m.type() === "error" && /dolly|zoom/i.test(m.text())) errors.push(m.text()) })
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles(CUBE)
+    await expect(page.getByText("216.0 cm³").first()).toBeVisible()
+    const zoomBtns = page.locator("canvas").first().locator("xpath=ancestor::div[contains(@class,'relative')][1]").locator("button")
+    await zoomBtns.nth(0).click()
+    await zoomBtns.nth(1).click()
+    expect(errors).toEqual([])
+  })
+
+  test("send quote to LINE copies the quote and opens LINE", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"])
+    await context.route(/lin\.ee/, r => r.fulfill({ status: 200, contentType: "text/html", body: "LINE stub" }))
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles(CUBE)
+    await page.getByRole("button", { name: /ถัดไป/ }).click()
+    await page.getByRole("button", { name: /ยืนยันสั่งซื้อ/ }).click()
+    await expect(page).toHaveURL(/\/quote$/)
+    const [popup] = await Promise.all([
+      page.waitForEvent("popup"),
+      page.getByTestId("send-to-line").click(),
+    ])
+    await popup.waitForLoadState()
+    expect(popup.url()).toContain("lin.ee")
+    await expect(page.getByRole("status")).toContainText("คัดลอกใบเสนอราคาแล้ว")
+    const text = await page.evaluate(() => navigator.clipboard.readText())
+    expect(text).toContain("cube60.stl ×1")
+    expect(text).toContain(`฿${price({}).totalPrice.toLocaleString()}`)
+    expect(text.split("\n").length).toBeGreaterThan(4) // real line breaks, not "\\n"
+  })
+
+  test("broken saved quote data sends the customer back to upload", async ({ page }) => {
+    await page.goto("/")
+    await page.evaluate(() => localStorage.setItem("pb3d-order-storage",
+      JSON.stringify({ state: { estimateData: { models: [{ name: 1 }], result: { totalPrice: "abc" } } }, version: 0 })))
+    await page.goto("/quote")
+    await expect(page).toHaveURL(/\/upload$/)
+  })
+})
+
 test.describe("Cookie banner", () => {
   test("shows once and remembers the choice", async ({ page }) => {
     await page.addInitScript(() => { sessionStorage.setItem("__e2e_keep_banner", "1") })
@@ -230,7 +292,7 @@ test.describe("Guards", () => {
   test("estimate API validates input", async ({ request }) => {
     const bad = await request.post("/api/estimate", { data: { material: "PLA" } })
     expect(bad.status()).toBe(400)
-    const ok = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.16, quantity: 1 } })
+    const ok = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.24, quantity: 1 } })
     expect(ok.status()).toBe(200)
     expect((await ok.json()).totalPrice).toBe(price({}).totalPrice)
   })

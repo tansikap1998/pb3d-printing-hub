@@ -3,7 +3,7 @@ import { calculate, fitsInBuildVolume, formatTime, formatTimeFull, BUILD_MAX } f
 
 const base = {
   volumeCm3: 8, dimensions: { x: 20, y: 20, z: 20 }, technology: "FDM" as const,
-  material: "PLA" as const, infill: 25 as const, layerHeight: 0.16 as const, quantity: 1, shipping: "pickup" as const,
+  material: "PLA" as const, infill: 25 as const, layerHeight: 0.24 as const, quantity: 1, shipping: "pickup" as const,
 }
 
 test("small part hits the ฿59/pc minimum", () => {
@@ -52,4 +52,10 @@ test("time formatters", () => {
   expect(formatTime(90)).toBe("1h 30m")
   expect(formatTime(120)).toBe("2h")
   expect(formatTime(5)).toBe("5m")
+})
+
+test("price = (material + machine) × 0.90 above the ฿59 minimum", () => {
+  const r = calculate({ ...base, volumeCm3: 500 })
+  expect(r.pricePerPc).toBe(Math.round((r.materialCost + r.machineCost) * 0.9))
+  expect(r.pricePerPc).toBeGreaterThan(59)
 })

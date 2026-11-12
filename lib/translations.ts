@@ -62,7 +62,7 @@ export const translations = {
     },
     trust: {
       rating: "คะแนน 4.9/5.0 บน Shopee",
-      years: "ประสบการณ์กว่า 10 ปี",
+      years: "ประสบการณ์กว่า 5 ปี",
       orders: "รีวิวจริงจากลูกค้ากว่า 1,000+",
       shopeeCta: "ไปที่ร้าน Shopee",
       facebookCta: "เพจ Facebook",
@@ -70,7 +70,7 @@ export const translations = {
     shopee: {
       title: "ความเชื่อมั่นที่จับต้องได้.",
       subtitle: "จาก Marketplace สู่โรงงานดิจิทัล",
-      desc: "เราเริ่มต้นจากการเป็นร้านเล็กๆ ใน Shopee (PB-3D) และเติบโตด้วยความไว้วางใจจากลูกค้ากว่า 10 ปี ด้วยคะแนนความพึงพอใจ 4.9/5.0 เราการันตีคุณภาพทุกชิ้นงาน",
+      desc: "เราเริ่มต้นจากการเป็นร้านเล็กๆ ใน Shopee (PB-3D) และเติบโตด้วยความไว้วางใจจากลูกค้ากว่า 5 ปี ด้วยคะแนนความพึงพอใจ 4.9/5.0 เราการันตีคุณภาพทุกชิ้นงาน",
       review1: "งานเนี๊ยบมากครับ ส่งไว แพ็คของมาดีสุดๆ แนะนำร้านนี้เลย",
       review2: "สั่งทำชิ้นส่วนพิเศษ ร้านให้คำแนะนำดีมาก งานออกมาตรงสเปคเป๊ะ",
       review3: "รวดเร็ว ทันใจ งานสวยคุ้มค่าราคาครับ",
@@ -212,7 +212,7 @@ export const translations = {
     },
     trust: {
       rating: "4.9/5.0 Shopee Rating",
-      years: "10+ Years Excellence",
+      years: "5+ Years Excellence",
       orders: "1,000+ Verified Reviews",
       shopeeCta: "Visit Shopee Shop",
       facebookCta: "Facebook Page",
@@ -220,7 +220,7 @@ export const translations = {
     shopee: {
       title: "Tangible Trust.",
       subtitle: "From Marketplace to Digital Factory",
-      desc: "Founded as PB-3D on Shopee, we've spent a decade building a reputation for excellence. With over 1,000 positive reviews and a 4.9/5.0 rating, our commitment to quality is proven by our community.",
+      desc: "Founded as PB-3D on Shopee, we've spent over five years building a reputation for excellence. With over 1,000 positive reviews and a 4.9/5.0 rating, our commitment to quality is proven by our community.",
       review1: "Exceptional quality, super fast shipping and great packaging. Highly recommend!",
       review2: "Ordered custom parts, the shop provided great advice. Result was perfect.",
       review3: "Fast, reliable, and worth every penny. Beautiful work!",

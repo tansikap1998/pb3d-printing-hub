@@ -458,7 +458,7 @@ export default function Home() {
                 <div className="text-xs text-muted-foreground">{lang === 'TH' ? 'คะแนนรีวิว' : 'Rating'}</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card border border-border">
-                <div className="text-2xl md:text-3xl font-semibold mb-1">10+</div>
+                <div className="text-2xl md:text-3xl font-semibold mb-1">5+</div>
                 <div className="text-xs text-muted-foreground">{lang === 'TH' ? 'ปีประสบการณ์' : 'Years'}</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card border border-border">

@@ -10,7 +10,7 @@ import {
   FileText, ChevronLeft, User, MapPin, Phone, Mail,
   Shield, Truck, Clock, Weight, CheckCircle2,
   Layers, Loader2, AlertCircle, Zap,
-  Package, Store, ArrowRight, BarChart3
+  Package, Store, ArrowRight, BarChart3, MessageCircle
 } from 'lucide-react'
 
 const MATERIAL_COLORS: Record<string, string> = {
@@ -21,7 +21,7 @@ const MATERIAL_COLORS: Record<string, string> = {
 function layerLabel(lh: number) {
   if (lh <= 0.08) return 'Fine (0.08mm)'
   if (lh <= 0.16) return 'Normal (0.16mm)'
-  return 'Coarse (0.24mm)'
+  return 'Standard (0.24mm)'
 }
 
 // ── Form components with improved readability ─────────────────────────────────
@@ -88,17 +88,29 @@ function TextareaField({ label, icon: Icon, value, onChange, placeholder, requir
   )
 }
 
+// Saved quote data comes from localStorage, so it can be stale or broken: check it.
+function isValidQuoteData(d: any): boolean {
+  if (!d || typeof d !== 'object' || !Array.isArray(d.models) || d.models.length === 0) return false
+  const r = d.result
+  if (!r || typeof r !== 'object') return false
+  if (!['totalPrice', 'weightG'].every(k => Number.isFinite(Number(r[k])) && Number(r[k]) >= 0)) return false
+  return d.models.every((m: any) => m && typeof m.name === 'string' && Number(m.quantity) >= 1)
+}
+
+const LINE_URL = 'https://lin.ee/R8Vd7q5'
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function QuotePage() {
   const router = useRouter()
   const { estimateData, _hasHydrated } = useOrderStore()
-  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '' })
+  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '', shopeeReference: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
-    if (_hasHydrated && (!estimateData || !estimateData.result)) router.replace('/upload')
+    if (_hasHydrated && !isValidQuoteData(estimateData)) router.replace('/upload')
   }, [estimateData, _hasHydrated, router])
 
   if (!_hasHydrated) return (
@@ -106,7 +118,7 @@ export default function QuotePage() {
       <Loader2 size={24} className="animate-spin text-foreground/30" />
     </div>
   )
-  if (!estimateData || !estimateData.result) return null
+  if (!estimateData || !isValidQuoteData(estimateData)) return null
 
   const { models, technology, infill, layerHeight, result } = estimateData
   const totalQty  = models.reduce((a: number, m: any) => a + m.quantity, 0)
@@ -140,14 +152,16 @@ export default function QuotePage() {
       const colors    = uniq(models.map((m: any) => m.colorId)).join(', ') || 'various'
       const shippingLabel = (estimateData.shipping ?? (shippingCost > 0 ? 'postal' : 'pickup')) === 'postal'
         ? `ส่งไปรษณีย์ (+฿${shippingCost})` : 'รับเอง (ฟรี)'
-      const notes = `จัดส่ง: ${shippingLabel}`
+      const shopeeRef = customer.shopeeReference.trim().slice(0, 200)
+      const notes = `จัดส่ง: ${shippingLabel}` + (shopeeRef ? `\nShopee: ${shopeeRef}` : '')
       const printTimeMin = result.printTimeMin ?? Math.round((result.printTimeSec ?? 0) / 60)
 
       // Orders are created on the server; the browser never touches the order sheet.
       const res = await fetch('/api/orders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer, fileName: fileNames, technology, material: materials, color: colors,
+          customer: { name: customer.name, phone: customer.phone, email: customer.email, address: customer.address },
+          fileName: fileNames, technology, material: materials, color: colors,
           infill, layerHeight, quantity: totalQty, notes,
           volumeCm3: models.reduce((a: number, m: any) => a + (m.originalVolumeCm3 ?? m.volumeCm3 ?? 0), 0),
           weightG, printTimeMin, totalPrice, subtotal,
@@ -160,6 +174,27 @@ export default function QuotePage() {
       setError(e?.message && e.message !== 'Failed to fetch' ? e.message : 'Failed to place order. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Copy a plain-text quote and open the shop's LINE, for customers who prefer to chat.
+  const handleSendToLine = async () => {
+    setError(''); setNotice('')
+    const summary = [
+      'PB3D Hub – ใบเสนอราคา / Quote',
+      ...models.map((m: any) => `• ${m.name} ×${m.quantity} (${m.material ?? ''}${m.colorId ? `, ${m.colorId}` : ''})`),
+      `Infill: ${infill}% · Layer: ${Number(layerHeight).toFixed(2)} mm`,
+      `น้ำหนัก / Weight: ${Number(weightG).toFixed(0)} g · เวลาพิมพ์ / Print time: ${printDisplay}`,
+      `จัดส่ง / Shipping: ${shippingCost === 0 ? 'รับเอง (ฟรี)' : `฿${shippingCost}`}`,
+      `ยอดรวม / Total: ฿${Number(totalPrice).toLocaleString()}`,
+    ].join('\n')
+    // open LINE first: browsers block pop-ups opened after an await
+    window.open(LINE_URL, '_blank', 'noopener,noreferrer')
+    try {
+      await navigator.clipboard.writeText(summary)
+      setNotice('คัดลอกใบเสนอราคาแล้ว วางในแชท LINE ได้เลย / Quote copied — paste it in LINE.')
+    } catch {
+      setNotice('คัดลอกอัตโนมัติไม่ได้ กรุณาพิมพ์รายละเอียดจากหน้านี้ในแชท LINE')
     }
   }
 
@@ -284,12 +319,22 @@ export default function QuotePage() {
                 </div>
                 <InputField label="Email" icon={Mail} type="email" value={customer.email}
                   onChange={v => setCustomer(p => ({ ...p, email: v }))} placeholder="john@example.com" />
+                <InputField label="เลขคำสั่งซื้อ Shopee หรือชื่อร้าน (ถ้ามี) / Shopee order no. (optional)" icon={Package}
+                  value={customer.shopeeReference}
+                  onChange={v => setCustomer(p => ({ ...p, shopeeReference: v }))}
+                  placeholder="ช่วยให้เราจับคู่กับออเดอร์เดิมได้" />
                 <TextareaField label="Delivery Address" icon={MapPin} value={customer.address}
                   onChange={v => setCustomer(p => ({ ...p, address: v }))}
                   placeholder="123 Street, Bangkok 10xxx" required />
               </div>
             </section>
 
+            {notice && (
+              <div role="status" className="flex items-center gap-3 px-4 py-3.5 bg-emerald-500/8 border border-emerald-500/25 rounded-2xl">
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <p className="text-sm text-emerald-400">{notice}</p>
+              </div>
+            )}
             {error && (
               <div className="flex items-center gap-3 px-4 py-3.5 bg-red-500/8 border border-red-500/25 rounded-2xl">
                 <AlertCircle size={15} className="text-red-400 shrink-0" />
@@ -362,6 +407,10 @@ export default function QuotePage() {
               </div>
 
               {/* CTA */}
+              <button onClick={handleSendToLine} data-testid="send-to-line"
+                className="w-full py-3 rounded-2xl border border-emerald-500/40 text-emerald-600 text-sm font-medium hover:bg-emerald-500/10 transition-colors flex items-center justify-center gap-2">
+                <MessageCircle size={15} /> ส่งใบเสนอราคาเข้า LINE
+              </button>
               <button onClick={handleConfirm} disabled={!isValid || loading}
                 className="w-full py-5 rounded-2xl bg-background text-foreground font-header text-base uppercase tracking-[0.15em] transition-all disabled:opacity-25 hover:bg-background/80 active:scale-[0.98] flex items-center justify-center gap-3 shadow-xl">
                 {loading
@@ -408,6 +457,10 @@ export default function QuotePage() {
             <p className="text-xs text-foreground/30 mb-0.5">Total</p>
             <p className="font-header text-2xl tracking-tighter">฿{totalPrice?.toLocaleString()}</p>
           </div>
+          <button onClick={handleSendToLine} aria-label="ส่งใบเสนอราคาเข้า LINE"
+            className="w-12 h-12 shrink-0 rounded-2xl border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
+            <MessageCircle size={18} />
+          </button>
           <button onClick={handleConfirm} disabled={!isValid || loading}
             className="flex-1 py-4 rounded-2xl font-header text-sm uppercase tracking-[0.15em] transition-all disabled:opacity-30 flex items-center justify-center gap-2 bg-foreground text-background shadow-2xl active:scale-[0.98]">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={14} />}
