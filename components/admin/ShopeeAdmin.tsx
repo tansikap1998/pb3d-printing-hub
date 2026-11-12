@@ -102,9 +102,9 @@ export default function ShopeeAdmin() {
         <p className="text-foreground/35 text-sm mt-1">
           วางลิงก์สินค้าจาก Shopee → แสดงบนหน้าแรกพร้อมปุ่ม “สั่งซื้อ” ที่พาลูกค้าไปหน้าสินค้าใน Shopee
         </p>
-        {storage === "file" && (
+        {storage === "emulator" && (
           <p className="text-xs text-amber-400/80 mt-2">
-            โหมดทดสอบ: บันทึกลงไฟล์บนเซิร์ฟเวอร์ (.data/) — สำหรับ production ให้ตั้งค่า SUPABASE_SERVICE_ROLE_KEY และรัน migration 01_shopee_products.sql
+            โหมดทดสอบ: ใช้ Google Sheets จำลองในเครื่อง — สำหรับเว็บจริงให้ตั้งค่า GOOGLE_SHEETS_WEBHOOK_URL และ GOOGLE_SHEETS_WEBHOOK_SECRET
           </p>
         )}
       </div>

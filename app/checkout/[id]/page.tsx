@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Upload, CheckCircle, Copy, ArrowLeft, Loader2 } from 'lucide-react'
-import { isPlaceholder } from '@/lib/supabase/client'
 import { MAX_SLIP_BYTES, SLIP_TYPES, validateSlip } from '@/lib/orderInput'
 import { Stepper } from '@/components/Stepper'
 
@@ -49,16 +48,9 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        let fetchedOrder = null
-
-        if (!isPlaceholder) {
-          const res = await fetch(`/api/orders/${params.id}`, { cache: 'no-store' })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          fetchedOrder = (await res.json()).order
-        } else {
-          const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
-          fetchedOrder = existing.find((o: any) => o.id === params.id)
-        }
+        const res = await fetch(`/api/orders/${params.id}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const fetchedOrder = (await res.json()).order
 
         if (fetchedOrder) {
           setOrder(fetchedOrder)
@@ -81,7 +73,7 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
     if (file) {
       const check = validateSlip(file)
       if (!check.ok) {
-        setSlipError(file.size > MAX_SLIP_BYTES ? 'ไฟล์ใหญ่เกิน 5MB กรุณาเลือกไฟล์ใหม่' : 'รองรับเฉพาะไฟล์ JPG, PNG, WEBP, HEIC หรือ PDF')
+        setSlipError(file.size > MAX_SLIP_BYTES ? 'ไฟล์ใหญ่เกิน 4MB กรุณาเลือกไฟล์ใหม่' : 'รองรับเฉพาะไฟล์ JPG, PNG, WEBP, HEIC หรือ PDF')
         return
       }
       setSlipError('')
@@ -99,26 +91,14 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
     setSubmitting(true)
     
     try {
-      if (!isPlaceholder) {
-        // The server checks the order is still awaiting payment, stores the slip in a
-        // private bucket and updates the order.
-        const fd = new FormData()
-        fd.append('file', slipFile!)
-        const res = await fetch(`/api/orders/${params.id}/slip`, { method: 'POST', body: fd })
-        if (!res.ok) {
-          const d = await res.json().catch(() => ({}))
-          throw new Error(d.error || `HTTP ${res.status}`)
-        }
-      } else {
-        // Fallback local update
-        const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
-        const updated = existing.map((o: any) => {
-          if (o.id === params.id) {
-            return { ...o, status: 'awaiting_verification', payment: { slip: slipPreview, slipName: slipFile?.name ?? null, submittedAt: new Date().toISOString() } }
-          }
-          return o
-        })
-        localStorage.setItem('pb3d_orders', JSON.stringify(updated))
+      // The server checks the order is still awaiting payment, stores the slip in a
+      // private Google Drive folder and updates the order.
+      const fd = new FormData()
+      fd.append('file', slipFile!)
+      const res = await fetch(`/api/orders/${params.id}/slip`, { method: 'POST', body: fd })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || `HTTP ${res.status}`)
       }
 
       router.push(`/checkout/${params.id}/success`)
@@ -205,7 +185,7 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
           {/* Slip Upload */}
           <div className="bg-foreground/[0.02] border border-foreground/10 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 flex flex-col shadow-2xl">
             <h2 className="font-semibold tracking-tight text-2xl mb-2">Upload Slip</h2>
-            <p className="font-body text-xs text-foreground/40 mb-8">JPG, PNG, WEBP, HEIC, PDF • Max 5MB</p>
+            <p className="font-body text-xs text-foreground/40 mb-8">JPG, PNG, WEBP, HEIC, PDF • Max 4MB</p>
             
             <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-foreground/10 rounded-[2rem] p-8 relative overflow-hidden group hover:border-foreground/30 transition-all duration-300">
               <input ref={fileInputRef} data-testid="slip-input" type="file" accept={SLIP_ACCEPT} onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />

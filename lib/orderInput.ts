@@ -4,7 +4,8 @@ export const ORDER_STATUSES = [
   "pending", "awaiting_verification", "confirmed", "printing", "shipped", "delivered", "cancelled",
 ] as const
 
-export const MAX_SLIP_BYTES = 5 * 1024 * 1024
+// 4MB: Vercel rejects request bodies over 4.5MB, so a 5MB slip could never arrive
+export const MAX_SLIP_BYTES = 4 * 1024 * 1024
 export const SLIP_TYPES: Record<string, string> = {
   "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic", "application/pdf": "pdf",
 }
@@ -54,7 +55,7 @@ export function validateNewOrder(b: any): { ok: true; row: NewOrderRow } | { ok:
 /** Check an uploaded slip. Returns the file extension to store it under. */
 export function validateSlip(file: { size: number; type: string } | null): { ok: true; ext: string } | { ok: false; error: string } {
   if (!file || file.size === 0) return { ok: false, error: "กรุณาแนบสลิป" }
-  if (file.size > MAX_SLIP_BYTES) return { ok: false, error: "ไฟล์ใหญ่เกิน 5MB" }
+  if (file.size > MAX_SLIP_BYTES) return { ok: false, error: "ไฟล์ใหญ่เกิน 4MB" }
   const ext = SLIP_TYPES[file.type]
   if (!ext) return { ok: false, error: "รองรับเฉพาะไฟล์รูปภาพหรือ PDF" }
   return { ok: true, ext }

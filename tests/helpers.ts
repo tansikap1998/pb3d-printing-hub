@@ -48,3 +48,60 @@ export async function loginAsAdmin(page: Page) {
   await expect(page).toHaveURL(/\/admin$/)
   await expect(page.getByText("Order Dashboard")).toBeVisible()
 }
+
+// ─── Backend (Google Sheets emulator) helpers ───────────────────────────────
+import { APIRequestContext } from "@playwright/test"
+import { promises as fsp, readFileSync } from "fs"
+import path from "path"
+
+export const EMULATOR_FILE = path.join(__dirname, "..", "test-results", "sheets.e2e.json")
+
+/** Empty the simulated Google Sheet (the emulator re-reads the file on every request). */
+export async function resetDb() { await fsp.rm(EMULATOR_FILE, { force: true }) }
+
+/** Raw tabs of the simulated sheet: { Orders: [[titles...], [row...]], ... } */
+export function sheetTabs(): Record<string, any[][]> {
+  try { return JSON.parse(readFileSync(EMULATOR_FILE, "utf8")).sheets } catch { return {} }
+}
+
+export const sampleOrder = (over: Record<string, any> = {}) => ({
+  customer: { name: "ลูกค้า ทดสอบ", phone: "0812345678", address: "Bangkok", email: "" },
+  fileName: "part.stl", technology: "FDM", material: "PLA", color: "white",
+  infill: 25, layerHeight: 0.16, quantity: 1, notes: "จัดส่ง: รับเอง (ฟรี)",
+  volumeCm3: 216, weightG: 107, printTimeMin: 48, totalPrice: 365, subtotal: 365,
+  ...over,
+})
+
+/** Create an order through the public API, like /quote does. */
+export async function createOrder(request: APIRequestContext, over: Record<string, any> = {}): Promise<string> {
+  const r = await request.post("/api/orders", { data: sampleOrder(over) })
+  if (r.status() !== 201) throw new Error(`createOrder ${r.status()} ${await r.text()}`)
+  return (await r.json()).id
+}
+
+/** Upload a slip through the public API, like /checkout does. */
+export async function submitSlip(request: APIRequestContext, id: string) {
+  const r = await request.post(`/api/orders/${id}/slip`, {
+    multipart: { file: { name: "slip.png", mimeType: "image/png", buffer: PNG_1PX } },
+  })
+  if (!r.ok()) throw new Error(`submitSlip ${r.status()} ${await r.text()}`)
+}
+
+/** Admin-only helpers (use page.request after loginAsAdmin so the session cookie is sent). */
+export async function adminSetStatus(page: Page, id: string, status: string, trackingNumber?: string) {
+  const r = await page.request.patch(`/api/admin/orders/${id}`, { data: { status, ...(trackingNumber ? { trackingNumber } : {}) } })
+  if (!r.ok()) throw new Error(`adminSetStatus ${r.status()} ${await r.text()}`)
+}
+export async function adminGetOrder(page: Page, id: string) {
+  const r = await page.request.get("/api/admin/orders")
+  return ((await r.json()).orders as any[]).find(o => o.id === id)
+}
+
+/** One order row of the simulated sheet as { columnTitle: value }. */
+export function sheetOrder(id: string): Record<string, any> | undefined {
+  const tab = sheetTabs().Orders
+  if (!tab) return undefined
+  const [titles, ...rows] = tab
+  const r = rows.find(x => x[titles.indexOf("Order ID")] === id)
+  return r && Object.fromEntries(titles.map((t: string, i: number) => [t, r[i]]))
+}

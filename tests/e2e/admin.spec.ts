@@ -1,31 +1,12 @@
 import { test, expect, Page } from "@playwright/test"
-import { promises as fs } from "fs"
-import path from "path"
-import { isolateNetwork, loginAsAdmin, ADMIN_EMAIL } from "../helpers"
-
-const DATA_FILE = path.join(__dirname, "..", "..", "test-results", "shopee-products.e2e.json")
-
-function makeOrder(over: Record<string, any> = {}) {
-  return {
-    id: crypto.randomUUID(), createdAt: new Date().toISOString(), status: "pending",
-    customer: { name: "ลูกค้า ทดสอบ", email: "", phone: "0812345678", address: "Bangkok" },
-    items: { fileName: "part.stl", technology: "FDM", material: "PLA", color: "white", infill: 25, layerHeight: 0.16, quantity: 1, notes: "จัดส่ง: รับเอง (ฟรี)" },
-    pricing: { total: 365, subtotal: 365, shippingCost: 0, weightG: 107, printTimeMin: 48 },
-    delivery: { trackingNumber: null },
-    ...over,
-  }
-}
-
-async function seedOrders(page: Page, orders: any[]) {
-  await page.evaluate(o => localStorage.setItem("pb3d_orders", JSON.stringify(o)), orders)
-  await page.reload()
-}
-const stored = (page: Page, id: string) =>
-  page.evaluate(id => JSON.parse(localStorage.getItem("pb3d_orders") || "[]").find((o: any) => o.id === id), id)
+import {
+  isolateNetwork, loginAsAdmin, ADMIN_EMAIL, resetDb, createOrder, submitSlip,
+  adminSetStatus, adminGetOrder, sheetTabs,
+} from "../helpers"
 
 const row = (page: Page, id: string) => page.locator("div.rounded-3xl", { has: page.getByText(`#${id.slice(-6).toUpperCase()}`) })
 
-test.beforeEach(async ({ page }) => { await isolateNetwork(page) })
+test.beforeEach(async ({ page }) => { await resetDb(); await isolateNetwork(page) })
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 test.describe("Admin auth", () => {
@@ -58,17 +39,17 @@ test.describe("Admin auth", () => {
   })
 })
 
-// ─── Orders ──────────────────────────────────────────────────────────────────
+// ─── Orders (stored in the Google Sheets emulator) ──────────────────────────
 test.describe("Admin orders", () => {
   test.beforeEach(async ({ page }) => { await loginAsAdmin(page) })
 
-  test("stats, filters and revenue", async ({ page }) => {
-    await seedOrders(page, [
-      makeOrder({ status: "pending" }),
-      makeOrder({ status: "awaiting_verification", payment: { slip: "data:image/png;base64,AAAA" } }),
-      makeOrder({ status: "printing", pricing: { total: 500 } }),
-      makeOrder({ status: "cancelled", pricing: { total: 1000 } }),
-    ])
+  test("stats, filters and revenue", async ({ page, request }) => {
+    await createOrder(request)
+    const slip = await createOrder(request); await submitSlip(request, slip)
+    const printing = await createOrder(request, { totalPrice: 500, subtotal: 500 }); await adminSetStatus(page, printing, "printing")
+    const cancelled = await createOrder(request, { totalPrice: 1000, subtotal: 1000 }); await adminSetStatus(page, cancelled, "cancelled")
+    await page.reload()
+
     await expect(page.getByText("฿1,230")).toBeVisible() // 365+365+500, cancelled excluded
     await expect(page.getByText("1 คำสั่งซื้อส่งสลิปแล้ว รอตรวจสอบ")).toBeVisible()
     const card = (label: string) => page.getByRole("button", { name: new RegExp(`^\\s*\\d+\\s*${label}\\s*$`) })
@@ -84,69 +65,81 @@ test.describe("Admin orders", () => {
     await expect(page.getByText(/^#/)).toHaveCount(4)
   })
 
-  test("full status workflow with tracking number", async ({ page }) => {
-    const o = makeOrder({ status: "awaiting_verification", payment: { slip: "data:image/png;base64,AAAA" } })
-    await seedOrders(page, [o])
-    const r = row(page, o.id)
-    await r.getByText(o.customer.name).click()
+  test("full status workflow with tracking number and slip", async ({ page, request }) => {
+    const id = await createOrder(request)
+    await submitSlip(request, id)
+    await page.reload()
+    const r = row(page, id)
+    await r.getByText("ลูกค้า ทดสอบ").click()
     await expect(r.getByText("จัดส่ง: รับเอง (ฟรี)")).toBeVisible()
-    await expect(r.getByTestId("slip-link")).toHaveAttribute("href", /^data:image\/png/)
+
+    // the slip opens through the admin-only route (stored privately in Drive)
+    const href = await r.getByTestId("slip-link").getAttribute("href")
+    expect(href).toBe(`/api/admin/orders/${id}/slip`)
+    const slip = await page.request.get(href!)
+    expect(slip.status()).toBe(200)
+    expect(slip.headers()["content-type"]).toBe("image/png")
+    expect((await slip.body()).subarray(1, 4).toString()).toBe("PNG")
 
     await r.getByRole("button", { name: "✓ Confirm" }).click()
     await expect(r.getByText("ยืนยันแล้ว")).toBeVisible()
-    expect((await stored(page, o.id)).status).toBe("confirmed")
-    // slip/payment data must survive a status update
-    expect((await stored(page, o.id)).payment.slip).toContain("data:image")
+    expect((await adminGetOrder(page, id)).status).toBe("confirmed")
+    expect((await adminGetOrder(page, id)).has_slip).toBe(true) // slip survives a status update
     await expect(r.getByRole("button", { name: "✓ Confirm" })).toBeDisabled()
 
     await r.getByRole("button", { name: "⬡ Printing" }).click()
     await expect(r.getByText("กำลังพิมพ์")).toBeVisible()
 
-    // ship without tracking → blocked
+    // ship without tracking → blocked (in the UI and by the API)
     page.once("dialog", d => { expect(d.message()).toContain("เลขพัสดุ"); d.accept() })
     await r.getByRole("button", { name: "→ Ship" }).click()
-    expect((await stored(page, o.id)).status).toBe("printing")
+    expect((await adminGetOrder(page, id)).status).toBe("printing")
+    expect((await page.request.patch(`/api/admin/orders/${id}`, { data: { status: "shipped" } })).status()).toBe(400)
+    expect((await page.request.patch(`/api/admin/orders/${id}`, { data: { status: "shipped", trackingNumber: "  " } })).status()).toBe(400)
 
     // save tracking (persists) then ship
     await r.getByPlaceholder("กรอกเลขพัสดุ...").fill("TH123456789")
     await r.getByRole("button", { name: "บันทึก" }).click()
     await expect(r.getByRole("button", { name: "✓ บันทึกแล้ว" })).toBeVisible()
-    expect((await stored(page, o.id)).delivery.trackingNumber).toBe("TH123456789")
+    expect((await adminGetOrder(page, id)).tracking_number).toBe("TH123456789")
     await page.reload()
-    await row(page, o.id).getByText(o.customer.name).click()
-    await expect(row(page, o.id).getByText("TH123456789").first()).toBeVisible()
+    await row(page, id).getByText("ลูกค้า ทดสอบ").click()
+    await expect(row(page, id).getByText("TH123456789").first()).toBeVisible()
 
-    await row(page, o.id).getByRole("button", { name: "→ Ship" }).click()
-    await expect(row(page, o.id).getByText("จัดส่งแล้ว")).toBeVisible()
-    await row(page, o.id).getByRole("button", { name: "✓ Delivered" }).click()
-    await expect(row(page, o.id).getByText("ส่งถึงแล้ว")).toBeVisible()
-    expect((await stored(page, o.id)).status).toBe("delivered")
-    await expect(row(page, o.id).getByRole("button", { name: "✕ Cancel" })).toBeDisabled()
+    await row(page, id).getByRole("button", { name: "→ Ship" }).click()
+    await expect(row(page, id).getByText("จัดส่งแล้ว")).toBeVisible()
+    await row(page, id).getByRole("button", { name: "✓ Delivered" }).click()
+    await expect(row(page, id).getByText("ส่งถึงแล้ว")).toBeVisible()
+    expect((await adminGetOrder(page, id)).status).toBe("delivered")
+    await expect(row(page, id).getByRole("button", { name: "✕ Cancel" })).toBeDisabled()
   })
 
-  test("cancel asks for confirmation and locks the order", async ({ page }) => {
-    const o = makeOrder()
-    await seedOrders(page, [o])
-    const r = row(page, o.id)
-    await r.getByText(o.customer.name).click()
+  test("cancel asks for confirmation and locks the order", async ({ page, request }) => {
+    const id = await createOrder(request)
+    await page.reload()
+    const r = row(page, id)
+    await r.getByText("ลูกค้า ทดสอบ").click()
     page.once("dialog", d => d.dismiss())
     await r.getByRole("button", { name: "✕ Cancel" }).click()
-    expect((await stored(page, o.id)).status).toBe("pending")
+    expect((await adminGetOrder(page, id)).status).toBe("pending")
     page.once("dialog", d => d.accept())
     await r.getByRole("button", { name: "✕ Cancel" }).click()
     await expect(r.getByText("ยกเลิก", { exact: true })).toBeVisible()
     for (const b of ["✓ Confirm", "⬡ Printing", "→ Ship", "✓ Delivered", "✕ Cancel"])
       await expect(r.getByRole("button", { name: b })).toBeDisabled()
+    // a cancelled order no longer accepts a slip
+    const late = await request.post(`/api/orders/${id}/slip`, { multipart: { file: { name: "s.png", mimeType: "image/png", buffer: Buffer.from("x") } } })
+    expect(late.status()).toBe(409)
   })
 
-  test("order placed in the shop shows up in admin with correct details", async ({ page }) => {
-    // simulates the record written by /quote
-    const o = makeOrder({
-      customer: { name: "สมชาย", email: "", phone: "0899999999", address: "Chiang Mai" },
-      items: { fileName: "bracket.stl", technology: "FDM", material: "PETG", color: "black", infill: 50, layerHeight: 0.08, quantity: 3, notes: "จัดส่ง: ส่งไปรษณีย์ (+฿45)" },
+  test("order details show up in admin and in the sheet", async ({ page, request }) => {
+    const id = await createOrder(request, {
+      customer: { name: "สมชาย", phone: "0899999999", address: "Chiang Mai", email: "" },
+      fileName: "bracket.stl", material: "PETG", color: "black", infill: 50, layerHeight: 0.08, quantity: 3,
+      notes: "จัดส่ง: ส่งไปรษณีย์ (+฿45)",
     })
-    await seedOrders(page, [o])
-    const r = row(page, o.id)
+    await page.reload()
+    const r = row(page, id)
     await r.getByText("สมชาย").click()
     await expect(r.getByText("PETG (FDM)")).toBeVisible()
     await expect(r.getByText("black")).toBeVisible()
@@ -154,34 +147,48 @@ test.describe("Admin orders", () => {
     await expect(r.getByText("3 ชิ้น")).toBeVisible()
     await expect(r.getByText("จัดส่ง: ส่งไปรษณีย์ (+฿45)")).toBeVisible()
     await expect(r.getByRole("link", { name: /Email/ })).toHaveCount(0) // no email given
+
+    // the row really is in the "Orders" tab, phone kept as text with its leading zero
+    const [titles, data] = sheetTabs().Orders
+    const cell = (title: string) => data[titles.indexOf(title)]
+    expect(cell("Order ID")).toBe(id)
+    expect(cell("ชื่อลูกค้า")).toBe("สมชาย")
+    expect(cell("เบอร์โทร")).toBe("0899999999")
+    expect(cell("สถานะ")).toBe("pending")
+    expect(cell("ยอดรวม (บาท)")).toBe(365)
+    expect(cell("วันที่สั่ง")).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+07:00$/)
   })
 })
 
-test("admin order API: rejects visitors, needs the service-role key on the server", async ({ page, request }) => {
-  const id = "11111111-2222-4333-8444-555555555555"
+test("admin order API: visitors are rejected, ids are checked", async ({ page, request }) => {
+  const id = await createOrder(request)
   expect((await request.patch(`/api/admin/orders/${id}`, { data: { status: "delivered" } })).status()).toBe(401)
   expect((await request.get("/api/admin/orders")).status()).toBe(401)
+  expect((await request.get(`/api/admin/orders/${id}/slip`)).status()).toBe(401)
   await loginAsAdmin(page)
-  // test server runs without SUPABASE_SERVICE_ROLE_KEY
-  expect((await page.request.patch(`/api/admin/orders/${id}`, { data: { status: "delivered" } })).status()).toBe(503)
   expect((await page.request.patch("/api/admin/orders/not-a-uuid", { data: { status: "delivered" } })).status()).toBe(404)
-  expect((await page.request.get("/api/admin/orders")).status()).toBe(503)
+  expect((await page.request.patch("/api/admin/orders/11111111-2222-4333-8444-555555555555", { data: { status: "confirmed" } })).status()).toBe(404)
+  expect((await page.request.patch(`/api/admin/orders/${id}`, { data: { status: "bogus" } })).status()).toBe(400)
+  expect((await page.request.get(`/api/admin/orders/${id}/slip`)).status()).toBe(404) // no slip yet
 })
 
-test("public order API: no listing, ids must be UUIDs, needs the service-role key", async ({ request }) => {
-  const id = "11111111-2222-4333-8444-555555555555"
+test("public order API: no listing, no personal data, validated input", async ({ request }) => {
   expect((await request.get("/api/orders")).status()).toBe(405) // there is no "list all orders"
   expect((await request.get("/api/orders/not-a-uuid")).status()).toBe(404)
-  expect((await request.get(`/api/orders/${id}`)).status()).toBe(503)
+  expect((await request.get("/api/orders/11111111-2222-4333-8444-555555555555")).status()).toBe(404)
+  expect((await request.post("/api/orders", { data: {} })).status()).toBe(400)
+  expect((await request.post("/api/orders", { data: { customer: { name: "x", phone: "1", address: "a" }, totalPrice: -1 } })).status()).toBe(400)
+
+  const id = await createOrder(request)
+  const pub = (await (await request.get(`/api/orders/${id}`)).json()).order
+  expect(pub).toEqual({ id, status: "pending", total_price: 365, created_at: expect.any(String), has_slip: false })
+
   expect((await request.post(`/api/orders/not-a-uuid/slip`, { multipart: { file: { name: "s.png", mimeType: "image/png", buffer: Buffer.from("x") } } })).status()).toBe(404)
-  expect((await request.post(`/api/orders/${id}/slip`, { multipart: { file: { name: "s.png", mimeType: "image/png", buffer: Buffer.from("x") } } })).status()).toBe(503)
-  expect((await request.post("/api/orders", { data: {} })).status()).toBe(503)
+  expect((await request.post(`/api/orders/${id}/slip`, { multipart: { file: { name: "s.gif", mimeType: "image/gif", buffer: Buffer.from("x") } } })).status()).toBe(400)
 })
 
 // ─── Shopee products ─────────────────────────────────────────────────────────
 test.describe("Shopee product links", () => {
-  test.beforeAll(async () => { await fs.rm(DATA_FILE, { force: true }) })
-
   test("API: public can read, only admin can write", async ({ request }) => {
     const pub = await request.get("/api/shopee-products")
     expect(pub.status()).toBe(200)

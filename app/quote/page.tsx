@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useOrderStore } from '@/lib/store'
-import { isPlaceholder } from '@/lib/supabase/client'
 import { formatTimeFull, formatTime } from '@/lib/priceCalculator'
 import {
   FileText, ChevronLeft, User, MapPin, Phone, Mail,
@@ -135,7 +134,6 @@ export default function QuotePage() {
     if (!isValid) return
     setLoading(true); setError('')
     try {
-      let orderId = crypto.randomUUID()
       const fileNames = models.map((m: any) => m.name).join(', ')
       const uniq = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)))
       const materials = uniq(models.map((m: any) => m.material)).join(', ') || 'PLA'
@@ -145,31 +143,19 @@ export default function QuotePage() {
       const notes = `จัดส่ง: ${shippingLabel}`
       const printTimeMin = result.printTimeMin ?? Math.round((result.printTimeSec ?? 0) / 60)
 
-      if (!isPlaceholder) {
-        // Orders are created on the server; the browser has no direct access to the table.
-        const res = await fetch('/api/orders', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customer, fileName: fileNames, technology, material: materials, color: colors,
-            infill, layerHeight, quantity: totalQty, notes,
-            volumeCm3: models.reduce((a: number, m: any) => a + (m.originalVolumeCm3 ?? m.volumeCm3 ?? 0), 0),
-            weightG, printTimeMin, totalPrice, subtotal,
-          }),
-        })
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(data.error || 'Failed to place order')
-        orderId = data.id
-      } else {
-        const localOrder = {
-          id: orderId, createdAt: new Date().toISOString(), status: 'pending', customer,
-          items: { fileName: fileNames, technology, material: materials, color: colors, infill, layerHeight, quantity: totalQty, notes },
-          pricing: { total: totalPrice, subtotal, shippingCost, weightG, printTimeMin },
-          delivery: { trackingNumber: null }
-        }
-        const existing = JSON.parse(localStorage.getItem('pb3d_orders') || '[]')
-        localStorage.setItem('pb3d_orders', JSON.stringify([localOrder, ...existing]))
-      }
-      router.push(`/checkout/${orderId}`)
+      // Orders are created on the server; the browser never touches the order sheet.
+      const res = await fetch('/api/orders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer, fileName: fileNames, technology, material: materials, color: colors,
+          infill, layerHeight, quantity: totalQty, notes,
+          volumeCm3: models.reduce((a: number, m: any) => a + (m.originalVolumeCm3 ?? m.volumeCm3 ?? 0), 0),
+          weightG, printTimeMin, totalPrice, subtotal,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to place order')
+      router.push(`/checkout/${data.id}`)
     } catch (e: any) {
       setError(e?.message && e.message !== 'Failed to fetch' ? e.message : 'Failed to place order. Please try again.')
     } finally {
