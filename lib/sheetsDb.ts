@@ -28,8 +28,13 @@ export interface ProductRow {
   image_url: string; description: string; active: boolean; sort_order: number | null
 }
 
+export const DEFAULT_WEBHOOK_URL =
+  "https://script.google.com/macros/s/AKfycbxDoYlmwXFYDcrA87CuQWk7nUbdB4ApSYNM51vfbiLsWcNci3yZYN4a39VP9YtQnx24/exec"
+
 const cfg = () => ({
-  url: process.env.GOOGLE_SHEETS_WEBHOOK_URL || "",
+  // The shop's deployed Apps Script web app. Not a secret (anyone can open it);
+  // the WEBHOOK_SECRET is what protects it. Override with GOOGLE_SHEETS_WEBHOOK_URL.
+  url: process.env.GOOGLE_SHEETS_WEBHOOK_URL ?? DEFAULT_WEBHOOK_URL,
   secret: process.env.GOOGLE_SHEETS_WEBHOOK_SECRET || "",
   emulator: process.env.SHEETS_EMULATOR_FILE || "",
 })
@@ -122,7 +127,7 @@ export const db = {
 /** Standard JSON error for a backend failure (503 when not set up, 502 when the sheet failed). */
 export function backendErrorResponse(e: unknown, label: string) {
   if (e instanceof SheetsNotConfigured)
-    return NextResponse.json({ error: "ยังไม่ได้ตั้งค่า Google Sheets (GOOGLE_SHEETS_WEBHOOK_URL / GOOGLE_SHEETS_WEBHOOK_SECRET)" }, { status: 503 })
+    return NextResponse.json({ error: "ยังไม่ได้ตั้งค่า Google Sheets (GOOGLE_SHEETS_WEBHOOK_SECRET)" }, { status: 503 })
   console.error(label, e)
   return NextResponse.json({ error: "ระบบหลังบ้าน (Google Sheets) ไม่ตอบสนอง กรุณาลองใหม่" }, { status: 502 })
 }

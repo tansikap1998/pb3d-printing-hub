@@ -51,7 +51,7 @@
 
 | Name | Value |
 | --- | --- |
-| `GOOGLE_SHEETS_WEBHOOK_URL` | Web app URL จากขั้นที่ 4 |
+| `GOOGLE_SHEETS_WEBHOOK_URL` | Web app URL จากขั้นที่ 4 (ไม่ใส่ก็ได้ ถ้าใช้ URL เดียวกับที่ตั้งไว้ใน `lib/sheetsDb.ts`) |
 | `GOOGLE_SHEETS_WEBHOOK_SECRET` | รหัสลับจาก Execution log ในขั้นที่ 3 (ต้องตรงกันทุกตัวอักษร) |
 
 **ต้องมีอีก 2 ตัว** (ถ้ายังไม่มี):
