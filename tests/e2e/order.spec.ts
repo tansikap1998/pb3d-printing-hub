@@ -7,7 +7,7 @@ const SMALL = { name: "small20.stl", mimeType: "model/stl", buffer: boxStl(20, 2
 
 const price = (o: Partial<Parameters<typeof calculate>[0]>) => calculate({
   volumeCm3: 216, dimensions: { x: 60, y: 60, z: 60 }, technology: "FDM", material: "PLA",
-  infill: 25, layerHeight: 0.24, quantity: 1, shipping: "pickup", ...o,
+  infill: 25, layerHeight: 0.4, quantity: 1, shipping: "pickup", ...o,
 })
 const baht = (n: number) => `฿${n.toLocaleString()}`
 const liveQuote = (page: Page) => page.locator("p", { hasText: "Live Quote" }).locator("xpath=following-sibling::p[1]")
@@ -137,7 +137,7 @@ test.describe("Full order: upload → quote → checkout → success", () => {
 
     // order summary before paying: details + name + masked phone, never the full phone or address
     const summary = page.getByTestId("order-summary")
-    for (const t of ["ทดสอบ ระบบ", "081-xxx-5678", "cube60.stl", "PETG · black", "2 ชิ้น", "25% · 0.24 mm", "Shopee: SPX-220101ABC"])
+    for (const t of ["ทดสอบ ระบบ", "081-xxx-5678", "cube60.stl", "PETG · black", "2 ชิ้น", "25% · 0.40 mm", "Shopee: SPX-220101ABC"])
       await expect(summary).toContainText(t)
     await expect(summary).not.toContainText("0812345678")
     await expect(summary).not.toContainText("ถนนทดสอบ")
@@ -154,7 +154,7 @@ test.describe("Full order: upload → quote → checkout → success", () => {
     expect(stored["จำนวน"]).toBe(2)
     expect(stored["หมายเหตุ"]).toContain("ส่งไปรษณีย์")
     expect(stored["หมายเหตุ"]).toContain("Shopee: SPX-220101ABC")
-    expect(stored["Layer (mm)"]).toBe(0.24)
+    expect(stored["Layer (mm)"]).toBe(0.4)
     expect(stored["ยอดรวม (บาท)"]).toBe(p.totalPrice)
     expect(stored["สลิป (Drive file ID)"]).toBe("")
 
@@ -209,12 +209,12 @@ test.describe("Full order: upload → quote → checkout → success", () => {
 })
 
 test.describe("Ported from the -qe site", () => {
-  test("only the 0.24 mm layer is offered", async ({ page }) => {
+  test("only the 0.4 mm layer is offered", async ({ page }) => {
     await page.goto("/upload")
     await page.locator('input[type="file"]').setInputFiles(CUBE)
     const layerCard = page.locator("p", { hasText: /^Layer$/ }).locator("xpath=..")
     await expect(layerCard.getByRole("button")).toHaveCount(1)
-    await expect(layerCard.getByRole("button")).toContainText("0.24 mm")
+    await expect(layerCard.getByRole("button")).toContainText("0.4 mm")
   })
 
   test("zoom buttons work without errors", async ({ page }) => {
@@ -292,7 +292,7 @@ test.describe("Guards", () => {
   test("estimate API validates input", async ({ request }) => {
     const bad = await request.post("/api/estimate", { data: { material: "PLA" } })
     expect(bad.status()).toBe(400)
-    const ok = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.24, quantity: 1 } })
+    const ok = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.4, quantity: 1 } })
     expect(ok.status()).toBe(200)
     expect((await ok.json()).totalPrice).toBe(price({}).totalPrice)
   })

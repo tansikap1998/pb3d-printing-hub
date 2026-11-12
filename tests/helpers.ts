@@ -67,7 +67,7 @@ export function sheetTabs(): Record<string, any[][]> {
 export const sampleOrder = (over: Record<string, any> = {}) => ({
   customer: { name: "ลูกค้า ทดสอบ", phone: "0812345678", address: "Bangkok", email: "" },
   fileName: "part.stl", technology: "FDM", material: "PLA", color: "white",
-  infill: 25, layerHeight: 0.24, quantity: 1, notes: "จัดส่ง: รับเอง (ฟรี)",
+  infill: 25, layerHeight: 0.4, quantity: 1, notes: "จัดส่ง: รับเอง (ฟรี)",
   volumeCm3: 216, weightG: 107, printTimeMin: 48, totalPrice: 365, subtotal: 365,
   ...over,
 })

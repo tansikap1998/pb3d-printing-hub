@@ -21,7 +21,8 @@ const MATERIAL_COLORS: Record<string, string> = {
 function layerLabel(lh: number) {
   if (lh <= 0.08) return 'Fine (0.08mm)'
   if (lh <= 0.16) return 'Normal (0.16mm)'
-  return 'Standard (0.24mm)'
+  if (lh < 0.4) return `${lh}mm`
+  return 'Standard (0.4mm)'
 }
 
 // ── Form components with improved readability ─────────────────────────────────

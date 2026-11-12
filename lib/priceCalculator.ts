@@ -4,7 +4,7 @@ export type Technology  = "FDM"
 export type FDMMaterial = "PLA" | "PETG" | "ABS" | "ASA" | "TPU" | "CarbonFiber" | "Nylon"
 export type Material    = FDMMaterial
 export type InfillLevel = 10 | 25 | 50 | 80
-export type LayerHeight = 0.08 | 0.16 | 0.24
+export type LayerHeight = 0.08 | 0.16 | 0.24 | 0.4
 export type Shipping    = "pickup" | "postal"
 
 // Build volume limits (mm)
@@ -71,7 +71,8 @@ const MACHINE_RATE: Record<Technology, number> = {
 const LAYER_SPEED: Record<number, number> = {
   0.08: 0.50,  // Fine   — slowest
   0.16: 1.00,  // Normal — baseline
-  0.24: 1.60,  // Coarse — fastest
+  0.24: 1.60,  // Coarse
+  0.40: 2.50,  // 0.4 mm — the shop's standard (thicker layers, fewer of them)
 }
 
 // Shipping cost (THB)
@@ -116,7 +117,9 @@ export function calculate(input: EstimateInput): EstimateResult {
   // --- Print time ---
   // Base time: proportional to actual volume + layer height factor
   // Formula: (actualVolume / speed_constant) / LAYER_SPEED × 60  → seconds
-  const baseMinutes   = (actualVolume / 1.8) / LAYER_SPEED[layerHeight]
+  // unknown heights fall back to "proportional to layer height" instead of NaN
+  const speed         = LAYER_SPEED[layerHeight] ?? Math.max(0.25, layerHeight / 0.16)
+  const baseMinutes   = (actualVolume / 1.8) / speed
   const printTimeSec  = Math.round(baseMinutes * 60)
   const printTimeMin  = Math.round(baseMinutes)
 
