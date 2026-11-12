@@ -15,7 +15,7 @@ interface State {
 }
 
 let script: vm.Script | null = null
-function compiled() {
+export function compiled() {
   if (!script) {
     const src = fs.readFileSync(path.join(process.cwd(), "integrations/google-sheets/Code.gs"), "utf8")
     script = new vm.Script(src, { filename: "Code.gs" })
@@ -23,7 +23,7 @@ function compiled() {
   return script
 }
 
-function load(file: string): State {
+export function load(file: string): State {
   try { return JSON.parse(fs.readFileSync(file, "utf8")) } catch { return { sheets: {}, props: {}, files: {} } }
 }
 function save(file: string, s: State) {
@@ -34,8 +34,8 @@ function save(file: string, s: State) {
 }
 
 /** Fakes of SpreadsheetApp / DriveApp / … that read and write `state`. */
-export function fakeServices(state: State, secret: string) {
-  state.props.WEBHOOK_SECRET = secret
+export function fakeServices(state: State, secret?: string) {
+  if (secret !== undefined) state.props.WEBHOOK_SECRET = secret
 
   const makeSheet = (name: string) => {
     const g = () => (state.sheets[name] ||= [])
@@ -103,7 +103,9 @@ export function fakeServices(state: State, secret: string) {
       MimeType: { JSON: "application/json" },
       createTextOutput: (s: string) => ({ setMimeType: () => s }),
     },
+    Logger: { log: (..._a: unknown[]) => {} },
     Utilities: {
+      getUuid: () => randomUUID(),
       base64Decode: (s: string) => Buffer.from(s, "base64"),
       base64Encode: (b: Buffer) => Buffer.from(b).toString("base64"),
       newBlob: (bytes: Buffer, mimeType: string, name: string) => blob(Buffer.from(bytes), mimeType, name),

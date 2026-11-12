@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test"
 import { mkdtempSync, readFileSync, writeFileSync } from "fs"
 import { tmpdir } from "os"
 import path from "path"
-import { emulatorPost } from "../../lib/sheetsEmulator"
+import vm from "vm"
+import { emulatorPost, fakeServices, compiled } from "../../lib/sheetsEmulator"
 import { rpc, nowBangkok, backendMode, SheetsNotConfigured, SheetsError } from "../../lib/sheetsDb"
 
 // Every test gets its own empty simulated spreadsheet running the real Code.gs.
@@ -169,4 +170,20 @@ test("real Apps Script mode: sends secret + action, follows redirect, surfaces e
 test("Bangkok timestamps", () => {
   expect(nowBangkok(new Date("2026-11-12T07:03:09Z"))).toBe("2026-11-12T14:03:09+07:00")
   expect(nowBangkok(new Date("2026-11-12T20:30:00Z"))).toBe("2026-11-13T03:30:00+07:00")
+})
+
+test("setup() creates the secret once, the tabs and the slip folder", () => {
+  const state: any = { sheets: {}, props: {}, files: {} }
+  const ctx: any = vm.createContext({ ...fakeServices(state) })
+  compiled().runInContext(ctx)
+  const secret = ctx.setup()
+  expect(secret).toMatch(/^[0-9a-f]{64}$/)
+  expect(state.props.WEBHOOK_SECRET).toBe(secret)
+  expect(Object.keys(state.sheets).sort()).toEqual(["Consent", "Orders", "Products"])
+  expect(state.sheets.Orders[0][0]).toBe("Order ID")
+  expect(state.props.SLIP_FOLDER_ID).toBeTruthy()
+  expect(ctx.setup()).toBe(secret) // second run keeps the same secret
+  // and the web app accepts that secret
+  const reply = JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify({ secret, action: "ping" }) } }))
+  expect(reply).toEqual({ ok: true })
 })

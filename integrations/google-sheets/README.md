@@ -26,27 +26,23 @@
 2. ลบโค้ดเดิมทั้งหมด แล้ววางโค้ดจากไฟล์ `integrations/google-sheets/Code.gs`
 3. กด 💾 **Save**
 
-### 3. ตั้งรหัสลับ
-1. สร้างรหัสสุ่มยาว ๆ ด้วยคำสั่งนี้ หรือใช้ password generator ที่ยาว 40 ตัวขึ้นไป
-   ```
-   openssl rand -hex 32
-   ```
-2. ใน Apps Script ไปที่ **Project Settings (⚙️) → Script properties → Add script property**
-   - Property: `WEBHOOK_SECRET`
-   - Value: รหัสจากข้อ 1
-3. กด **Save script properties**
+### 3. กด Run `setup` ครั้งเดียว
+1. ที่แถบด้านบนของ Apps Script เลือกฟังก์ชัน **setup** จากช่อง dropdown แล้วกด ▶ **Run**
+2. Google จะขอสิทธิ์: กด **Review permissions** แล้วเลือกบัญชีของคุณ
+   - ถ้าขึ้นหน้า "Google hasn't verified this app" ให้กด **Advanced → Go to … (unsafe)** สคริปต์นี้เป็นของคุณเอง จึงปลอดภัย
+   - สคริปต์ขอสิทธิ์ใช้ชีตนี้ และขอสิทธิ์ Drive เพื่อเก็บไฟล์สลิป
+3. ที่ช่อง **Execution log** ด้านล่าง จะมีรหัสลับยาว 64 ตัวอักษร **คัดลอกเก็บไว้** ใช้ในขั้นที่ 5
+   - สคริปต์จะสร้างแท็บ Orders / Products / Consent และโฟลเดอร์ PB3D Payment Slips ให้เอง
+   - กด Run ซ้ำได้ รหัสลับจะเป็นค่าเดิม
 
 ### 4. Deploy เป็น Web app
 1. กด **Deploy → New deployment**
 2. กด ⚙️ ข้าง "Select type" แล้วเลือก **Web app**
 3. ตั้งค่า:
    - **Execute as: Me** (สคริปต์ทำงานด้วยบัญชีของคุณ)
-   - **Who has access: Anyone** (เพื่อให้เว็บเรียกได้ ส่วนรหัสลับในข้อ 3 จะกันคนอื่นไว้)
-4. กด **Deploy** แล้วกด **Authorize access** เลือกบัญชี Google ของคุณ
-   - ถ้าขึ้นหน้า "Google hasn't verified this app" ให้กด **Advanced → Go to … (unsafe)** สคริปต์นี้เป็นของคุณเอง จึงปลอดภัย
-   - สคริปต์ขอสิทธิ์ใช้ชีตนี้ และขอสิทธิ์ Drive เพื่อเก็บไฟล์สลิป
-5. คัดลอก **Web app URL** (ลงท้ายด้วย `/exec`)
-6. ตรวจสอบ: เปิด URL นั้นในเบราว์เซอร์ ต้องเห็น `{"ok":true,"service":"pb3d-sheets-backend"}`
+   - **Who has access: Anyone** (เพื่อให้เว็บเรียกได้ ส่วนรหัสลับในขั้นที่ 3 จะกันคนอื่นไว้)
+4. กด **Deploy** แล้วคัดลอก **Web app URL** (ลงท้ายด้วย `/exec`)
+5. ตรวจสอบ: เปิด URL นั้นในเบราว์เซอร์ ต้องเห็น `{"ok":true,"service":"pb3d-sheets-backend"}`
 
 ### 5. ตั้งค่าบน Vercel
 ไปที่ Vercel → Project → **Settings → Environment Variables**
@@ -56,7 +52,7 @@
 | Name | Value |
 | --- | --- |
 | `GOOGLE_SHEETS_WEBHOOK_URL` | Web app URL จากขั้นที่ 4 |
-| `GOOGLE_SHEETS_WEBHOOK_SECRET` | รหัสลับจากขั้นที่ 3 (ต้องตรงกันทุกตัวอักษร) |
+| `GOOGLE_SHEETS_WEBHOOK_SECRET` | รหัสลับจาก Execution log ในขั้นที่ 3 (ต้องตรงกันทุกตัวอักษร) |
 
 **ลบตัวเก่าของ Supabase** (เว็บไม่ได้ใช้แล้ว):
 - `NEXT_PUBLIC_SUPABASE_URL`

@@ -11,8 +11,8 @@
  * Columns are found by their title in row 1, so you may reorder columns or add
  * your own columns. Do not rename the titles listed below.
  *
- * Setup: see README.md in this folder. The secret lives in
- * Project Settings → Script properties → WEBHOOK_SECRET (never in this file).
+ * Setup: see README.md in this folder. Run setup() once: it creates the secret
+ * (Project Settings → Script properties → WEBHOOK_SECRET), never stored in this file.
  */
 
 var TABLES = {
@@ -104,6 +104,27 @@ function doPost(e) {
   } finally {
     if (lock) lock.releaseLock();
   }
+}
+
+/**
+ * Run this ONCE from the Apps Script editor (select "setup" → ▶ Run).
+ * It asks for permission, creates the tabs and the private slip folder, makes a
+ * random secret, and prints the secret in the Execution log for Vercel.
+ * Running it again is safe: it keeps the existing secret.
+ */
+function setup() {
+  var props = PropertiesService.getScriptProperties();
+  var secret = props.getProperty('WEBHOOK_SECRET');
+  if (!secret) {
+    secret = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
+    props.setProperty('WEBHOOK_SECRET', secret);
+  }
+  table_('orders'); table_('products'); table_('consent');
+  slipFolder_();
+  Logger.log('✅ Setup done. Put this in Vercel as GOOGLE_SHEETS_WEBHOOK_SECRET:');
+  Logger.log(secret);
+  Logger.log('Next: Deploy → New deployment → Web app (Execute as: Me, Who has access: Anyone)');
+  return secret;
 }
 
 /** Opening the web app URL in a browser just confirms it is deployed. */
