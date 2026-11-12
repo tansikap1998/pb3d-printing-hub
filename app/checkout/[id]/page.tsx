@@ -148,6 +148,39 @@ export default function CheckoutPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
+        {/* Order summary — so the customer can check the order before paying */}
+        <section data-testid="order-summary" className="mb-10 rounded-[2rem] border border-foreground/10 bg-foreground/[0.03] p-6 sm:p-8">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div>
+              <p className="text-xs text-foreground/45 mb-1">สรุปคำสั่งซื้อ</p>
+              <h2 className="font-semibold tracking-tight text-2xl">Order Summary</h2>
+            </div>
+            <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
+          </div>
+          <dl className="grid md:grid-cols-2 gap-x-10 text-sm">
+            {[
+              ['ผู้สั่งซื้อ', order.customer_name],
+              ['เบอร์โทร', order.customer_phone_masked],
+              ['ไฟล์', order.file_name],
+              ['วัสดุ / สี', [order.material, order.color].filter(Boolean).join(' · ')],
+              ['จำนวน', order.quantity ? `${order.quantity} ชิ้น` : ''],
+              ['Infill / Layer', order.infill !== undefined && order.infill !== null ? `${order.infill}% · ${Number(order.layer_height).toFixed(2)} mm` : ''],
+            ].filter(([, v]) => v).map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-4 border-b border-foreground/10 py-3">
+                <dt className="text-foreground/50 shrink-0">{k}</dt>
+                <dd className="font-medium text-right break-all">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          {order.notes && (
+            <p className="mt-4 text-sm text-foreground/60 whitespace-pre-line">{order.notes}</p>
+          )}
+          <div className="mt-5 flex justify-between items-baseline">
+            <span className="text-foreground/50 text-sm">ยอดชำระ</span>
+            <span className="font-semibold text-2xl">฿{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          </div>
+        </section>
+
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Payment Details */}
           <div className="space-y-8">

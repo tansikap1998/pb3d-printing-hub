@@ -20,19 +20,26 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError("")
 
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-      callbackUrl,
-    })
-
-    setLoading(false)
-
-    if (res?.error) {
-      setError("อีเมล์หรือรหัสผ่านไม่ถูกต้อง")
-    } else if (res?.ok) {
-      router.push(callbackUrl)
+    try {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+        callbackUrl,
+      })
+      if (res?.error === "ADMIN_PASSWORD_NOT_SET") {
+        setError("ยังไม่ได้ตั้งรหัสผ่านแอดมินบนเซิร์ฟเวอร์ (ADMIN_PASSWORD ใน Vercel)")
+      } else if (res?.error) {
+        setError("อีเมล์หรือรหัสผ่านไม่ถูกต้อง")
+      } else if (res?.ok) {
+        router.push(callbackUrl)
+      } else {
+        setError("เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่")
+      }
+    } catch {
+      setError("เครือข่ายขัดข้อง กรุณาลองใหม่")
+    } finally {
+      setLoading(false)
     }
   }
 

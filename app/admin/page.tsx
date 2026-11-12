@@ -71,7 +71,7 @@ function InfoRow({ label, value, href }: { label: string; value: string; href?: 
       <span className="text-xs text-foreground/35 shrink-0 w-28">{label}</span>
       {href
         ? <a href={href} className="text-sm text-blue-400 hover:text-blue-300 transition-colors text-right break-all">{value}</a>
-        : <span className="text-sm text-foreground/80 text-right break-all">{value}</span>
+        : <span className="text-sm text-foreground/80 text-right break-all whitespace-pre-line">{value}</span>
       }
     </div>
   )

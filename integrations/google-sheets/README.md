@@ -54,6 +54,13 @@
 | `GOOGLE_SHEETS_WEBHOOK_URL` | Web app URL จากขั้นที่ 4 |
 | `GOOGLE_SHEETS_WEBHOOK_SECRET` | รหัสลับจาก Execution log ในขั้นที่ 3 (ต้องตรงกันทุกตัวอักษร) |
 
+**ต้องมีอีก 2 ตัว** (ถ้ายังไม่มี):
+
+| Name | Value |
+| --- | --- |
+| `ADMIN_PASSWORD` | รหัสผ่านเข้าหน้าแอดมิน — ถ้าไม่ตั้ง เว็บจริงจะไม่ให้ใครล็อกอินแอดมินได้เลย |
+| `NEXTAUTH_SECRET` | ข้อความสุ่มยาว ๆ (เช่นจาก `openssl rand -hex 32`) |
+
 **ลบตัวเก่าของ Supabase** (เว็บไม่ได้ใช้แล้ว):
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`

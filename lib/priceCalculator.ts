@@ -128,8 +128,9 @@ export function calculate(input: EstimateInput): EstimateResult {
   // --- Machine cost ---
   const machineCost = Math.round((baseMinutes / 60) * MACHINE_RATE[technology])
 
-  // --- Per-piece price with markup (20%) + minimum order ฿100 ---
-  const pricePerPc = Math.max(MINIMUM_PRICE_PER_PC, Math.round((materialCost + machineCost) * 1.20))
+  // --- Per-piece price: (material + machine) × 0.90 (10% discount), minimum ฿59/pc ---
+  const PRICE_FACTOR = 0.90
+  const pricePerPc = Math.max(MINIMUM_PRICE_PER_PC, Math.round((materialCost + machineCost) * PRICE_FACTOR))
 
   // --- Totals ---
   const shippingCost = SHIPPING_COST[shipping]

@@ -181,7 +181,15 @@ test("public order API: no listing, no personal data, validated input", async ({
 
   const id = await createOrder(request)
   const pub = (await (await request.get(`/api/orders/${id}`)).json()).order
-  expect(pub).toEqual({ id, status: "pending", total_price: 365, created_at: expect.any(String), has_slip: false })
+  expect(pub).toMatchObject({ id, status: "pending", total_price: 365, has_slip: false,
+    customer_name: "ลูกค้า ทดสอบ", customer_phone_masked: "081-xxx-5678", file_name: "part.stl", quantity: 1 })
+  // never the full phone, address or email
+  const json = JSON.stringify(pub)
+  expect(json).not.toContain("0812345678")
+  expect(json).not.toContain("Bangkok")
+  expect(pub).not.toHaveProperty("customer_phone")
+  expect(pub).not.toHaveProperty("customer_address")
+  expect(pub).not.toHaveProperty("customer_email")
 
   expect((await request.post(`/api/orders/not-a-uuid/slip`, { multipart: { file: { name: "s.png", mimeType: "image/png", buffer: Buffer.from("x") } } })).status()).toBe(404)
   expect((await request.post(`/api/orders/${id}/slip`, { multipart: { file: { name: "s.gif", mimeType: "image/gif", buffer: Buffer.from("x") } } })).status()).toBe(400)
