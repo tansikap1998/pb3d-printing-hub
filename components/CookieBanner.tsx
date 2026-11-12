@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { supabase, isPlaceholder } from '@/lib/supabase/client'
 
 interface ConsentState {
   necessary: boolean;
@@ -32,14 +31,9 @@ export default function CookieBanner() {
     setShow(false)
 
     try {
-      if (!isPlaceholder) {
-        await supabase.from('consent_logs').insert({
-          necessary_accepted: state.necessary,
-          analytics_accepted: state.analytics,
-          marketing_accepted: state.marketing,
-          user_agent: navigator.userAgent
-        })
-      }
+      await fetch('/api/consent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state),
+      })
     } catch (e) {
       console.error("Failed to log consent", e)
     }

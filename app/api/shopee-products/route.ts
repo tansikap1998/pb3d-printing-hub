@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { validateProductInput } from "@/lib/shopee"
 import { listProducts, createProduct, storageMode } from "@/lib/shopeeStore"
+import { backendErrorResponse, SheetsNotConfigured } from "@/lib/sheetsDb"
 import { isAdminRequest } from "@/lib/adminSession"
 
 export const dynamic = "force-dynamic"
@@ -12,15 +13,16 @@ export async function GET(req: NextRequest) {
   try {
     if (wantAll) {
       if (!(await isAdminRequest())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      return NextResponse.json({ products: await listProducts(), storage: storageMode })
+      return NextResponse.json({ products: await listProducts(), storage: storageMode() })
     }
     return NextResponse.json(
       { products: await listProducts({ activeOnly: true }) },
       { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } }
     )
   } catch (e) {
-    console.error("shopee-products GET", e)
-    return NextResponse.json({ error: "Failed to load products" }, { status: 500 })
+    // the home page simply hides the section when the backend isn't set up yet
+    if (!wantAll && e instanceof SheetsNotConfigured) return NextResponse.json({ products: [] })
+    return backendErrorResponse(e, "shopee-products GET")
   }
 }
 
@@ -34,7 +36,6 @@ export async function POST(req: NextRequest) {
     const product = await createProduct(v.value as any)
     return NextResponse.json({ product }, { status: 201 })
   } catch (e) {
-    console.error("shopee-products POST", e)
-    return NextResponse.json({ error: "บันทึกไม่สำเร็จ" }, { status: 500 })
+    return backendErrorResponse(e, "shopee-products POST")
   }
 }

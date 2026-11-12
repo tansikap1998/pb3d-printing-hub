@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { validateProductInput } from "@/lib/shopee"
 import { updateProduct, deleteProduct } from "@/lib/shopeeStore"
 import { isAdminRequest } from "@/lib/adminSession"
+import { backendErrorResponse } from "@/lib/sheetsDb"
 
 export const dynamic = "force-dynamic"
 
@@ -16,8 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 })
     return NextResponse.json({ product })
   } catch (e) {
-    console.error("shopee-products PATCH", e)
-    return NextResponse.json({ error: "บันทึกไม่สำเร็จ" }, { status: 500 })
+    return backendErrorResponse(e, "shopee-products PATCH")
   }
 }
 
@@ -28,7 +28,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 })
     return NextResponse.json({ ok: true })
   } catch (e) {
-    console.error("shopee-products DELETE", e)
-    return NextResponse.json({ error: "ลบไม่สำเร็จ" }, { status: 500 })
+    return backendErrorResponse(e, "shopee-products DELETE")
   }
 }

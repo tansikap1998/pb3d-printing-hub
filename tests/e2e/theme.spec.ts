@@ -1,20 +1,14 @@
 import { test, expect, Page } from "@playwright/test"
-import { isolateNetwork, boxStl, loginAsAdmin } from "../helpers"
+import { isolateNetwork, boxStl, loginAsAdmin, resetDb, createOrder } from "../helpers"
 
-test.beforeEach(async ({ page }) => { await isolateNetwork(page) })
+test.beforeEach(async ({ page }) => { await resetDb(); await isolateNetwork(page) })
 
 const bg = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
 const fg = (page: Page) => page.evaluate(() => getComputedStyle(document.body).color)
 
 async function seedOrder(page: Page) {
   await page.goto("/")
-  return page.evaluate(() => {
-    const id = crypto.randomUUID()
-    localStorage.setItem("pb3d_orders", JSON.stringify([{ id, status: "pending", createdAt: new Date().toISOString(),
-      customer: { name: "Theme Test", phone: "0812345678", address: "BKK" }, items: { fileName: "a.stl", material: "PLA" },
-      pricing: { total: 365 }, delivery: { trackingNumber: null } }]))
-    return id
-  })
+  return createOrder(page.request, { customer: { name: "Theme Test", phone: "0812345678", address: "BKK" } })
 }
 
 test("dark is the default, toggle switches to light and is remembered across pages", async ({ page }) => {
@@ -102,11 +96,11 @@ for (const theme of ["dark", "light"] as const) {
 
 test("headings on every page use the same font as the home page", async ({ page }) => {
   const id = await seedOrder(page)
-  const style = () => page.evaluate(() => {
+  const style = async () => { await page.locator("h1, h2").first().waitFor(); return page.evaluate(() => {
     const h = document.querySelector("h1, h2") as HTMLElement
     const cs = getComputedStyle(h)
     return { family: cs.fontFamily, weight: cs.fontWeight, transform: cs.textTransform }
-  })
+  }) }
   await page.goto("/")
   const home = await style()
   expect(home.family).toMatch(/^Inter/)

@@ -4,13 +4,12 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
-import { isPlaceholder } from '@/lib/supabase/client'
 import ShopeeAdmin from "@/components/admin/ShopeeAdmin"
 import {
   RefreshCw, LogOut, Package, Clock, Printer, Truck,
   CheckCircle2, XCircle, ChevronDown, Mail, Phone,
   MapPin, FileText, Layers, Weight, AlertCircle,
-  TrendingUp, User, Hash, Send, ShoppingBag, Receipt, Sheet
+  TrendingUp, User, Hash, Send, ShoppingBag, Receipt
 } from "lucide-react"
 
 // ─── Types & Config ──────────────────────────────────────────────────────────
@@ -21,7 +20,7 @@ interface Order {
   items: { fileName: string; material: string; technology: string; color: string; infill: number; layerHeight: number; quantity: number; notes: string }
   pricing: { total: number; weightG: number; printTimeMin: number }
   delivery: { trackingNumber: string | null }
-  slipUrl?: string | null
+  hasSlip?: boolean
 }
 
 const STATUS: Record<string, { label: string; th: string; color: string; bg: string; border: string; dot: string }> = {
@@ -37,21 +36,6 @@ const STATUS_FLOW = ["pending","confirmed","printing","shipped","delivered"]
 // awaiting_verification sits between pending and confirmed in the progress bar
 const flowIndex = (status: string) => status === "awaiting_verification" ? 0 : STATUS_FLOW.indexOf(status)
 
-/** Map a local-storage order (demo mode) or a Supabase row to the dashboard shape. */
-function normalizeLocal(o: any): Order {
-  return {
-    id: o.id, createdAt: o.createdAt || new Date().toISOString(), status: o.status || "pending",
-    customer: { name: o.customer?.name || "", email: o.customer?.email || "", phone: o.customer?.phone || "", address: o.customer?.address || "" },
-    items: {
-      fileName: o.items?.fileName || "", material: o.items?.material || "", technology: o.items?.technology || "FDM",
-      color: o.items?.color || "", infill: o.items?.infill ?? 0, layerHeight: o.items?.layerHeight ?? 0,
-      quantity: o.items?.quantity ?? 1, notes: o.items?.notes || "",
-    },
-    pricing: { total: Number(o.pricing?.total) || 0, weightG: o.pricing?.weightG || 0, printTimeMin: o.pricing?.printTimeMin || 0 },
-    delivery: { trackingNumber: o.delivery?.trackingNumber ?? null },
-    slipUrl: o.payment?.slip ?? null,
-  }
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("th-TH", { day: "numeric", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })
@@ -107,41 +91,22 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"orders" | "shopee">("orders")
   const [savedTrackingId, setSavedTrackingId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState("")
-  const [sheetSync, setSheetSync] = useState<{ busy: boolean; msg: string; ok?: boolean }>({ busy: false, msg: "" })
-
-  const syncAllToSheet = async () => {
-    setSheetSync({ busy: true, msg: "" })
-    try {
-      const r = await fetch("/api/admin/orders/sync-sheet", { method: "POST" })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
-      setSheetSync({ busy: false, ok: true, msg: `ส่ง ${d.written} ออเดอร์ไป Google Sheets แล้ว` })
-    } catch (e: any) {
-      setSheetSync({ busy: false, ok: false, msg: e?.message || "ส่งไม่สำเร็จ" })
-    }
-  }
 
   const loadOrders = useCallback(async () => {
     setRefreshing(true)
     try {
-      if (!isPlaceholder) {
-        const res = await fetch('/api/admin/orders', { cache: 'no-store' })
-        const body = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
-        const data: any[] = body.orders
-        const mapped: Order[] = data.map(o => ({
-          id: o.id, createdAt: o.created_at, status: o.status,
-          customer: { name: o.customer_name, email: o.customer_email || '', phone: o.customer_phone || '', address: o.customer_address || '' },
-          items: { fileName: o.file_name, material: o.material, technology: o.technology, color: o.color, infill: o.infill, layerHeight: o.layer_height, quantity: o.quantity, notes: o.notes || '' },
-          pricing: { total: Number(o.total_price) || 0, weightG: Number(o.weight_g) || 0, printTimeMin: o.print_time_min || 0 },
-          delivery: { trackingNumber: o.tracking_number },
-          slipUrl: o.slip_url,
-        }))
-        setOrders(mapped)
-      } else {
-        const raw = localStorage.getItem("pb3d_orders")
-        setOrders(raw ? (JSON.parse(raw) as any[]).map(normalizeLocal) : [])
-      }
+      const res = await fetch('/api/admin/orders', { cache: 'no-store' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
+      const data: any[] = body.orders
+      setOrders(data.map(o => ({
+        id: o.id, createdAt: o.created_at, status: o.status,
+        customer: { name: o.customer_name, email: o.customer_email || '', phone: o.customer_phone || '', address: o.customer_address || '' },
+        items: { fileName: o.file_name, material: o.material, technology: o.technology, color: o.color, infill: o.infill, layerHeight: o.layer_height, quantity: o.quantity, notes: o.notes || '' },
+        pricing: { total: Number(o.total_price) || 0, weightG: Number(o.weight_g) || 0, printTimeMin: o.print_time_min || 0 },
+        delivery: { trackingNumber: o.tracking_number || null },
+        hasSlip: !!o.has_slip,
+      })))
       setLoadError("")
     } catch (e: any) { console.error(e); setLoadError(e?.message || "โหลดคำสั่งซื้อไม่สำเร็จ") }
     setLastRefresh(new Date().toLocaleTimeString("th-TH"))
@@ -154,19 +119,7 @@ export default function AdminPage() {
     return () => clearInterval(t)
   }, [loadOrders])
 
-  /** Demo mode: patch the raw local-storage record in place so no fields are lost. */
-  const patchLocal = (id: string, patch: { status?: string; trackingNumber?: string | null }) => {
-    const raw: any[] = JSON.parse(localStorage.getItem("pb3d_orders") || "[]")
-    const next = raw.map(o => o.id !== id ? o : {
-      ...o,
-      ...(patch.status ? { status: patch.status } : {}),
-      ...(patch.trackingNumber !== undefined ? { delivery: { ...(o.delivery || {}), trackingNumber: patch.trackingNumber } } : {}),
-    })
-    localStorage.setItem("pb3d_orders", JSON.stringify(next))
-    setOrders(next.map(normalizeLocal))
-  }
-
-  /** Admin writes go through the server (session check + service-role key), never the public key. */
+  /** Admin writes go through the server (admin session check), never straight to the sheet. */
   const adminPatch = async (id: string, body: { status?: string; trackingNumber?: string | null }) => {
     const r = await fetch(`/api/admin/orders/${id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -180,12 +133,8 @@ export default function AdminPage() {
   const saveTracking = async (id: string) => {
     const value = (trackingInputs[id] ?? "").trim() || null
     try {
-      if (!isPlaceholder) {
-        await adminPatch(id, { trackingNumber: value })
-        await loadOrders()
-      } else {
-        patchLocal(id, { trackingNumber: value })
-      }
+      await adminPatch(id, { trackingNumber: value })
+      await loadOrders()
       setSavedTrackingId(id)
       setTimeout(() => setSavedTrackingId(p => p === id ? null : p), 2000)
     } catch (e: any) { console.error(e); alert("บันทึกเลขพัสดุไม่สำเร็จ: " + (e?.message || "")) }
@@ -212,12 +161,8 @@ export default function AdminPage() {
     if (newStatus === "cancelled" && !confirm("ยืนยันการยกเลิกคำสั่งซื้อนี้?")) return
     setUpdatingId(id)
     try {
-      if (!isPlaceholder) {
-        await adminPatch(id, { status: newStatus, ...(tracking ? { trackingNumber: tracking } : {}) })
-        await loadOrders()
-      } else {
-        patchLocal(id, { status: newStatus, ...(tracking ? { trackingNumber: tracking } : {}) })
-      }
+      await adminPatch(id, { status: newStatus, ...(tracking ? { trackingNumber: tracking } : {}) })
+      await loadOrders()
       if (current) sendEmail(current, newStatus, tracking)
     } catch (e: any) { console.error(e); alert("อัปเดตสถานะไม่สำเร็จ: " + (e?.message || "")) }
     setUpdatingId(null)
@@ -284,18 +229,6 @@ export default function AdminPage() {
           <div className="text-right">
             <p className="text-xs text-foreground/30 mb-1 flex items-center gap-1.5 justify-end"><TrendingUp size={11} />Total Revenue</p>
             <p className="font-header text-3xl tracking-tighter">฿{totalRevenue.toLocaleString()}</p>
-            {!isPlaceholder && (
-              <div className="mt-2 flex flex-col items-end gap-1">
-                <button onClick={syncAllToSheet} disabled={sheetSync.busy} data-testid="sync-sheet"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-foreground/10 text-xs text-foreground/50 hover:text-foreground/80 hover:border-foreground/20 transition-all disabled:opacity-40">
-                  <Sheet size={12} className={sheetSync.busy ? "animate-pulse" : ""} />
-                  {sheetSync.busy ? "กำลังส่ง…" : "ส่งออเดอร์ทั้งหมดไป Google Sheets"}
-                </button>
-                {sheetSync.msg && (
-                  <p className={`text-xs ${sheetSync.ok ? "text-emerald-400" : "text-red-400"}`}>{sheetSync.msg}</p>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
@@ -412,10 +345,10 @@ export default function AdminPage() {
                         {order.delivery.trackingNumber && (
                           <InfoRow label="เลขพัสดุ" value={order.delivery.trackingNumber} />
                         )}
-                        {order.slipUrl && (
+                        {order.hasSlip && (
                           <div className="flex items-start justify-between gap-4 py-2.5">
                             <span className="text-xs text-foreground/35 shrink-0 w-28 flex items-center gap-1.5"><Receipt size={11} />สลิปโอนเงิน</span>
-                            <a href={order.slipUrl} target="_blank" rel="noopener noreferrer" data-testid="slip-link"
+                            <a href={`/api/admin/orders/${order.id}/slip`} target="_blank" rel="noopener noreferrer" data-testid="slip-link"
                               className="text-sm text-blue-400 hover:text-blue-300">ดูสลิป →</a>
                           </div>
                         )}

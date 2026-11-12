@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test"
 import { calculate } from "../../lib/priceCalculator"
-import { boxStl, PNG_1PX, isolateNetwork } from "../helpers"
+import { boxStl, PNG_1PX, isolateNetwork, resetDb, createOrder, sheetOrder } from "../helpers"
 
 const CUBE = { name: "cube60.stl", mimeType: "model/stl", buffer: boxStl(60, 60, 60) }
 const SMALL = { name: "small20.stl", mimeType: "model/stl", buffer: boxStl(20, 20, 20) }
@@ -12,7 +12,7 @@ const price = (o: Partial<Parameters<typeof calculate>[0]>) => calculate({
 const baht = (n: number) => `฿${n.toLocaleString()}`
 const liveQuote = (page: Page) => page.locator("p", { hasText: "Live Quote" }).locator("xpath=following-sibling::p[1]")
 
-test.beforeEach(async ({ page }) => { await isolateNetwork(page) })
+test.beforeEach(async ({ page }) => { await resetDb(); await isolateNetwork(page) })
 
 test.describe("Home page", () => {
   test("renders and every order CTA leads to /upload", async ({ page }) => {
@@ -136,18 +136,21 @@ test.describe("Full order: upload → quote → checkout → success", () => {
     const confirm = page.getByRole("button", { name: "Confirm Payment" })
     await expect(confirm).toBeDisabled()
 
-    // the stored order carries the real material/colour/shipping
-    const stored = await page.evaluate(id => JSON.parse(localStorage.getItem("pb3d_orders") || "[]").find((o: any) => o.id === id), orderId)
-    expect(stored.status).toBe("pending")
-    expect(stored.items.material).toBe("PETG")
-    expect(stored.items.color).toBe("black")
-    expect(stored.items.quantity).toBe(2)
-    expect(stored.items.notes).toContain("ส่งไปรษณีย์")
-    expect(stored.pricing.total).toBe(p.totalPrice)
+    // the order row in the Google Sheet carries the real details
+    const stored = sheetOrder(orderId)!
+    expect(stored["สถานะ"]).toBe("pending")
+    expect(stored["ชื่อลูกค้า"]).toBe("ทดสอบ ระบบ")
+    expect(stored["เบอร์โทร"]).toBe("0812345678")
+    expect(stored["วัสดุ"]).toBe("PETG")
+    expect(stored["สี"]).toBe("black")
+    expect(stored["จำนวน"]).toBe(2)
+    expect(stored["หมายเหตุ"]).toContain("ส่งไปรษณีย์")
+    expect(stored["ยอดรวม (บาท)"]).toBe(p.totalPrice)
+    expect(stored["สลิป (Drive file ID)"]).toBe("")
 
     // too-large slip is rejected
-    await page.getByTestId("slip-input").setInputFiles({ name: "big.png", mimeType: "image/png", buffer: Buffer.alloc(5 * 1024 * 1024 + 1) })
-    await expect(page.locator('p[role="alert"]')).toContainText("5MB")
+    await page.getByTestId("slip-input").setInputFiles({ name: "big.png", mimeType: "image/png", buffer: Buffer.alloc(4 * 1024 * 1024 + 1) })
+    await expect(page.locator('p[role="alert"]')).toContainText("4MB")
     await expect(confirm).toBeDisabled()
     // wrong type is rejected
     await page.getByTestId("slip-input").setInputFiles({ name: "x.txt", mimeType: "text/plain", buffer: Buffer.from("x") })
@@ -172,19 +175,13 @@ test.describe("Full order: upload → quote → checkout → success", () => {
     await expect(page).toHaveURL(new RegExp(`/checkout/${orderId}/success$`))
     await expect(page.getByRole("heading", { name: "Payment Received" })).toBeVisible()
     await expect(page.getByText(`#${orderId.split("-")[0]}`)).toBeVisible()
-    const after = await page.evaluate(id => JSON.parse(localStorage.getItem("pb3d_orders") || "[]").find((o: any) => o.id === id), orderId)
-    expect(after.status).toBe("awaiting_verification")
-    expect(after.payment.slip).toMatch(/^data:image\/png;base64,/)
+    const after = sheetOrder(orderId)!
+    expect(after["สถานะ"]).toBe("awaiting_verification")
+    expect(after["สลิป (Drive file ID)"]).not.toBe("")
   })
 
-  test("PDF slip shows its file name instead of a broken image", async ({ page }) => {
-    await page.goto("/")
-    const id = await page.evaluate(() => {
-      const id = crypto.randomUUID()
-      localStorage.setItem("pb3d_orders", JSON.stringify([{ id, status: "pending", createdAt: new Date().toISOString(),
-        customer: { name: "A" }, items: {}, pricing: { total: 100 }, delivery: { trackingNumber: null } }]))
-      return id
-    })
+  test("PDF slip shows its file name instead of a broken image", async ({ page, request }) => {
+    const id = await createOrder(request)
     await page.goto(`/checkout/${id}`)
     await page.getByTestId("slip-input").setInputFiles({ name: "slip.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n%%EOF") })
     await expect(page.getByText("slip.pdf")).toBeVisible()

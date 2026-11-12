@@ -23,8 +23,7 @@ export default defineConfig({
     { name: "e2e", testDir: "./tests/e2e", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
-    // Runs against a production build; Supabase is left unconfigured so orders use the
-    // browser-storage demo mode and Shopee products use a throwaway JSON file.
+    // Runs against a production build.
     command: `npx next start -p ${PORT}`,
     url: BASE,
     reuseExistingServer: !process.env.CI,
@@ -33,9 +32,11 @@ export default defineConfig({
       ADMIN_PASSWORD,
       NEXTAUTH_URL: BASE,
       NEXTAUTH_SECRET: "e2e-secret",
-      SHOPEE_DATA_FILE: path.join(__dirname, "test-results", "shopee-products.e2e.json"),
-      NEXT_PUBLIC_SUPABASE_URL: "",
-      SUPABASE_SERVICE_ROLE_KEY: "",
+      // The whole backend runs on the local Google Sheets emulator, which executes the
+      // real integrations/google-sheets/Code.gs. Tests reset it by deleting this file.
+      SHEETS_EMULATOR_FILE: path.join(__dirname, "test-results", "sheets.e2e.json"),
+      GOOGLE_SHEETS_WEBHOOK_URL: "",
+      GOOGLE_SHEETS_WEBHOOK_SECRET: "",
     },
   },
 })
