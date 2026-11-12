@@ -168,6 +168,14 @@ test("admin order API: rejects visitors, needs the service-role key on the serve
   expect((await page.request.get("/api/admin/orders")).status()).toBe(503)
 })
 
+test("sheet sync API: admin only, and reports when Google Sheets isn't configured", async ({ page, request }) => {
+  expect((await request.post("/api/admin/orders/sync-sheet")).status()).toBe(401)
+  await loginAsAdmin(page)
+  const r = await page.request.post("/api/admin/orders/sync-sheet")
+  expect(r.status()).toBe(503)
+  expect((await r.json()).error).toContain("GOOGLE_SHEETS_WEBHOOK_URL")
+})
+
 test("public order API: no listing, ids must be UUIDs, needs the service-role key", async ({ request }) => {
   const id = "11111111-2222-4333-8444-555555555555"
   expect((await request.get("/api/orders")).status()).toBe(405) // there is no "list all orders"

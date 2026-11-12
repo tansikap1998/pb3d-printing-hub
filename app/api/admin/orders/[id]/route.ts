@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { isAdminRequest } from "@/lib/adminSession"
 import { supabaseAdmin, hasServiceRole } from "@/lib/supabaseAdmin"
 import { ORDER_STATUSES, isUuid } from "@/lib/orderInput"
+import { syncOrderToSheet } from "@/lib/sheetsSync"
 
 export const dynamic = "force-dynamic"
 
@@ -38,11 +39,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   if (Object.keys(upd).length === 0) return NextResponse.json({ error: "Nothing to update" }, { status: 400 })
 
-  const { data, error } = await supabaseAdmin().from("orders").update(upd).eq("id", params.id).select("id").maybeSingle()
+  const { data, error } = await supabaseAdmin().from("orders").update(upd).eq("id", params.id).select("*").maybeSingle()
   if (error) {
     console.error("admin order update", error)
     return NextResponse.json({ error: "อัปเดตไม่สำเร็จ" }, { status: 500 })
   }
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  await syncOrderToSheet(data) // best-effort copy to Google Sheets
   return NextResponse.json({ ok: true })
 }

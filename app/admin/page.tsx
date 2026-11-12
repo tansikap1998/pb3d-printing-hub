@@ -10,7 +10,7 @@ import {
   RefreshCw, LogOut, Package, Clock, Printer, Truck,
   CheckCircle2, XCircle, ChevronDown, Mail, Phone,
   MapPin, FileText, Layers, Weight, AlertCircle,
-  TrendingUp, User, Hash, Send, ShoppingBag, Receipt
+  TrendingUp, User, Hash, Send, ShoppingBag, Receipt, Sheet
 } from "lucide-react"
 
 // ─── Types & Config ──────────────────────────────────────────────────────────
@@ -107,6 +107,19 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"orders" | "shopee">("orders")
   const [savedTrackingId, setSavedTrackingId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState("")
+  const [sheetSync, setSheetSync] = useState<{ busy: boolean; msg: string; ok?: boolean }>({ busy: false, msg: "" })
+
+  const syncAllToSheet = async () => {
+    setSheetSync({ busy: true, msg: "" })
+    try {
+      const r = await fetch("/api/admin/orders/sync-sheet", { method: "POST" })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
+      setSheetSync({ busy: false, ok: true, msg: `ส่ง ${d.written} ออเดอร์ไป Google Sheets แล้ว` })
+    } catch (e: any) {
+      setSheetSync({ busy: false, ok: false, msg: e?.message || "ส่งไม่สำเร็จ" })
+    }
+  }
 
   const loadOrders = useCallback(async () => {
     setRefreshing(true)
@@ -271,6 +284,18 @@ export default function AdminPage() {
           <div className="text-right">
             <p className="text-xs text-foreground/30 mb-1 flex items-center gap-1.5 justify-end"><TrendingUp size={11} />Total Revenue</p>
             <p className="font-header text-3xl tracking-tighter">฿{totalRevenue.toLocaleString()}</p>
+            {!isPlaceholder && (
+              <div className="mt-2 flex flex-col items-end gap-1">
+                <button onClick={syncAllToSheet} disabled={sheetSync.busy} data-testid="sync-sheet"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-foreground/10 text-xs text-foreground/50 hover:text-foreground/80 hover:border-foreground/20 transition-all disabled:opacity-40">
+                  <Sheet size={12} className={sheetSync.busy ? "animate-pulse" : ""} />
+                  {sheetSync.busy ? "กำลังส่ง…" : "ส่งออเดอร์ทั้งหมดไป Google Sheets"}
+                </button>
+                {sheetSync.msg && (
+                  <p className={`text-xs ${sheetSync.ok ? "text-emerald-400" : "text-red-400"}`}>{sheetSync.msg}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

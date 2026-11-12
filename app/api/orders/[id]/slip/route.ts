@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isUuid, validateSlip } from "@/lib/orderInput"
 import { supabaseAdmin, hasServiceRole } from "@/lib/supabaseAdmin"
+import { syncOrderToSheet } from "@/lib/sheetsSync"
 
 export const dynamic = "force-dynamic"
 
@@ -36,8 +37,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // Only move forward from the two payment states (guards against a race with an admin update)
   const { data: upd, error: updErr } = await db.from("orders")
     .update({ status: "awaiting_verification", slip_url: path })
-    .eq("id", params.id).in("status", ["pending", "awaiting_verification"]).select("id").maybeSingle()
+    .eq("id", params.id).in("status", ["pending", "awaiting_verification"]).select("*").maybeSingle()
   if (updErr) { console.error("slip: update order", updErr); return NextResponse.json({ error: "อัปโหลดไม่สำเร็จ" }, { status: 500 }) }
   if (!upd) return NextResponse.json({ error: "คำสั่งซื้อนี้ไม่ได้รอการชำระเงินแล้ว" }, { status: 409 })
+  await syncOrderToSheet(upd) // best-effort copy to Google Sheets
   return NextResponse.json({ ok: true })
 }
