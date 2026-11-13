@@ -28,7 +28,9 @@ export default function AdminLoginPage() {
         callbackUrl,
       })
       if (res?.error === "ADMIN_PASSWORD_NOT_SET") {
-        setError("ยังไม่ได้ตั้งรหัสผ่านแอดมินบนเซิร์ฟเวอร์ (ADMIN_PASSWORD ใน Vercel)")
+        setError("ยังไม่ได้ตั้งรหัสผ่านแอดมิน (แท็บ Admins ใน Google Sheet หรือ ADMIN_PASSWORD ใน Vercel)")
+      } else if (res?.error === "LOGIN_LOCKED") {
+        setError("ใส่รหัสผิดหลายครั้ง บัญชีนี้ถูกล็อกชั่วคราว 15 นาที")
       } else if (res?.error) {
         setError("อีเมล์หรือรหัสผ่านไม่ถูกต้อง")
       } else if (res?.ok) {

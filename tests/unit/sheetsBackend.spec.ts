@@ -179,7 +179,7 @@ test("setup() creates the secret once, the tabs and the slip folder", () => {
   const secret = ctx.setup()
   expect(secret).toMatch(/^[0-9a-f]{64}$/)
   expect(state.props.WEBHOOK_SECRET).toBe(secret)
-  expect(Object.keys(state.sheets).sort()).toEqual(["Consent", "Orders", "Products"])
+  expect(Object.keys(state.sheets).sort()).toEqual(["Admins", "Consent", "Orders", "Products"])
   expect(state.sheets.Orders[0][0]).toBe("Order ID")
   expect(state.props.SLIP_FOLDER_ID).toBeTruthy()
   expect(ctx.setup()).toBe(secret) // second run keeps the same secret
@@ -196,3 +196,44 @@ test("secret pasted with spaces, newline or quotes still matches", env(
     await rpc("ping", {}, { fetchImpl: ok })
     expect(calls[0].secret).toBe("s3cret")
   }))
+
+// ─── admins ──────────────────────────────────────────────────────────────────
+function withAdmins(rows: any[][]) {
+  const s = sheet()
+  s.call("ping")
+  const db = JSON.parse(readFileSync(s.file, "utf8"))
+  db.sheets.Admins = [["อีเมล", "รหัสผ่าน", "ชื่อ", "ปิดใช้งาน"], ...rows]
+  writeFileSync(s.file, JSON.stringify(db))
+  return s
+}
+
+test("admins.verify: right password only, case-insensitive email, never returns the password", () => {
+  const s = withAdmins([["Boss@Shop.com", "0812pass", "บอส", false], ["off@shop.com", "x", "", true], ["nopw@shop.com", "", "", false]])
+  const ok = s.call("admins.verify", { email: " boss@shop.com ", password: "0812pass" })
+  expect(ok).toEqual({ ok: true, admin: { email: "boss@shop.com", name: "บอส" } })
+  expect(JSON.stringify(ok)).not.toContain("0812pass")
+  expect(s.call("admins.verify", { email: "boss@shop.com", password: "wrong" }).admin).toBeNull()
+  expect(s.call("admins.verify", { email: "off@shop.com", password: "x" }).admin).toBeNull()      // disabled
+  expect(s.call("admins.verify", { email: "nopw@shop.com", password: "" }).admin).toBeNull()     // blank password
+  expect(s.call("admins.verify", { email: "nobody@shop.com", password: "0812pass" }).admin).toBeNull()
+})
+
+test("admins.verify: 10 wrong passwords lock the email, a correct one before that resets the count", () => {
+  const s = withAdmins([["a@shop.com", "right", "", false]])
+  for (let i = 0; i < 9; i++) s.call("admins.verify", { email: "a@shop.com", password: "bad" })
+  expect(s.call("admins.verify", { email: "a@shop.com", password: "right" }).admin).not.toBeNull() // 9 fails, still ok → reset
+  for (let i = 0; i < 10; i++) s.call("admins.verify", { email: "a@shop.com", password: "bad" })
+  expect(s.call("admins.verify", { email: "a@shop.com", password: "right" })).toMatchObject({ admin: null, locked: true })
+})
+
+test("setup() creates an Admins tab with the two shop emails and blank passwords", () => {
+  const state: any = { sheets: {}, props: {}, files: {} }
+  const ctx: any = vm.createContext({ ...fakeServices(state) })
+  compiled().runInContext(ctx)
+  ctx.setup()
+  expect(state.sheets.Admins[0]).toEqual(["อีเมล", "รหัสผ่าน", "ชื่อ", "ปิดใช้งาน"])
+  expect(state.sheets.Admins.slice(1).map((r: any[]) => r[0])).toEqual(["tansika.p1998@gmail.com", "supapol_111213@hotmail.com"])
+  expect(state.sheets.Admins.slice(1).every((r: any[]) => r[1] === "")).toBe(true)
+  ctx.setup() // running again does not duplicate them
+  expect(state.sheets.Admins).toHaveLength(3)
+})

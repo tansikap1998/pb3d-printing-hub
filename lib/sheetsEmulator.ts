@@ -12,6 +12,7 @@ interface State {
   sheets: Record<string, Cell[][]>
   props: Record<string, string>
   files: Record<string, { name: string; mimeType: string; base64: string }>
+  cache?: Record<string, string>
 }
 
 let script: vm.Script | null = null
@@ -99,6 +100,14 @@ export function fakeServices(state: State, secret?: string) {
       }),
     },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    // expiry is ignored in the emulator; tests reset the file instead
+    CacheService: {
+      getScriptCache: () => ({
+        get: (k: string) => (state.cache ||= {})[k] ?? null,
+        put: (k: string, v: string) => { (state.cache ||= {})[k] = v },
+        remove: (k: string) => { delete (state.cache ||= {})[k] },
+      }),
+    },
     ContentService: {
       MimeType: { JSON: "application/json" },
       createTextOutput: (s: string) => ({ setMimeType: () => s }),

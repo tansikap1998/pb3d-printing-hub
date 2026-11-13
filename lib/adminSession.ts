@@ -1,9 +1,8 @@
 import { getServerSession } from "next-auth"
-import { authOptions, ALLOWED_EMAILS } from "./auth"
+import { authOptions } from "./auth"
 
-/** True when the request comes from a signed-in admin. */
+/** True when the request comes from a signed-in admin (env admin or "Admins" tab). */
 export async function isAdminRequest(): Promise<boolean> {
   const session = await getServerSession(authOptions)
-  const email = session?.user?.email?.toLowerCase()
-  return !!email && ALLOWED_EMAILS.includes(email)
+  return !!session?.user?.email && (session.user as any).role === "admin"
 }

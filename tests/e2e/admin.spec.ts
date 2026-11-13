@@ -318,3 +318,33 @@ test("health endpoint reports backend status without revealing the secret", asyn
   expect(h.webhookUrl.source).toContain("Vercel") // the e2e server sets the variable (empty)
   expect(JSON.stringify(h)).not.toMatch(/secret"\s*:\s*"/) // never a secret value
 })
+
+test.describe("Admins tab in the Google Sheet", () => {
+  test("an admin added in the sheet can sign in; disabled or removed ones cannot", async ({ page }) => {
+    const { readFileSync, writeFileSync } = await import("fs")
+    const { EMULATOR_FILE } = await import("../helpers")
+    await page.request.get("/api/health") // makes the emulator create its file
+    const db = JSON.parse(readFileSync(EMULATOR_FILE, "utf8"))
+    db.sheets.Admins = [["อีเมล", "รหัสผ่าน", "ชื่อ", "ปิดใช้งาน"],
+      ["staff@pb3d.test", "sheet-pass-123", "พนักงาน", false],
+      ["gone@pb3d.test", "gone-pass", "", true]]
+    writeFileSync(EMULATOR_FILE, JSON.stringify(db))
+
+    const login = async (email: string, pw: string) => {
+      await page.goto("/admin/login")
+      await page.getByPlaceholder("Admin Email").fill(email)
+      await page.getByPlaceholder("••••••••").fill(pw)
+      await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click()
+    }
+    await login("gone@pb3d.test", "gone-pass")
+    await expect(page.getByText("อีเมล์หรือรหัสผ่านไม่ถูกต้อง")).toBeVisible()
+    await login("staff@pb3d.test", "wrong")
+    await expect(page.getByText("อีเมล์หรือรหัสผ่านไม่ถูกต้อง")).toBeVisible()
+
+    await login("staff@pb3d.test", "sheet-pass-123")
+    await expect(page).toHaveURL(/\/admin$/)
+    await expect(page.getByText("Order Dashboard")).toBeVisible()
+    // the session is a real admin session for the APIs too
+    expect((await page.request.get("/api/admin/orders")).status()).toBe(200)
+  })
+})

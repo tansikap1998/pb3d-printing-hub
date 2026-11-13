@@ -6,6 +6,7 @@
  *   Orders    – one row per order
  *   Products  – Shopee product links shown on the home page
  *   Consent   – cookie consent log (PDPA)
+ *   Admins    – who can sign in to /admin (email + password, edit here directly)
  * Payment slips are files in a private Google Drive folder ("PB3D Payment Slips").
  *
  * Columns are found by their title in row 1, so you may reorder columns or add
@@ -60,6 +61,18 @@ var TABLES = {
     ],
     numbers: ['price', 'sort_order'],
     booleans: ['active'],
+  },
+  // Admin sign-in. Edit this tab to add/remove admins or change a password.
+  // Passwords are checked inside this script and never sent back to the website.
+  admins: {
+    sheet: 'Admins',
+    cols: [
+      ['email', 'อีเมล'],
+      ['password', 'รหัสผ่าน'],
+      ['name', 'ชื่อ'],
+      ['disabled', 'ปิดใช้งาน'],
+    ],
+    booleans: ['disabled'],
   },
   consent: {
     sheet: 'Consent',
@@ -120,6 +133,12 @@ function setup() {
     props.setProperty('WEBHOOK_SECRET', secret);
   }
   table_('orders'); table_('products'); table_('consent');
+  var admins = table_('admins');
+  if (admins.sheet.getLastRow() < 2) {
+    // starter rows: fill in the passwords in the sheet (blank password = cannot sign in)
+    writeRow_(admins, 2, { email: 'tansika.p1998@gmail.com', password: '', name: '', disabled: false });
+    writeRow_(admins, 3, { email: 'supapol_111213@hotmail.com', password: '', name: '', disabled: false });
+  }
   slipFolder_();
   Logger.log('✅ Setup done. Put this in Vercel as GOOGLE_SHEETS_WEBHOOK_SECRET:');
   Logger.log(secret);
@@ -244,6 +263,28 @@ var ACTIONS = {
     return { deleted: true };
   },
 
+  // ── admins ──
+  // Checks an admin's email + password. Only "yes, this admin" or "no" leaves the
+  // script; 10 wrong passwords lock that email for 15 minutes.
+  'admins.verify': function (b) {
+    var email = String(b.email || '').trim().toLowerCase();
+    var password = String(b.password || '');
+    if (!email || !password) return { admin: null };
+    var cache = CacheService.getScriptCache();
+    var key = 'login-fail:' + email;
+    var fails = Number(cache.get(key) || 0);
+    if (fails >= 10) return { admin: null, locked: true };
+    var match = readAll_(table_('admins')).filter(function (a) {
+      return String(a.email).trim().toLowerCase() === email && !a.disabled && a.password !== '';
+    })[0];
+    if (match && match.password === password) {
+      cache.remove(key);
+      return { admin: { email: email, name: match.name || '' } };
+    }
+    cache.put(key, String(fails + 1), 15 * 60);
+    return { admin: null };
+  },
+
   // ── consent ──
   'consent.add': function (b) {
     var t = table_('consent');
@@ -281,6 +322,7 @@ function table_(name) {
   });
   if (created) {
     sheet.setFrozenRows(1);
+    if (name === 'admins') sheet.getRange(2, col.password, sheet.getMaxRows() - 1, 1).setNumberFormat('@');
     if (name === 'orders') {
       var rule = SpreadsheetApp.newDataValidation().requireValueInList(ORDER_STATUSES, true).setAllowInvalid(false).build();
       sheet.getRange(2, col.status, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
