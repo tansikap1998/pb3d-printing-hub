@@ -187,3 +187,12 @@ test("setup() creates the secret once, the tabs and the slip folder", () => {
   const reply = JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify({ secret, action: "ping" }) } }))
   expect(reply).toEqual({ ok: true })
 })
+
+test("secret pasted with spaces, newline or quotes still matches", env(
+  { GOOGLE_SHEETS_WEBHOOK_URL: "https://script.google.com/macros/s/X/exec", GOOGLE_SHEETS_WEBHOOK_SECRET: '  "s3cret"\n' },
+  async () => {
+    const calls: any[] = []
+    const ok = (async (_u: any, init: any) => { calls.push(JSON.parse(init.body)); return new Response('{"ok":true}') }) as typeof fetch
+    await rpc("ping", {}, { fetchImpl: ok })
+    expect(calls[0].secret).toBe("s3cret")
+  }))

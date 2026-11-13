@@ -35,7 +35,8 @@ const cfg = () => ({
   // The shop's deployed Apps Script web app. Not a secret (anyone can open it);
   // the WEBHOOK_SECRET is what protects it. Override with GOOGLE_SHEETS_WEBHOOK_URL.
   url: process.env.GOOGLE_SHEETS_WEBHOOK_URL ?? DEFAULT_WEBHOOK_URL,
-  secret: process.env.GOOGLE_SHEETS_WEBHOOK_SECRET || "",
+  // tolerate copy-paste slips in the Vercel dashboard: spaces, newlines, quotes
+  secret: (process.env.GOOGLE_SHEETS_WEBHOOK_SECRET || "").trim().replace(/^["']|["']$/g, "").trim(),
   emulator: process.env.SHEETS_EMULATOR_FILE || "",
 })
 
