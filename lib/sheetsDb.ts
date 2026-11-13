@@ -119,6 +119,10 @@ export const db = {
       rpc<{ product: ProductRow | null }>("products.update", { id, patch }).then(r => r.product),
     delete: (id: string) => rpc<{ deleted: boolean }>("products.delete", { id }).then(r => r.deleted),
   },
+  admins: {
+    verify: (email: string, password: string) =>
+      rpc<{ admin: { email: string; name: string } | null; locked?: boolean }>("admins.verify", { email, password }),
+  },
   consent: {
     add: (entry: { necessary: boolean; analytics: boolean; marketing: boolean; user_agent: string }) =>
       rpc("consent.add", { entry: { ...entry, created_at: nowBangkok() } }),
