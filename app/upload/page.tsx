@@ -66,9 +66,9 @@ const INFILL_OPTIONS: { v: InfillLevel; label: string; pct: string }[] = [
   { v: 80, label: 'Very Strong', pct: '80%' },
 ]
 
-// The shop prints at 0.24 mm only (same as the -qe site)
+// The shop prints at a single layer height: 0.4 mm
 const LAYER_OPTIONS: { v: LayerHeight; label: string; desc: string }[] = [
-  { v: 0.24, label: 'Standard', desc: '0.24 mm' },
+  { v: 0.4, label: 'Standard', desc: '0.4 mm' },
 ]
 
 const STEPS = ['อัปโหลด & ตั้งค่า', 'จัดส่ง & ยืนยัน']
@@ -183,7 +183,7 @@ export default function WizardPage() {
   const [colorId,     setColorId]     = useState('white')
   const modelColor = COLOR_SWATCHES.find(c => c.id === colorId)?.hex ?? '#b0b4c0'
   const [infill,      setInfill]      = useState<InfillLevel>(25)
-  const [layerHeight, setLayerHeight] = useState<LayerHeight>(0.24)
+  const [layerHeight, setLayerHeight] = useState<LayerHeight>(0.4)
   const [shipping,    setShipping]    = useState<Shipping>('pickup')
 
   // Dimension / scale state
