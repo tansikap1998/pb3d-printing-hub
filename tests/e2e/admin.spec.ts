@@ -307,3 +307,14 @@ test.describe("Shopee product links", () => {
     await expect(home.getByTestId("shopee-products")).toHaveCount(0)
   })
 })
+
+test("health endpoint reports backend status without revealing the secret", async ({ request }) => {
+  const r = await request.get("/api/health")
+  expect(r.status()).toBe(200)
+  const h = await r.json()
+  expect(h.backend).toBe("emulator")
+  expect(h.ping).toEqual({ ok: true })
+  expect(h.secret).toMatchObject({ set: false, length: 0 })
+  expect(h.webhookUrl.source).toContain("Vercel") // the e2e server sets the variable (empty)
+  expect(JSON.stringify(h)).not.toMatch(/secret"\s*:\s*"/) // never a secret value
+})
