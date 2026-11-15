@@ -456,6 +456,25 @@ test.describe("AI product copy", () => {
     expect(prompt).toMatch(/- ราคาขาย \(บาท\): \d+/)
   })
 
+  test("Shopee listing box has every field ready to copy", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"])
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+    await page.getByTestId("sp-name").fill("ขาตั้งมือถือรุ่นแมว")
+    await page.getByTestId("ai-generate").click()
+    const box = page.getByTestId("shopee-box")
+    await expect(box.getByTestId("shopee-box-title-value")).toHaveText("ขาตั้งมือถือรุ่นแมว พิมพ์ 3 มิติ ปรับองศาได้")
+    await box.getByTestId("shopee-box-pick").selectOption("1")
+    await expect(box.getByTestId("shopee-box-title-value")).toHaveText("ขาตั้งโทรศัพท์ลายแมว ตั้งโต๊ะ")
+    await expect(box.getByTestId("shopee-box-price-value")).toHaveText("299")
+    await expect(box.getByTestId("shopee-box-weight-value")).toHaveText("0.15") // 100 g + 50 g
+    await box.getByTestId("shopee-box-packaging").fill("120")
+    await expect(box.getByTestId("shopee-box-weight-value")).toHaveText("0.22")
+    await box.getByTestId("shopee-box-description").getByRole("button", { name: "คัดลอก" }).click()
+    const clip = await page.evaluate(() => navigator.clipboard.readText())
+    expect(clip).toContain("จุดเด่น\n• ปรับองศาได้ 3 ระดับ")
+  })
+
   test("sends a chosen title, price and pitch to the Shopee product form", async ({ page }) => {
     await loginAsAdmin(page)
     await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()

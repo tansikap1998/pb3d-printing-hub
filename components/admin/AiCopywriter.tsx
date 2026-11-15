@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { Sparkles, Loader2, Copy, Check, AlertCircle, ShoppingBag } from "lucide-react"
 import type { ShopeeDraft } from "./ShopeeAdmin"
-import { listingText, type CopyOutput } from "@/lib/aiCopy"
+import { listingText, packageWeight, type CopyOutput } from "@/lib/aiCopy"
 
 const inputCls =
   "w-full bg-foreground/[0.04] border border-foreground/10 rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/30 outline-none focus:border-blue-400/50 transition-all"
@@ -47,6 +47,8 @@ export default function AiCopywriter({ name, category, grams, prices, onSendToSh
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [copy, setCopy] = useState<CopyOutput | null>(null)
+  const [pick, setPick] = useState(0) // chosen title for the Shopee box
+  const [packagingG, setPackagingG] = useState("50")
 
   const generate = async () => {
     setBusy(true); setError("")
@@ -58,7 +60,7 @@ export default function AiCopywriter({ name, category, grams, prices, onSendToSh
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
-      setCopy(d.copy)
+      setCopy(d.copy); setPick(0)
     } catch (e: any) {
       setError(e.message)
     }
@@ -144,8 +146,56 @@ export default function AiCopywriter({ name, category, grams, prices, onSendToSh
               {listingText(copy)}
             </div>
           </div>
+          <ShopeeListingBox
+            titles={copy.titles} pick={pick} setPick={setPick}
+            description={listingText(copy)} price={shopeePrice}
+            grams={grams} packagingG={packagingG} setPackagingG={setPackagingG}
+          />
         </div>
       )}
     </section>
+  )
+}
+
+/** Everything the Shopee "add product" form asks for that we know, one copy button per field. */
+function ShopeeListingBox({ titles, pick, setPick, description, price, grams, packagingG, setPackagingG }: {
+  titles: string[]; pick: number; setPick: (i: number) => void
+  description: string; price: number | null
+  grams: number; packagingG: string; setPackagingG: (v: string) => void
+}) {
+  const title = titles[pick] ?? titles[0] ?? ""
+  const w = packageWeight(grams, Number(packagingG))
+  const rows: { label: string; value: string; note?: string; testId: string }[] = [
+    { label: "ชื่อสินค้า", value: title, note: `${Array.from(title).length}/120 ตัวอักษร`, testId: "shopee-box-title" },
+    { label: "รายละเอียดสินค้า", value: description, note: `${Array.from(description).length} ตัวอักษร`, testId: "shopee-box-description" },
+    { label: "ราคา (บาท)", value: price === null ? "" : String(price), note: "ราคาแนะนำช่อง Shopee", testId: "shopee-box-price" },
+    { label: "น้ำหนักพัสดุ (kg)", value: w.kg, note: `ชิ้นงาน ${grams || 0} g + กล่อง/แพ็ก ≈ ${w.g} g`, testId: "shopee-box-weight" },
+  ]
+  return (
+    <div className="rounded-2xl border border-orange-400/30 bg-orange-500/[0.04] p-4 space-y-3" data-testid="shopee-box">
+      <div>
+        <p className="text-sm font-medium flex items-center gap-2"><ShoppingBag size={14} />ข้อมูลสำหรับลง Shopee</p>
+        <p className="text-xs text-foreground/50 mt-1">Seller Centre → เพิ่มสินค้า แล้วคัดลอกไปวางทีละช่อง รูป หมวดหมู่ ขนาดพัสดุ สต็อก และตัวเลือกสี กรอกใน Shopee</p>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <label className="block"><span className="text-xs text-foreground/50 mb-1.5 block">ใช้ชื่อแบบที่</span>
+          <select value={pick} onChange={e => setPick(Number(e.target.value))} className={inputCls} data-testid="shopee-box-pick">
+            {titles.map((t, i) => <option key={i} value={i}>{i + 1}. {t.length > 40 ? t.slice(0, 40) + "…" : t}</option>)}
+          </select></label>
+        <label className="block"><span className="text-xs text-foreground/50 mb-1.5 block">น้ำหนักกล่อง/แพ็ก (g)</span>
+          <input type="number" min="0" value={packagingG} onChange={e => setPackagingG(e.target.value)} className={inputCls} data-testid="shopee-box-packaging" /></label>
+      </div>
+      <ul className="divide-y divide-foreground/8 rounded-xl border border-foreground/8">
+        {rows.map(r => (
+          <li key={r.label} className="flex items-start gap-3 px-3 py-2.5" data-testid={r.testId}>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-foreground/50">{r.label}{r.note && <span className="text-foreground/30"> · {r.note}</span>}</p>
+              <p className="text-sm break-words line-clamp-2" data-testid={`${r.testId}-value`}>{r.value || "—"}</p>
+            </div>
+            {r.value && <CopyBtn text={r.value} />}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

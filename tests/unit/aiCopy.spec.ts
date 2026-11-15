@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test"
-import { CopyInputSchema, buildUserPrompt, cleanOutput, listingText, hasEnoughInput, TITLE_MAX } from "../../lib/aiCopy"
+import { CopyInputSchema, buildUserPrompt, cleanOutput, listingText, hasEnoughInput, packageWeight, TITLE_MAX } from "../../lib/aiCopy"
 
 test("input schema fills defaults and rejects bad tone", () => {
   const i = CopyInputSchema.parse({ name: "  ขาตั้งมือถือ  " })
@@ -36,4 +36,11 @@ test("output is tidied: dupes, long titles, bullets, hashtags, blank lines", () 
   expect(o.bullet_points).toEqual(["ข้อ 1", "ข้อ 2"])
   expect(o.hashtags).toEqual(["#3DPrint", "#pla"])
   expect(listingText(o)).toBe("สั้น\n\nย่อหน้า 1\n\nย่อหน้า 2\n\nจุดเด่น\n• ข้อ 1\n• ข้อ 2\n\n#3DPrint #pla")
+})
+
+test("package weight = piece + packaging, rounded up to 10 g", () => {
+  expect(packageWeight(100, 50)).toEqual({ g: 150, kg: "0.15" })
+  expect(packageWeight(83, 50)).toEqual({ g: 140, kg: "0.14" })
+  expect(packageWeight(0, 0)).toEqual({ g: 0, kg: "0.00" })
+  expect(packageWeight(-5, NaN)).toEqual({ g: 0, kg: "0.00" })
 })

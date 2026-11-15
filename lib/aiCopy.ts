@@ -93,3 +93,10 @@ export function listingText(o: CopyOutput): string {
     o.hashtags.join(" "),
   ].filter(Boolean).join("\n\n")
 }
+
+/** Shipping weight for the Shopee form: piece + packaging, rounded up to 10 g; kg with 2 decimals. */
+export function packageWeight(pieceG: number, packagingG: number): { g: number; kg: string } {
+  const raw = Math.max(0, Number(pieceG) || 0) + Math.max(0, Number(packagingG) || 0)
+  const g = Math.ceil(raw / 10) * 10
+  return { g, kg: (g / 1000).toFixed(2) }
+}
