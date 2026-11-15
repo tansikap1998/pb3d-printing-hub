@@ -130,6 +130,7 @@ export const db = {
   market: {
     list: () => rpc<{ rows: any[] }>("market.list").then(r => r.rows),
     seed: (rows: any[]) => rpc<{ seeded: number }>("market.seed", { rows }).then(r => r.seeded),
+    append: (rows: any[]) => rpc<{ added: number }>("market.append", { rows }).then(r => r.added),
   },
   consent: {
     add: (entry: { necessary: boolean; analytics: boolean; marketing: boolean; user_agent: string }) =>

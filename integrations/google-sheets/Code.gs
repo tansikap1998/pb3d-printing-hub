@@ -339,6 +339,20 @@ var ACTIONS = {
     (b.rows || []).forEach(function (r, i) { writeRow_(t, i + 2, r); });
     return { seeded: (b.rows || []).length };
   },
+  // add rows for categories the tab doesn't have yet (never touches existing rows)
+  'market.append': function (b) {
+    var t = table_('market');
+    var have = {};
+    readAll_(t).forEach(function (r) { have[String(r.category).trim()] = true; });
+    var added = 0;
+    (b.rows || []).forEach(function (r) {
+      var c = String(r.category || '').trim();
+      if (!c || have[c]) return;
+      writeRow_(t, t.sheet.getLastRow() + 1, r);
+      have[c] = true; added++;
+    });
+    return { added: added };
+  },
 
   // ── consent ──
   'consent.add': function (b) {
@@ -351,7 +365,7 @@ var ACTIONS = {
 var WRITE_ACTIONS = {
   'orders.create': 1, 'orders.update': 1, 'orders.submitSlip': 1, 'orders.import': 1, 'slips.attach': 1,
   'products.create': 1, 'products.update': 1, 'products.delete': 1, 'consent.add': 1,
-  'settings.set': 1, 'market.seed': 1,
+  'settings.set': 1, 'market.seed': 1, 'market.append': 1,
 };
 
 // ─── Table helpers ───────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { test, expect, Page } from "@playwright/test"
 import {
   isolateNetwork, loginAsAdmin, ADMIN_EMAIL, resetDb, createOrder, submitSlip,
-  adminSetStatus, adminGetOrder, sheetTabs,
+  adminSetStatus, adminGetOrder, sheetTabs, EMULATOR_FILE,
 } from "../helpers"
 
 const row = (page: Page, id: string) => page.locator("div.rounded-3xl", { has: page.getByText(`#${id.slice(-6).toUpperCase()}`) })
@@ -399,7 +399,7 @@ test.describe("Selling-price calculator", () => {
     await page.getByTestId("sp-min-profit").fill("60")
     await page.getByTestId("sp-save").click()
     await expect(page.getByRole("status")).toContainText("บันทึกค่าตั้งค่าลง Google Sheet แล้ว")
-    const saved = JSON.parse((sheetTabs().Settings ?? [])[1]?.[1] ?? "{}")
+    const saved = JSON.parse((sheetTabs().Settings ?? []).find(r => r[0] === "sellPricing")?.[1] ?? "{}")
     expect(saved.minProfitPct).toBe(60)
 
     // reload → settings come back from the sheet, market rows from MarketPrices
@@ -410,6 +410,27 @@ test.describe("Selling-price calculator", () => {
     expect((sheetTabs().MarketPrices ?? []).length).toBeGreaterThan(5)
     await expect(page.getByTestId("sp-market")).toBeVisible()
   })
+})
+
+test("an existing MarketPrices tab gets the new starter categories once", async ({ page }) => {
+  await loginAsAdmin(page)
+  // a sheet seeded by an older version: only one (edited) category, no version flag
+  const { emulatorPost } = await import("../../lib/sheetsEmulator")
+  emulatorPost(EMULATOR_FILE, "s", { secret: "s", action: "market.seed", rows: [
+    { category: "พวงกุญแจ / ป้ายชื่อเล็ก", example: "", typicalWeightG: 15, low: 1, typical: 77, high: 100, source: "สำรวจเอง", updated: "" },
+  ] })
+  await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+  await expect(page.getByTestId("sell-pricing").getByText(/เพิ่มหมวดสินค้าใหม่ 15 หมวด/)).toBeVisible()
+  const options = page.getByTestId("sp-category").locator("option")
+  await expect(options).toHaveCount(17) // 16 categories + "no comparison"
+  const tab = sheetTabs().MarketPrices
+  expect(tab).toHaveLength(17) // header + 16
+  expect(tab[1]).toContain(77) // edited row kept
+  // second visit: nothing re-added
+  await page.reload()
+  await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+  await expect(page.getByTestId("sp-category").locator("option")).toHaveCount(17)
+  expect(sheetTabs().MarketPrices).toHaveLength(17)
 })
 
 test("selling-price calculator fits a phone screen (cards instead of a table)", async ({ page }) => {
@@ -428,6 +449,7 @@ test.describe("AI product copy", () => {
 
   test("API is admin only", async ({ request }) => {
     expect((await request.post("/api/admin/ai-copy", { data: { name: "x" } })).status()).toBe(401)
+    expect((await request.post("/api/admin/slicer-read", { data: { image: "x", mimeType: "image/png" } })).status()).toBe(401)
   })
 
   test("writes titles + description from the calculator's product", async ({ page }) => {
@@ -493,6 +515,25 @@ test.describe("AI product copy", () => {
     await expect(form.locator('input[name="name"]')).toHaveValue("ขาตั้งโทรศัพท์ลายแมว ตั้งโต๊ะ")
     await form.getByRole("button", { name: "เพิ่มสินค้า" }).click()
     await expect(page.getByTestId("shopee-admin-row")).toContainText("฿299")
+  })
+
+  test("slicer screenshot fills grams and print time", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+    expect((await page.request.post("/api/admin/slicer-read", { data: { image: "x", mimeType: "text/plain" } })).status()).toBe(400)
+
+    const png = (marker: string) => ({ name: "slicer.png", mimeType: "image/png", buffer: Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.from(marker)]) })
+    await page.getByTestId("slicer-file").setInputFiles(png("slicer"))
+    await expect(page.getByTestId("slicer-result")).toContainText("363.58 g · 11 ชม. 8 นาที · 7 เพลต")
+    await expect(page.getByTestId("sp-grams")).toHaveValue("363.58")
+    await expect(page.getByTestId("sp-hours")).toHaveValue("11.13")
+
+    const [call] = JSON.parse(fs.readFileSync(LOG, "utf8"))
+    expect(call.body.messages[0].content[0]).toMatchObject({ type: "image", source: { type: "base64", media_type: "image/png" } })
+
+    await page.getByTestId("slicer-file").setInputFiles(png("NOT-SLICER"))
+    await expect(page.getByTestId("slicer-error")).toContainText("ไม่พบน้ำหนักหรือเวลาพิมพ์")
+    await expect(page.getByTestId("sp-grams")).toHaveValue("363.58") // unchanged
   })
 
   test("shows a clear message when the AI declines", async ({ page }) => {

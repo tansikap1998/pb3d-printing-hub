@@ -8,6 +8,9 @@ import {
 export const dynamic = "force-dynamic"
 
 const KEY = "sellPricing"
+// bump when DEFAULT_MARKET_PRICES gains categories, so existing sheets get them once
+const MARKET_VERSION_KEY = "marketDefaultsVersion"
+const MARKET_VERSION = "2"
 // Older Code.gs deployments don't know the new actions yet
 const isOldScript = (e: unknown) => /unknown action/.test(String((e as Error)?.message ?? ""))
 const OLD_SCRIPT_NOTE = "Apps Script ยังเป็นเวอร์ชันเก่า: วาง Code.gs ใหม่แล้ว Deploy → New version เพื่อบันทึกค่าและราคาตลาดลงชีต"
@@ -31,10 +34,27 @@ export async function GET() {
 
   try {
     const rows = sanitizeMarket(await db.market.list())
-    if (rows.length) { market = rows; marketSource = "sheet" }
+    if (rows.length) {
+      market = rows; marketSource = "sheet"
+      // once per defaults version: add categories that are new in the starter list
+      if ((await db.settings.get(MARKET_VERSION_KEY)) !== MARKET_VERSION) {
+        const added = await db.market.append(DEFAULT_MARKET_PRICES).catch(e => {
+          if (isOldScript(e)) { notes.push(OLD_SCRIPT_NOTE); return -1 }
+          throw e
+        })
+        if (added >= 0) {
+          await db.settings.set(MARKET_VERSION_KEY, MARKET_VERSION)
+          if (added > 0) {
+            market = sanitizeMarket(await db.market.list())
+            notes.push(`เพิ่มหมวดสินค้าใหม่ ${added} หมวดในแท็บ MarketPrices แล้ว (ราคาประมาณ แก้ได้ในชีต)`)
+          }
+        }
+      }
+    }
     else {
       // first use: copy the starter reference prices into the MarketPrices tab
       await db.market.seed(DEFAULT_MARKET_PRICES)
+      await db.settings.set(MARKET_VERSION_KEY, MARKET_VERSION)
       notes.push("สร้างแท็บ MarketPrices พร้อมราคาอ้างอิงเริ่มต้นแล้ว: แก้ไขตามราคาที่สำรวจจริงได้เลย")
     }
   } catch (e) {

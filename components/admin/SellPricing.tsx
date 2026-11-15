@@ -6,6 +6,7 @@ import {
   type SellPricingSettings, type MarketPrice, type ChannelPrice,
 } from "@/lib/sellPricing"
 import AiCopywriter from "./AiCopywriter"
+import SlicerUpload from "./SlicerUpload"
 import type { ShopeeDraft } from "./ShopeeAdmin"
 
 const baht = (x: number | null | undefined, digits = 0) =>
@@ -119,6 +120,10 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
               <option value="">— ไม่เทียบราคาตลาด —</option>
             </select>
           </label>
+          <SlicerUpload onRead={v => {
+            if (v.grams !== null) setGrams(String(v.grams))
+            if (v.hours !== null) setHours(String(v.hours))
+          }} />
           <div className="grid grid-cols-2 gap-3">
             <Num label="น้ำหนักชิ้นงาน" suffix="g" value={grams} onChange={setGrams} testId="sp-grams" />
             <Num label="เวลาพิมพ์" suffix="ชม." value={hours} onChange={setHours} testId="sp-hours" />
