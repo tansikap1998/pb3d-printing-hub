@@ -5,6 +5,7 @@ import {
   calculateSellPrices, shopeeSearchUrl, DEFAULT_SELL_PRICING,
   type SellPricingSettings, type MarketPrice, type ChannelPrice,
 } from "@/lib/sellPricing"
+import AiCopywriter from "./AiCopywriter"
 
 const baht = (x: number | null | undefined, digits = 0) =>
   x === null || x === undefined || !Number.isFinite(x) ? "—" : `฿${x.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
@@ -108,7 +109,7 @@ export default function SellPricing() {
           <p className="text-xs font-medium text-foreground/50">สินค้า</p>
           <label className="block">
             <span className="text-xs text-foreground/50 mb-1.5 block">ชื่อสินค้า (ไม่บังคับ)</span>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="เช่น ขาตั้งมือถือรุ่นแมว" className={inputCls} />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="เช่น ขาตั้งมือถือรุ่นแมว" className={inputCls} data-testid="sp-name" />
           </label>
           <label className="block">
             <span className="text-xs text-foreground/50 mb-1.5 block">หมวดสินค้า (ใช้เทียบราคาตลาด)</span>
@@ -261,6 +262,14 @@ export default function SellPricing() {
           <li><b>ช่วงเปิดตัว</b>: ลด {settings.launchDiscountPct}% จากราคาแนะนำ แต่ไม่ต่ำกว่าราคาต่ำสุด</li>
         </ul>
       </section>
+
+      <AiCopywriter
+        name={name}
+        category={category}
+        grams={Number(grams) || 0}
+        price={result.channels.find(r => r.recommended)?.recommended ?? null}
+        channels={settings.channels.map(ch => ch.name)}
+      />
 
       {/* ── Settings ── */}
       <details className="bg-foreground/[0.025] border border-foreground/8 rounded-3xl p-5 group" data-testid="sp-settings">

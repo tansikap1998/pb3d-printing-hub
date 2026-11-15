@@ -400,3 +400,47 @@ test("selling-price calculator fits a phone screen (cards instead of a table)", 
   await expect(page.getByTestId("sp-channels")).toBeHidden()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360)
 })
+
+test.describe("AI product copy", () => {
+  const LOG = require("path").join(process.cwd(), "test-results", "anthropic-requests.json")
+  const fs = require("fs")
+  test.beforeEach(() => { fs.rmSync(LOG, { force: true }) })
+
+  test("API is admin only", async ({ request }) => {
+    expect((await request.post("/api/admin/ai-copy", { data: { name: "x" } })).status()).toBe(401)
+  })
+
+  test("writes titles + description from the calculator's product", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: /คำนวณราคาขาย/ }).click()
+    const ai = page.getByTestId("ai-copy")
+    await expect(ai.getByTestId("ai-generate")).toBeDisabled()
+    await page.getByTestId("sp-name").fill("ขาตั้งมือถือรุ่นแมว")
+    await ai.getByTestId("ai-features").fill("ปรับองศาได้ 3 ระดับ")
+    await ai.getByTestId("ai-generate").click()
+
+    const result = ai.getByTestId("ai-result")
+    await expect(result).toBeVisible()
+    await expect(result.getByTestId("ai-title")).toHaveCount(2) // duplicate dropped
+    await expect(result.getByTestId("ai-description")).toContainText("• ปรับองศาได้ 3 ระดับ")
+    await expect(result.getByTestId("ai-description")).toContainText("#3DPrinting")
+
+    const [call] = JSON.parse(fs.readFileSync(LOG, "utf8"))
+    expect(call.headers["x-api-key"] ?? call.headers.authorization).toMatch(/test-anthropic-key/)
+    expect(call.body.model).toBe("claude-opus-5-5")
+    expect(call.body.output_config.format.type).toBe("json_schema")
+    const prompt = call.body.messages[0].content
+    expect(prompt).toContain("ขาตั้งมือถือรุ่นแมว")
+    expect(prompt).toContain("ปรับองศาได้ 3 ระดับ")
+    expect(prompt).toContain("- น้ำหนักชิ้นงาน (กรัม): 100")
+    expect(prompt).toMatch(/- ราคาขาย \(บาท\): \d+/)
+  })
+
+  test("shows a clear message when the AI declines", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: /คำนวณราคาขาย/ }).click()
+    await page.getByTestId("sp-name").fill("REFUSE-ME")
+    await page.getByTestId("ai-generate").click()
+    await expect(page.getByTestId("ai-error")).toContainText("AI ไม่สามารถเขียน")
+  })
+})
