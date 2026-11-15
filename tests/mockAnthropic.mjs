@@ -33,6 +33,12 @@ http.createServer((req, res) => {
       }))
       return
     }
+    if (prompt.includes("NO-CREDIT")) {
+      res.statusCode = 400
+      res.setHeader("content-type", "application/json")
+      res.end(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits." } }))
+      return
+    }
     const refuse = prompt.includes("REFUSE-ME")
     const copy = {
       titles: ["ขาตั้งมือถือรุ่นแมว พิมพ์ 3 มิติ ปรับองศาได้", "ขาตั้งโทรศัพท์ลายแมว ตั้งโต๊ะ", "  ขาตั้งมือถือรุ่นแมว พิมพ์ 3 มิติ ปรับองศาได้  "],

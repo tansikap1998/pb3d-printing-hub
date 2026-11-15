@@ -553,6 +553,12 @@ test.describe("AI product copy", () => {
     await expect(ai.getByTestId("ai-generate")).toBeDisabled()
     await page.getByTestId("sp-name").fill("ขาตั้งมือถือรุ่นแมว")
     await ai.getByTestId("ai-features").fill("ปรับองศาได้ 3 ระดับ")
+    // dropdowns: material follows the calculator, colour from the list or typed, size as 3 numbers
+    await expect(ai.getByTestId("ai-material")).toHaveValue("PLA")
+    await ai.getByTestId("ai-color").selectOption("ดำ")
+    await ai.getByTestId("ai-size-w").fill("8")
+    await ai.getByTestId("ai-size-l").fill("6")
+    await ai.getByTestId("ai-size-h").fill("10")
     await ai.getByTestId("ai-generate").click()
 
     const result = ai.getByTestId("ai-result")
@@ -569,6 +575,9 @@ test.describe("AI product copy", () => {
     expect(prompt).toContain("ขาตั้งมือถือรุ่นแมว")
     expect(prompt).toContain("ปรับองศาได้ 3 ระดับ")
     expect(prompt).toContain("- น้ำหนักชิ้นงาน (กรัม): 100")
+    expect(prompt).toContain("- สี: ดำ")
+    expect(prompt).toContain("- ขนาด: กว้าง 8 × ยาว 6 × สูง 10 cm")
+    expect(prompt).toContain("- วัสดุ: PLA")
     expect(prompt).toMatch(/- ราคาขาย \(บาท\): \d+/)
   })
 
@@ -628,6 +637,21 @@ test.describe("AI product copy", () => {
     await page.getByTestId("slicer-file").setInputFiles(png("NOT-SLICER"))
     await expect(page.getByTestId("slicer-error")).toContainText("ไม่พบน้ำหนักหรือเวลาพิมพ์")
     await expect(page.getByTestId("sp-grams")).toHaveValue("363.58") // unchanged
+  })
+
+  test("material and colour dropdowns accept a typed value; billing errors are explained", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+    await page.getByTestId("sp-material").selectOption({ label: "PETG — 1.2 ฿/g" })
+    await expect(page.getByTestId("ai-material")).toHaveValue("PETG")
+    await page.getByTestId("ai-color").selectOption({ label: "อื่น ๆ (พิมพ์เอง)" })
+    await page.getByTestId("ai-color-custom").fill("ขาวมุก")
+    await page.getByTestId("sp-name").fill("NO-CREDIT")
+    await page.getByTestId("ai-generate").click()
+    await expect(page.getByTestId("ai-error")).toContainText("เครดิตในบัญชี Anthropic ไม่พอ")
+    const [call] = JSON.parse(fs.readFileSync(LOG, "utf8"))
+    expect(call.body.messages[0].content).toContain("- สี: ขาวมุก")
+    expect(call.body.messages[0].content).toContain("- วัสดุ: PETG")
   })
 
   test("shows a clear message when the AI declines", async ({ page }) => {
