@@ -29,7 +29,7 @@ export interface ProductRow {
 }
 
 export const DEFAULT_WEBHOOK_URL =
-  "https://script.google.com/macros/s/AKfycbxDoYlmwXFYDcrA87CuQWk7nUbdB4ApSYNM51vfbiLsWcNci3yZYN4a39VP9YtQnx24/exec"
+  "https://script.google.com/macros/s/AKfycbylZJ_rWg74QRAE5dm1Ugyx_hsxZbOHv0QjV7zVaIewstdZmNmmPs5P--nQjMPBhvee/exec"
 
 const cfg = () => ({
   // The shop's deployed Apps Script web app. Not a secret (anyone can open it);
