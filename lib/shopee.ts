@@ -39,6 +39,15 @@ export function normalizeShopeeUrl(raw: string): string | null {
   return u.toString()
 }
 
+/** Seller Centre links (seller.shopee.co.th/portal/...) only open for the shop owner. */
+export function isSellerCentreUrl(raw: string): boolean {
+  const url = normalizeShopeeUrl(raw)
+  return !!url && /^seller\./i.test(new URL(url).hostname)
+}
+
+export const SELLER_CENTRE_ERROR =
+  "นี่คือลิงก์ Seller Centre ซึ่งลูกค้าเปิดไม่ได้ ให้ใช้ลิงก์หน้าสินค้าแบบลูกค้า: เปิดสินค้าใน Shopee → แชร์ → คัดลอกลิงก์"
+
 export function isShopeeUrl(raw: string): boolean {
   return normalizeShopeeUrl(raw) !== null
 }
@@ -61,10 +70,11 @@ export function parseShopeeIds(raw: string): { shopId: string; itemId: string } 
 export function guessNameFromUrl(raw: string): string {
   const url = normalizeShopeeUrl(raw)
   if (!url) return ""
-  const seg = decodeURIComponent(new URL(url).pathname.split("/").filter(Boolean)[0] || "")
+  let seg = new URL(url).pathname.split("/").filter(Boolean)[0] || ""
+  try { seg = decodeURIComponent(seg) } catch {}
   const m = seg.match(/^(.*)-i\.\d+\.\d+$/)
   if (!m) return ""
-  return m[1].replace(/-/g, " ").replace(/\s+/g, " ").trim()
+  return m[1].replace(/[-+_]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)
 }
 
 function cleanText(v: unknown, max: number): string | null {
@@ -92,6 +102,7 @@ export function validateProductInput(
   if (!partial || input.url !== undefined) {
     const url = normalizeShopeeUrl(String(input.url ?? ""))
     if (!url) return { ok: false, error: "ลิงก์ต้องเป็นลิงก์สินค้าจาก Shopee (เช่น https://shopee.co.th/...)" }
+    if (isSellerCentreUrl(url)) return { ok: false, error: SELLER_CENTRE_ERROR }
     value.url = url
   }
   if (!partial || input.name !== undefined) {

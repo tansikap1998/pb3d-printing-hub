@@ -15,6 +15,19 @@ test.describe("Admin auth", () => {
     await expect(page).toHaveURL(/\/admin\/login$/)
   })
 
+  test("signing in after being sent to the login page lands on the dashboard", async ({ page }) => {
+    await page.goto("/admin") // → redirected to /admin/login
+    await expect(page).toHaveURL(/\/admin\/login$/)
+    await page.getByPlaceholder("Admin Email").fill(ADMIN_EMAIL)
+    await page.getByPlaceholder("••••••••").fill("wrong")
+    await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click()
+    await expect(page.getByText("อีเมล์หรือรหัสผ่านไม่ถูกต้อง")).toBeVisible()
+    await page.getByPlaceholder("••••••••").fill("e2e-test-password")
+    await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click()
+    await expect(page).toHaveURL(/\/admin$/)
+    await expect(page.getByText("Order Dashboard")).toBeVisible()
+  })
+
   test("wrong password and non-admin email are rejected", async ({ page }) => {
     await page.goto("/admin/login")
     await page.getByPlaceholder("Admin Email").fill(ADMIN_EMAIL)
@@ -227,7 +240,14 @@ test.describe("Shopee product links", () => {
     await expect(form.getByText("ต้องเป็นลิงก์จาก shopee.co.th")).toBeVisible()
     await expect(submit).toBeDisabled()
 
-    // valid link → ids shown, name guessed from slug
+    // Seller Centre link → explained, can't be saved
+    await form.locator('input[name="url"]').fill("https://seller.shopee.co.th/portal/product/24267343976")
+    await expect(form.getByTestId("seller-link-warning")).toContainText("Seller Centre")
+    await expect(submit).toBeDisabled()
+
+    // valid link → ids shown, name guessed from slug (and re-guessed when the link changes)
+    await form.locator('input[name="url"]').fill("https://shopee.co.th/Old-Name-i.1.2")
+    await expect(form.locator('input[name="name"]')).toHaveValue("Old Name")
     await form.locator('input[name="url"]').fill("https://shopee.co.th/Phone-Stand-PLA-i.9883965.23456789012?sp_atk=abc")
     await expect(form.getByText("Shop ID 9883965 · Item ID 23456789012")).toBeVisible()
     await expect(form.locator('input[name="name"]')).toHaveValue("Phone Stand PLA")
@@ -434,6 +454,26 @@ test.describe("AI product copy", () => {
     expect(prompt).toContain("ปรับองศาได้ 3 ระดับ")
     expect(prompt).toContain("- น้ำหนักชิ้นงาน (กรัม): 100")
     expect(prompt).toMatch(/- ราคาขาย \(บาท\): \d+/)
+  })
+
+  test("sends a chosen title, price and pitch to the Shopee product form", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+    await page.getByTestId("sp-name").fill("ขาตั้งมือถือรุ่นแมว")
+    await page.getByTestId("ai-generate").click()
+    await page.getByTestId("ai-to-shopee").nth(1).click()
+
+    await expect(page.getByRole("tab", { name: "สินค้า Shopee" })).toHaveAttribute("aria-selected", "true")
+    const form = page.getByTestId("shopee-form")
+    await expect(form.getByText("เติมชื่อ ราคา และคำอธิบายจาก AI แล้ว")).toBeVisible()
+    await expect(form.locator('input[name="name"]')).toHaveValue("ขาตั้งโทรศัพท์ลายแมว ตั้งโต๊ะ")
+    await expect(form.locator('input[name="price"]')).toHaveValue("299") // Shopee recommended for 100 g / 2 h
+    await expect(form.locator('input[name="description"]')).toHaveValue("ขาตั้งมือถือน่ารักสำหรับโต๊ะทำงาน")
+    // pasting the link keeps the AI title
+    await form.locator('input[name="url"]').fill("https://shopee.co.th/Cat-Stand-i.9883965.111")
+    await expect(form.locator('input[name="name"]')).toHaveValue("ขาตั้งโทรศัพท์ลายแมว ตั้งโต๊ะ")
+    await form.getByRole("button", { name: "เพิ่มสินค้า" }).click()
+    await expect(page.getByTestId("shopee-admin-row")).toContainText("฿299")
   })
 
   test("shows a clear message when the AI declines", async ({ page }) => {

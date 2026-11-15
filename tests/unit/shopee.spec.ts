@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test"
-import { normalizeShopeeUrl, parseShopeeIds, guessNameFromUrl, validateProductInput } from "../../lib/shopee"
+import { normalizeShopeeUrl, parseShopeeIds, guessNameFromUrl, validateProductInput, isSellerCentreUrl } from "../../lib/shopee"
 
 test("accepts Shopee product, shop and short links", () => {
   expect(normalizeShopeeUrl("https://shopee.co.th/Phone-Stand-i.9883965.23456789012"))
@@ -40,4 +40,19 @@ test("validates admin input", () => {
   // partial update only touches given fields
   expect(validateProductInput({ active: false }, { partial: true })).toEqual({ ok: true, value: { active: false } })
   expect(validateProductInput({ price: "" }, { partial: true })).toEqual({ ok: true, value: { price: null } })
+})
+
+test("Seller Centre links are recognised and refused with a helpful message", () => {
+  const seller = "https://seller.shopee.co.th/portal/product/24267343976"
+  expect(isSellerCentreUrl(seller)).toBe(true)
+  expect(isSellerCentreUrl("https://shopee.co.th/x-i.1.2")).toBe(false)
+  const r = validateProductInput({ url: seller, name: "x" })
+  expect(r.ok).toBe(false)
+  expect(!r.ok && r.error).toContain("Seller Centre")
+})
+
+test("name guess tolerates bad escapes and other separators", () => {
+  expect(guessNameFromUrl("https://shopee.co.th/Cat+Phone_Stand-i.1.2")).toBe("Cat Phone Stand")
+  expect(guessNameFromUrl("https://shopee.co.th/bad%E0-i.1.2")).toBe("bad%E0")
+  expect(guessNameFromUrl("https://s.shopee.co.th/AbCdEf")).toBe("")
 })
