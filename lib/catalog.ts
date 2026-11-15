@@ -28,7 +28,7 @@ export function catalogRecord(i: CatalogInput): Record<string, string | number |
   const title = copy ? copy.titles[i.ai!.pick] ?? copy.titles[0] ?? "" : ""
   return {
     id: i.id,
-    name: i.name || title,
+    name: i.name.trim() || title,
     category: i.category,
     material: i.materialName,
     material_rate: i.cost.materialRate,
@@ -54,4 +54,24 @@ export function catalogRecord(i: CatalogInput): Record<string, string | number |
     hashtags: copy?.hashtags.join(" ") ?? "",
     package_weight_kg: i.ai ? Number(packageWeight(i.grams, i.ai.packagingG).kg) : null,
   }
+}
+
+export type CatalogField = "name" | "category" | "material" | "grams" | "hours"
+
+/** Required fields before a product can be saved to the sheet (Thai messages per field). */
+export function validateCatalog(i: { name: string; category: string; material: string; grams: unknown; hours: unknown }) {
+  const errors: Partial<Record<CatalogField, string>> = {}
+  const num = (v: unknown) => (v === "" || v === null || v === undefined ? NaN : Number(v))
+  const name = String(i.name ?? "").trim()
+  if (!name) errors.name = "กรอกชื่อสินค้า"
+  else if (name.length < 3) errors.name = "ชื่อสินค้าสั้นเกินไป (อย่างน้อย 3 ตัวอักษร)"
+  else if (name.length > 200) errors.name = "ชื่อสินค้ายาวเกิน 200 ตัวอักษร"
+  if (!String(i.category ?? "").trim()) errors.category = "เลือกหมวดสินค้า"
+  if (!String(i.material ?? "").trim()) errors.material = "เลือกวัสดุ"
+  const g = num(i.grams), h = num(i.hours)
+  if (!(g > 0)) errors.grams = "น้ำหนักต้องมากกว่า 0 g"
+  else if (g > 100000) errors.grams = "น้ำหนักมากเกินไป"
+  if (!(h > 0)) errors.hours = "เวลาพิมพ์ต้องมากกว่า 0 ชม."
+  else if (h > 24 * 30) errors.hours = "เวลาพิมพ์มากเกินไป"
+  return errors
 }

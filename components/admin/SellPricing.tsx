@@ -6,7 +6,7 @@ import {
   type SellPricingSettings, type MarketPrice, type ChannelPrice,
 } from "@/lib/sellPricing"
 import AiCopywriter, { type AiResult } from "./AiCopywriter"
-import { catalogRecord } from "@/lib/catalog"
+import { catalogRecord, validateCatalog, type CatalogField } from "@/lib/catalog"
 import SlicerUpload from "./SlicerUpload"
 import type { ShopeeDraft } from "./ShopeeAdmin"
 
@@ -16,17 +16,25 @@ const baht = (x: number | null | undefined, digits = 0) =>
 const inputCls =
   "w-full bg-foreground/[0.04] border border-foreground/10 rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/30 outline-none focus:border-blue-400/50 transition-all"
 
-function Num({ label, value, onChange, suffix, step = "any", testId }: {
+const Req = () => <span className="text-red-400" aria-hidden> *</span>
+const FieldError = ({ msg, testId }: { msg?: string; testId?: string }) =>
+  msg ? <p className="text-xs text-red-400 mt-1" data-testid={testId}>{msg}</p> : null
+const errCls = (bad?: string) => (bad ? " border-red-400/60" : "")
+
+function Num({ label, value, onChange, suffix, step = "any", testId, required, error }: {
   label: string; value: number | string; onChange: (v: string) => void; suffix?: string; step?: string; testId?: string
+  required?: boolean; error?: string
 }) {
   return (
     <label className="block">
-      <span className="text-xs text-foreground/50 mb-1.5 block">{label}</span>
+      <span className="text-xs text-foreground/50 mb-1.5 block">{label}{required && <Req />}</span>
       <div className="relative">
         <input type="number" inputMode="decimal" step={step} min={0} value={value} data-testid={testId}
-          onChange={e => onChange(e.target.value)} className={`${inputCls} ${suffix ? "pr-12" : ""}`} />
+          aria-invalid={!!error} required={required}
+          onChange={e => onChange(e.target.value)} className={`${inputCls} ${suffix ? "pr-12" : ""}${errCls(error)}`} />
         {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-foreground/40">{suffix}</span>}
       </div>
+      <FieldError msg={error} testId={testId ? `${testId}-error` : undefined} />
     </label>
   )
 }
@@ -55,6 +63,9 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
   const [rowId, setRowId] = useState<string | null>(null) // set after the first save → later saves update that row
   const [rowSaving, setRowSaving] = useState(false)
   const [rowMsg, setRowMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<CatalogField, string>>>({})
+  // re-check live once the admin has tried to save
+  const [triedSave, setTriedSave] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -96,12 +107,24 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
     setSaving(false)
   }
 
+  const materialName = materialId === TIER_TABLE_ID ? "ตามตารางขั้นบันได" : settings.materials.find(m => m.id === materialId)?.name ?? ""
+  const check = () => validateCatalog({ name, category, material: materialName, grams, hours })
+  useEffect(() => { if (triedSave) setFieldErrors(check()) }, [triedSave, name, category, materialName, grams, hours]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const saveRow = async () => {
+    setTriedSave(true)
+    const errors = check()
+    setFieldErrors(errors)
+    if (Object.keys(errors).length) {
+      setRowMsg({ ok: false, text: "กรอกช่องที่มีเครื่องหมาย * ให้ครบก่อนบันทึก" })
+      document.querySelector<HTMLElement>(`[data-testid="sp-${Object.keys(errors)[0]}"]`)?.focus()
+      return
+    }
     setRowSaving(true); setRowMsg(null)
     const id = rowId ?? (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `p-${Date.now().toString(36)}`)
     const product = catalogRecord({
       id, name, category,
-      materialName: settings.materials.find(m => m.id === materialId)?.name ?? "ตามตารางขั้นบันได",
+      materialName,
       grams: Number(grams) || 0, hours: Number(hours) || 0,
       cost: result.cost, channels: result.channels, settings, market: marketRow, ai,
     })
@@ -129,7 +152,7 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
       <div>
         <h2 className="font-semibold tracking-tight text-2xl flex items-center gap-2"><Calculator size={20} />คำนวณราคาขายสินค้า</h2>
         <p className="text-foreground/50 text-sm mt-1">
-          กรอกน้ำหนักและเวลาพิมพ์ → คิดต้นทุนแบบขั้นบันได + ค่าดำเนินการ + ค่าคอมแต่ละช่องทาง → ราคาที่ควรขาย
+          กรอกน้ำหนักและเวลาพิมพ์ (หรือแนบรูปจาก slicer) → ต้นทุนตามเรทวัสดุ + ค่าดำเนินการที่ติ๊ก + ค่าคอมแต่ละช่องทาง → ราคาที่ควรขาย
         </p>
         {notes.map(n => (
           <p key={n} className="text-xs text-amber-400 mt-2 flex items-start gap-1.5"><AlertCircle size={13} className="shrink-0 mt-0.5" />{n}</p>
@@ -141,30 +164,34 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
         <section className="bg-foreground/[0.025] border border-foreground/8 rounded-3xl p-5 space-y-4">
           <p className="text-xs font-medium text-foreground/50">สินค้า</p>
           <label className="block">
-            <span className="text-xs text-foreground/50 mb-1.5 block">ชื่อสินค้า (ไม่บังคับ)</span>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="เช่น ขาตั้งมือถือรุ่นแมว" className={inputCls} data-testid="sp-name" />
+            <span className="text-xs text-foreground/50 mb-1.5 block">ชื่อสินค้า<Req /></span>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="เช่น ขาตั้งมือถือรุ่นแมว" maxLength={200}
+              className={inputCls + errCls(fieldErrors.name)} data-testid="sp-name" aria-invalid={!!fieldErrors.name} />
+            <FieldError msg={fieldErrors.name} testId="sp-name-error" />
           </label>
           <label className="block">
-            <span className="text-xs text-foreground/50 mb-1.5 block">หมวดสินค้า (ใช้เทียบราคาตลาด)</span>
-            <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls} data-testid="sp-category">
+            <span className="text-xs text-foreground/50 mb-1.5 block">หมวดสินค้า (ใช้เทียบราคาตลาด)<Req /></span>
+            <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls + errCls(fieldErrors.category)} data-testid="sp-category" aria-invalid={!!fieldErrors.category}>
               {market.map(m => <option key={m.category} value={m.category}>{m.category}</option>)}
-              <option value="">— ไม่เทียบราคาตลาด —</option>
+              <option value="อื่น ๆ">อื่น ๆ (ไม่เทียบราคาตลาด)</option>
             </select>
+            <FieldError msg={fieldErrors.category} testId="sp-category-error" />
           </label>
           <label className="block">
-            <span className="text-xs text-foreground/50 mb-1.5 block">วัสดุ / เรทต้นทุน</span>
-            <select value={materialId} onChange={e => setMaterialId(e.target.value)} className={inputCls} data-testid="sp-material">
+            <span className="text-xs text-foreground/50 mb-1.5 block">วัสดุ / เรทต้นทุน<Req /></span>
+            <select value={materialId} onChange={e => setMaterialId(e.target.value)} className={inputCls + errCls(fieldErrors.material)} data-testid="sp-material">
               {settings.materials.map(m => <option key={m.id} value={m.id}>{m.name} — {m.perG} ฿/g</option>)}
               <option value={TIER_TABLE_ID}>ตามตารางขั้นบันได (ในตั้งค่า)</option>
             </select>
+            <FieldError msg={fieldErrors.material} testId="sp-material-error" />
           </label>
           <SlicerUpload onRead={v => {
             if (v.grams !== null) setGrams(String(v.grams))
             if (v.hours !== null) setHours(String(v.hours))
           }} />
           <div className="grid grid-cols-2 gap-3">
-            <Num label="น้ำหนักชิ้นงาน" suffix="g" value={grams} onChange={setGrams} testId="sp-grams" />
-            <Num label="เวลาพิมพ์" suffix="ชม." value={hours} onChange={setHours} testId="sp-hours" />
+            <Num label="น้ำหนักชิ้นงาน" suffix="g" value={grams} onChange={setGrams} testId="sp-grams" required error={fieldErrors.grams} />
+            <Num label="เวลาพิมพ์" suffix="ชม." value={hours} onChange={setHours} testId="sp-hours" required error={fieldErrors.hours} />
           </div>
 
           <p className="text-xs text-foreground/40 -mb-2">ติ๊กเลือกต้นทุนที่ต้องการบวกเพิ่มจากค่าวัสดุ</p>
@@ -335,7 +362,7 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" disabled={rowSaving || !(Number(grams) > 0)} onClick={saveRow} data-testid="sp-catalog-save"
+          <button type="button" disabled={rowSaving} onClick={saveRow} data-testid="sp-catalog-save"
             className="inline-flex items-center gap-2 bg-foreground text-background text-sm font-medium rounded-xl px-4 py-2.5 disabled:opacity-40">
             {rowSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {rowId ? "อัปเดตแถวเดิม" : "บันทึกลงชีต"}

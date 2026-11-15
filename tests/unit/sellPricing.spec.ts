@@ -106,3 +106,12 @@ test("cost items: only ticked operating costs are added", () => {
   expect(costBreakdown({ grams: 100, printHours: 2 }, materialOnly).total).toBe(100)
   expect(sanitizeSettings({ costItems: { electricity: "no" } }).costItems).toEqual(D.costItems)
 })
+
+test("catalog validation lists each missing field", async () => {
+  const { validateCatalog } = await import("../../lib/catalog")
+  expect(validateCatalog({ name: " ", category: "", material: "", grams: "", hours: 0 })).toEqual({
+    name: "กรอกชื่อสินค้า", category: "เลือกหมวดสินค้า", material: "เลือกวัสดุ",
+    grams: "น้ำหนักต้องมากกว่า 0 g", hours: "เวลาพิมพ์ต้องมากกว่า 0 ชม.",
+  })
+  expect(validateCatalog({ name: "ขาตั้งมือถือ", category: "อื่น ๆ", material: "PLA", grams: "100", hours: 2 })).toEqual({})
+})

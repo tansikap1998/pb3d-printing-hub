@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { isAdminRequest } from "@/lib/adminSession"
 import { db, backendErrorResponse, nowBangkok } from "@/lib/sheetsDb"
+import { validateCatalog } from "@/lib/catalog"
 
 export const dynamic = "force-dynamic"
 
@@ -25,6 +26,13 @@ export async function POST(req: NextRequest) {
     else if (typeof v === "string") clean[k] = v.slice(0, TEXT_MAX)
     else if (v === null) clean[k] = null
   }
+  const errors = validateCatalog({
+    name: String(clean.name ?? ""), category: String(clean.category ?? ""), material: String(clean.material ?? ""),
+    grams: clean.grams, hours: clean.print_hours,
+  })
+  if (Object.keys(errors).length)
+    return NextResponse.json({ error: Object.values(errors).join(" · "), errors }, { status: 400 })
+
   const session = await getServerSession(authOptions)
   clean.saved_at = nowBangkok()
   clean.saved_by = session?.user?.email ?? ""
