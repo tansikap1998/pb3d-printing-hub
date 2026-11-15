@@ -6,6 +6,7 @@ import {
   type SellPricingSettings, type MarketPrice, type ChannelPrice,
 } from "@/lib/sellPricing"
 import AiCopywriter from "./AiCopywriter"
+import type { ShopeeDraft } from "./ShopeeAdmin"
 
 const baht = (x: number | null | undefined, digits = 0) =>
   x === null || x === undefined || !Number.isFinite(x) ? "—" : `฿${x.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
@@ -34,7 +35,7 @@ const POSITION: Record<string, { label: string; cls: string }> = {
   above:  { label: "แพงกว่าตลาด", cls: "text-amber-400 bg-amber-400/10 border-amber-400/25" },
 }
 
-export default function SellPricing() {
+export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: ShopeeDraft) => void } = {}) {
   const [settings, setSettings] = useState<SellPricingSettings>(DEFAULT_SELL_PRICING)
   const [market, setMarket] = useState<MarketPrice[]>([])
   const [notes, setNotes] = useState<string[]>([])
@@ -267,8 +268,8 @@ export default function SellPricing() {
         name={name}
         category={category}
         grams={Number(grams) || 0}
-        price={result.channels.find(r => r.recommended)?.recommended ?? null}
-        channels={settings.channels.map(ch => ch.name)}
+        prices={Object.fromEntries(result.channels.map(r => [r.channel.name, r.recommended]))}
+        onSendToShopee={onSendToShopee}
       />
 
       {/* ── Settings ── */}

@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
-import { Sparkles, Loader2, Copy, Check, AlertCircle } from "lucide-react"
+import { Sparkles, Loader2, Copy, Check, AlertCircle, ShoppingBag } from "lucide-react"
+import type { ShopeeDraft } from "./ShopeeAdmin"
 import { listingText, type CopyOutput } from "@/lib/aiCopy"
 
 const inputCls =
@@ -30,9 +31,13 @@ function CopyBtn({ text, testId, label = "คัดลอก" }: { text: string;
 }
 
 /** "AI เขียนชื่อและรายละเอียดสินค้า" — uses the product facts from the calculator above. */
-export default function AiCopywriter({ name, category, grams, price, channels }: {
-  name: string; category: string; grams: number; price: number | null; channels: string[]
+export default function AiCopywriter({ name, category, grams, prices, onSendToShopee }: {
+  name: string; category: string; grams: number
+  /** recommended price per sales channel name, from the calculator */
+  prices: Record<string, number | null>
+  onSendToShopee?: (d: ShopeeDraft) => void
 }) {
+  const channels = Object.keys(prices)
   const [material, setMaterial] = useState("PLA")
   const [color, setColor] = useState("")
   const [size, setSize] = useState("")
@@ -49,7 +54,7 @@ export default function AiCopywriter({ name, category, grams, price, channels }:
       const r = await fetch("/api/admin/ai-copy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, category, grams: grams || null, price, material, color, size, features, channel, tone }),
+        body: JSON.stringify({ name, category, grams: grams || null, price: prices[channel] ?? null, material, color, size, features, channel, tone }),
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
@@ -59,6 +64,10 @@ export default function AiCopywriter({ name, category, grams, price, channels }:
     }
     setBusy(false)
   }
+
+  // price shown on the home-page card: the Shopee channel's recommended price
+  const shopeeKey = channels.find(c => /shopee/i.test(c))
+  const shopeePrice = (shopeeKey ? prices[shopeeKey] : prices[channel]) ?? null
 
   return (
     <section className="bg-foreground/[0.025] border border-foreground/8 rounded-3xl p-5 space-y-4" data-testid="ai-copy">
@@ -111,10 +120,17 @@ export default function AiCopywriter({ name, category, grams, price, channels }:
             <p className="text-xs font-medium text-foreground/50 mb-2">ชื่อสินค้า (เลือกหนึ่ง)</p>
             <ul className="space-y-2">
               {copy.titles.map((t, i) => (
-                <li key={i} className="flex items-start gap-2 rounded-xl border border-foreground/8 px-3 py-2 text-sm" data-testid="ai-title">
-                  <span className="flex-1 min-w-0 break-words">{t}</span>
+                <li key={i} className="flex flex-wrap items-start gap-2 rounded-xl border border-foreground/8 px-3 py-2 text-sm" data-testid="ai-title">
+                  <span className="flex-1 min-w-[12rem] break-words">{t}</span>
                   <span className="text-[11px] text-foreground/30 shrink-0 mt-0.5">{Array.from(t).length}</span>
                   <CopyBtn text={t} />
+                  {onSendToShopee && (
+                    <button type="button" data-testid="ai-to-shopee" title="ใช้ชื่อนี้เพิ่มเป็นสินค้า Shopee บนหน้าแรก"
+                      onClick={() => onSendToShopee({ name: t, price: shopeePrice, description: copy.short_description })}
+                      className="shrink-0 inline-flex items-center gap-1 text-xs text-foreground/50 hover:text-foreground border border-foreground/10 rounded-lg px-2 py-1 transition-colors">
+                      <ShoppingBag size={12} />ส่งไปหน้าสินค้า Shopee
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

@@ -3,7 +3,12 @@ import { useCallback, useEffect, useState } from "react"
 import {
   Plus, Trash2, Pencil, ExternalLink, Eye, EyeOff, Loader2, AlertCircle, Link2, X, Save, Package,
 } from "lucide-react"
-import { guessNameFromUrl, normalizeShopeeUrl, parseShopeeIds, type ShopeeProduct } from "@/lib/shopee"
+import {
+  guessNameFromUrl, normalizeShopeeUrl, parseShopeeIds, isSellerCentreUrl, SELLER_CENTRE_ERROR, type ShopeeProduct,
+} from "@/lib/shopee"
+
+/** Product details handed over from the AI copywriter (คำนวณราคาขาย tab). */
+export type ShopeeDraft = { name: string; price: number | null; description: string }
 
 type Form = { url: string; name: string; price: string; imageUrl: string; description: string; sortOrder: string }
 const EMPTY: Form = { url: "", name: "", price: "", imageUrl: "", description: "", sortOrder: "0" }
@@ -11,7 +16,7 @@ const EMPTY: Form = { url: "", name: "", price: "", imageUrl: "", description: "
 const inputCls =
   "w-full bg-foreground/[0.04] border border-foreground/10 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-foreground/20 outline-none focus:border-blue-400/40 transition-all"
 
-export default function ShopeeAdmin() {
+export default function ShopeeAdmin({ draft, onDraftUsed }: { draft?: ShopeeDraft | null; onDraftUsed?: () => void } = {}) {
   const [products, setProducts] = useState<ShopeeProduct[]>([])
   const [storage, setStorage] = useState<string>("")
   const [loading, setLoading] = useState(true)
@@ -34,11 +39,30 @@ export default function ShopeeAdmin() {
   }, [])
   useEffect(() => { load() }, [load])
 
-  const urlValid = !form.url || normalizeShopeeUrl(form.url) !== null
+  // Prefill from the AI copywriter; keep whatever link was already typed
+  useEffect(() => {
+    if (!draft) return
+    setEditingId(null); setError("")
+    setForm(f => ({
+      ...EMPTY, url: f.url,
+      name: draft.name.slice(0, 200),
+      price: draft.price === null ? "" : String(draft.price),
+      description: draft.description.slice(0, 500),
+    }))
+    setNotice("เติมชื่อ ราคา และคำอธิบายจาก AI แล้ว: วางลิงก์สินค้า Shopee และลิงก์รูป แล้วกดเพิ่มสินค้า")
+    onDraftUsed?.()
+  }, [draft, onDraftUsed])
+
+  const sellerLink = !!form.url && isSellerCentreUrl(form.url)
+  const urlValid = !form.url || (normalizeShopeeUrl(form.url) !== null && !sellerLink)
   const ids = form.url ? parseShopeeIds(form.url) : null
 
   const onUrlChange = (url: string) => {
-    setForm(f => ({ ...f, url, name: f.name || guessNameFromUrl(url) }))
+    setForm(f => {
+      // replace the name only while it is still the one guessed from the previous link
+      const autoName = !f.name || f.name === guessNameFromUrl(f.url)
+      return { ...f, url, name: autoName ? guessNameFromUrl(url) : f.name }
+    })
     setError("")
   }
 
@@ -122,7 +146,9 @@ export default function ShopeeAdmin() {
               placeholder="https://shopee.co.th/ชื่อสินค้า-i.9883965.123456789"
               className={`${inputCls} pl-10 ${!urlValid ? "border-red-400/50" : ""}`} />
           </div>
-          {!urlValid && <p className="text-xs text-red-400 mt-1.5">ต้องเป็นลิงก์จาก shopee.co.th หรือ shp.ee</p>}
+          {sellerLink
+            ? <p className="text-xs text-red-400 mt-1.5" data-testid="seller-link-warning">{SELLER_CENTRE_ERROR}</p>
+            : !urlValid && <p className="text-xs text-red-400 mt-1.5">ต้องเป็นลิงก์จาก shopee.co.th หรือ shp.ee</p>}
           {urlValid && ids && <p className="text-xs text-foreground/30 mt-1.5">Shop ID {ids.shopId} · Item ID {ids.itemId}</p>}
         </div>
         <div className="grid md:grid-cols-3 gap-4">

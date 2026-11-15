@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
-import ShopeeAdmin from "@/components/admin/ShopeeAdmin"
+import ShopeeAdmin, { type ShopeeDraft } from "@/components/admin/ShopeeAdmin"
 import SellPricing from "@/components/admin/SellPricing"
 import {
   RefreshCw, LogOut, Package, Clock, Printer, Truck,
@@ -90,6 +90,8 @@ export default function AdminPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [tab, setTab] = useState<"orders" | "shopee" | "pricing">("orders")
+  const [shopeeDraft, setShopeeDraft] = useState<ShopeeDraft | null>(null)
+  const clearShopeeDraft = useCallback(() => setShopeeDraft(null), [])
   const [savedTrackingId, setSavedTrackingId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState("")
 
@@ -221,8 +223,8 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {tab === "pricing" ? <div className="pt-8"><SellPricing /></div>
-        : tab === "shopee" ? <div className="pt-8"><ShopeeAdmin /></div> : <>
+        {tab === "pricing" ? <div className="pt-8"><SellPricing onSendToShopee={d => { setShopeeDraft(d); setTab("shopee"); window.scrollTo({ top: 0 }) }} /></div>
+        : tab === "shopee" ? <div className="pt-8"><ShopeeAdmin draft={shopeeDraft} onDraftUsed={clearShopeeDraft} /></div> : <>
         {/* Header */}
         <div className="py-8 flex items-end justify-between gap-4 flex-wrap">
           <div>
