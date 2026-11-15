@@ -88,6 +88,14 @@ export const DEFAULT_MARKET_PRICES: MarketPrice[] = [
   { category: "อะไหล่ / อุปกรณ์เสริม", example: "ตัวยึด, ฝาครอบ, คลิป", typicalWeightG: 40, low: 59, typical: 150, high: 400, source: "ค่าประมาณเริ่มต้น", updated: "" },
   { category: "ฟิกเกอร์ / โมเดลตั้งโชว์ (ไม่ทำสี)", example: "ฟิกเกอร์, รูปปั้นเล็ก", typicalWeightG: 150, low: 199, typical: 450, high: 1500, source: "ค่าประมาณเริ่มต้น", updated: "" },
   { category: "พร็อพคอสเพลย์ / ชิ้นใหญ่", example: "หน้ากาก, อาวุธพร็อพ", typicalWeightG: 600, low: 590, typical: 1500, high: 4000, source: "ค่าประมาณเริ่มต้น", updated: "" },
+  { category: "โมเดล / ของสะสม", example: "โมเดลรถ, ไดโอรามา, ฐานโมเดล", typicalWeightG: 200, low: 250, typical: 590, high: 1900, source: "ค่าประมาณเริ่มต้น", updated: "" },
+  { category: "โคมไฟ / ของแต่งบ้าน", example: "โคมไฟลิโทเฟน, แจกัน, ของตกแต่งผนัง", typicalWeightG: 250, low: 290, typical: 590, high: 1500, source: "ค่าประมาณเริ่มต้น", updated: "" },
+  { category: "ของใช้บนโต๊ะทำงาน", example: "ที่วางหูฟัง, แท่นวางคีย์บอร์ด, ที่เก็บสาย", typicalWeightG: 80, low: 89, typical: 199, high: 450, source: "ค่าประมาณเริ่มต้น", updated: "" },
+  { category: "อุปกรณ์รถยนต์ / มอเตอร์ไซค์", example: "ที่ยึดมือถือ, คลิปช่องแอร์, ฝาครอบ", typicalWeightG: 50, low: 79, typical: 190, high: 490, source: "ค่าประมาณเริ่มต้น", updated: "" },
+  { category: "ของเล่น / ฟิดเจ็ต", example: "ฟิดเจ็ต, ของเล่นข้อต่อขยับได้, ปริศนา", typicalWeightG: 40, low: 39, typical: 99, high: 290, source: "ค่าประมาณเริ่มต้น", updated: "" },
+  { category: "อุปกรณ์สัตว์เลี้ยง", example: "ชามอาหาร, ป้ายชื่อ, ของเล่นแมว", typicalWeightG: 80, low: 79, typical: 190, high: 450, source: "ค่าประมาณเริ่มต้น", updated: "" },
+  { category: "ชิ้นงานต้นแบบ (prototype)", example: "เคสอุปกรณ์, ชิ้นส่วนทดลองประกอบ", typicalWeightG: 150, low: 300, typical: 800, high: 3000, source: "ค่าประมาณเริ่มต้น", updated: "" },
+  { category: "ป้ายชื่อ / โลโก้สั่งทำ", example: "ป้ายร้าน, โลโก้ 3 มิติ, ป้ายห้อง", typicalWeightG: 120, low: 150, typical: 390, high: 1200, source: "ค่าประมาณเริ่มต้น", updated: "" },
 ]
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

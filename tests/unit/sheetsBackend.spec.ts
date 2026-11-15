@@ -256,3 +256,14 @@ test("market prices: seed once, list rows with numbers", () => {
   expect(s.call("market.seed", { rows }).seeded).toBe(0) // already has rows
   expect(s.call("market.list").rows).toEqual([{ ...rows[0], updated: "" }])
 })
+
+test("market prices: append only adds categories the tab doesn't have", () => {
+  const s = sheet()
+  const row = (category: string, typical = 100) =>
+    ({ category, example: "", typicalWeightG: 50, low: 50, typical, high: 200, source: "test", updated: "" })
+  s.call("market.seed", { rows: [row("ขาตั้ง", 555)] })
+  expect(s.call("market.append", { rows: [row("ขาตั้ง"), row("โคมไฟ"), row("โคมไฟ")] }).added).toBe(1)
+  const list = s.call("market.list").rows
+  expect(list.map((r: any) => r.category)).toEqual(["ขาตั้ง", "โคมไฟ"])
+  expect(list[0].typical).toBe(555) // existing row untouched
+})

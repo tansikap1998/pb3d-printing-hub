@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test"
+import { cleanSlicerRead } from "../../lib/slicerRead"
 import { CopyInputSchema, buildUserPrompt, cleanOutput, listingText, hasEnoughInput, packageWeight, TITLE_MAX } from "../../lib/aiCopy"
 
 test("input schema fills defaults and rejects bad tone", () => {
@@ -43,4 +44,11 @@ test("package weight = piece + packaging, rounded up to 10 g", () => {
   expect(packageWeight(83, 50)).toEqual({ g: 140, kg: "0.14" })
   expect(packageWeight(0, 0)).toEqual({ g: 0, kg: "0.00" })
   expect(packageWeight(-5, NaN)).toEqual({ g: 0, kg: "0.00" })
+})
+
+test("slicer reading is sanity-checked and converted to hours", () => {
+  expect(cleanSlicerRead({ found: true, total_grams: 363.584, total_minutes: 668, plates: 7, note: " Total " }))
+    .toEqual({ grams: 363.58, hours: 11.13, plates: 7, note: "Total" })
+  expect(cleanSlicerRead({ found: true, total_grams: -1, total_minutes: 0, plates: null, note: "" }))
+    .toEqual({ grams: null, hours: null, plates: null, note: "" })
 })
