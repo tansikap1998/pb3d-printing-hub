@@ -26,21 +26,24 @@ test("shop-style rounding ends in 9", () => {
 })
 
 test("cost breakdown: material + electricity + depreciation + packaging", () => {
-  // 100 g, 2 h: 200 + 2h×0.15kW×5฿ + 2h×(25000/5000) + 15
+  // 100 g, 2 h: 100 g × 1 ฿ + 2h×0.15kW×5฿ + 2h×(25000/5000) + 15
   const c = costBreakdown({ grams: 100, printHours: 2 }, D)
-  expect(c).toMatchObject({ material: 200, electricity: 1.5, depreciation: 10, packaging: 15, total: 226.5, perGram: 2.27 })
+  expect(c).toMatchObject({ material: 100, materialRate: 1, electricity: 1.5, depreciation: 10, packaging: 15, total: 126.5, perGram: 1.27 })
+  // flat rate: same 1 ฿/g at any weight
+  expect(costBreakdown({ grams: 401, printHours: 0 }, D).material).toBe(401)
+  expect(costBreakdown({ grams: 1000, printHours: 0 }, D).material).toBe(1000)
 })
 
 test("Shopee 30% + marketing 5%, minimum profit 50% of cost", () => {
   const shopee = D.channels[0]
-  const p = priceForChannel(226.5, shopee, D)
+  const p = priceForChannel(126.5, shopee, D)
   expect(p.pctCosts).toBe(35)
-  expect(p.breakEven).toBeCloseTo(348.46, 2)            // 226.5 / 0.65
-  expect(p.minPrice).toBeCloseTo(522.69, 2)             // 226.5 × 1.5 / 0.65
-  expect(p.recommended).toBe(529)
-  expect(p.launch).toBe(529)                            // can't discount below the minimum price
+  expect(p.breakEven).toBeCloseTo(194.62, 2)            // 126.5 / 0.65
+  expect(p.minPrice).toBeCloseTo(291.92, 2)             // 126.5 × 1.5 / 0.65 (cost 100 → profit 50)
+  expect(p.recommended).toBe(299)
+  expect(p.launch).toBe(299)                            // can't discount below the minimum price
   // at the recommended price the profit is at least 50% of cost
-  expect(p.profitAtRecommended!).toBeGreaterThanOrEqual(226.5 * 0.5)
+  expect(p.profitAtRecommended!).toBeGreaterThanOrEqual(126.5 * 0.5)
   expect(p.markupAtRecommended!).toBeGreaterThanOrEqual(50)
 })
 

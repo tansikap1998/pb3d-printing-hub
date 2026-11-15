@@ -362,16 +362,17 @@ test.describe("Selling-price calculator", () => {
     await expect(root).toBeVisible()
     await expect(root.getByText(/สร้างแท็บ MarketPrices/)).toBeVisible()
 
-    // 100 g, 2 h with default settings → total cost ฿226.50; Shopee recommended ฿529
+    // 100 g, 2 h with default settings → total cost ฿126.50; Shopee recommended ฿299
     await page.getByTestId("sp-grams").fill("100")
     await page.getByTestId("sp-hours").fill("2")
     await page.getByTestId("sp-category").selectOption({ label: "— ไม่เทียบราคาตลาด —" })
-    await expect(page.getByTestId("sp-total-cost")).toHaveText("฿226.50")
-    await expect(page.getByTestId("sp-row-shopee").getByTestId("sp-recommended")).toHaveText("฿529")
+    await expect(page.getByTestId("sp-total-cost")).toHaveText("฿126.50")
+    await expect(page.getByTestId("sp-row-shopee").getByTestId("sp-recommended")).toHaveText("฿299")
 
-    // 401 g switches to the 1 ฿/g tier (bracket mode)
+    // flat 1 ฿/g at any weight
     await page.getByTestId("sp-grams").fill("401")
     await expect(page.getByTestId("sp-cost")).toContainText("ค่าวัสดุ (1 ฿/g)")
+    await expect(page.getByTestId("sp-cost")).toContainText("฿401.00")
 
     // change the minimum profit and save → stored in the Settings tab
     await page.getByTestId("sp-settings").locator("summary").click()

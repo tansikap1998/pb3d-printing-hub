@@ -40,8 +40,8 @@ export interface SellPricingSettings {
 }
 
 export const DEFAULT_SELL_PRICING: SellPricingSettings = {
+  // flat rate: 1 ฿ per gram at any weight (add tiers in the settings if needed)
   materialTiers: [
-    { upToG: 400, perG: 2 },
     { upToG: null, perG: 1 },
   ],
   tierMode: "bracket",
@@ -97,7 +97,8 @@ const n = (v: unknown, fallback = 0) => {
   return Number.isFinite(x) ? x : fallback
 }
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x))
-const round2 = (x: number) => Math.round(x * 100) / 100
+// half-up to 2 decimals (EPSILON avoids 1.265 → 1.26 from binary floating point)
+const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100
 
 /** Round a price up to a "shop" price ending in 9: 143 → 149, 98 → 99, 1203 → 1249. */
 export function roundUpNice(x: number): number {
