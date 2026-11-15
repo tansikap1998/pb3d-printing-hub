@@ -8,6 +8,16 @@ export interface MaterialTier {
   perG: number
 }
 
+/** A filament with its own flat cost rate (฿/g), picked per product. */
+export interface MaterialRate {
+  id: string
+  name: string
+  perG: number
+}
+
+/** materialId value meaning "use the tier table" instead of a material rate */
+export const TIER_TABLE_ID = "tiers"
+
 export interface SalesChannel {
   id: string
   name: string
@@ -15,7 +25,19 @@ export interface SalesChannel {
   commissionPct: number
 }
 
+/** Which operating costs are added on top of the material cost (ticked = included). */
+export interface CostItems {
+  electricity: boolean
+  depreciation: boolean
+  packaging: boolean
+  other: boolean
+}
+export const COST_ITEM_KEYS = ["electricity", "depreciation", "packaging", "other"] as const
+
 export interface SellPricingSettings {
+  costItems: CostItems
+  /** cost rates to choose from per product (ต้นทุนวัสดุ) */
+  materials: MaterialRate[]
   materialTiers: MaterialTier[]
   /**
    * bracket:     the whole weight uses the rate of the tier it falls in
@@ -40,6 +62,16 @@ export interface SellPricingSettings {
 }
 
 export const DEFAULT_SELL_PRICING: SellPricingSettings = {
+  costItems: { electricity: true, depreciation: true, packaging: true, other: true },
+  // rate per gram includes filament, failed prints and waste; edit in the settings
+  materials: [
+    { id: "pla", name: "PLA", perG: 1 },
+    { id: "pla-special", name: "PLA Matte / Silk / PLA+", perG: 1.2 },
+    { id: "petg", name: "PETG", perG: 1.2 },
+    { id: "abs", name: "ABS / ASA", perG: 1.5 },
+    { id: "tpu", name: "TPU (ยืดหยุ่น)", perG: 2 },
+    { id: "cf", name: "คาร์บอนไฟเบอร์ (PLA-CF / PETG-CF)", perG: 2.5 },
+  ],
   // flat rate: 1 ฿ per gram at any weight (add tiers in the settings if needed)
   materialTiers: [
     { upToG: null, perG: 1 },
@@ -145,6 +177,13 @@ export function sanitizeSettings(input: any): SellPricingSettings {
       }))
     : d.materialTiers
   if (!tiers.some(t => t.upToG === null)) tiers.push({ upToG: null, perG: tiers[tiers.length - 1].perG })
+  const materials: MaterialRate[] = Array.isArray(s.materials) && s.materials.length
+    ? s.materials.slice(0, 20).map((m: any, i: number) => ({
+        id: String(m?.id || `m${i}`).slice(0, 30),
+        name: String(m?.name || `วัสดุ ${i + 1}`).slice(0, 60),
+        perG: clamp(n(m?.perG), 0, 1000),
+      })).filter((m: MaterialRate) => m.id !== TIER_TABLE_ID)
+    : d.materials
   const channels: SalesChannel[] = Array.isArray(s.channels) && s.channels.length
     ? s.channels.slice(0, 12).map((c: any, i: number) => ({
         id: String(c?.id || `ch${i}`).slice(0, 30),
@@ -152,7 +191,13 @@ export function sanitizeSettings(input: any): SellPricingSettings {
         commissionPct: clamp(n(c?.commissionPct), 0, 95),
       }))
     : d.channels
+  const ci = s.costItems && typeof s.costItems === "object" ? s.costItems : {}
+  const costItems = Object.fromEntries(
+    COST_ITEM_KEYS.map(k => [k, typeof ci[k] === "boolean" ? ci[k] : d.costItems[k]])
+  ) as unknown as CostItems
   return {
+    costItems,
+    materials,
     materialTiers: tiers,
     tierMode: s.tierMode === "progressive" ? "progressive" : "bracket",
     printerWatts: clamp(n(s.printerWatts, d.printerWatts), 0, 5000),
@@ -185,6 +230,8 @@ export function sanitizeMarket(rows: any[]): MarketPrice[] {
 export interface ProductInput {
   grams: number
   printHours: number
+  /** a MaterialRate id, or TIER_TABLE_ID / undefined for the tier table */
+  materialId?: string
 }
 
 export interface CostBreakdown {
@@ -194,6 +241,8 @@ export interface CostBreakdown {
   depreciation: number
   packaging: number
   other: number
+  /** which of the operating costs above are counted in total */
+  included: CostItems
   total: number             // total cost per piece before % costs
   perGram: number           // total cost / grams
 }
@@ -215,13 +264,17 @@ export interface ChannelPrice {
 export function costBreakdown(p: ProductInput, s: SellPricingSettings): CostBreakdown {
   const grams = Math.max(0, n(p.grams))
   const hours = Math.max(0, n(p.printHours))
-  const material = materialCost(grams, s.materialTiers, s.tierMode)
+  const rate = p.materialId && p.materialId !== TIER_TABLE_ID ? s.materials.find(m => m.id === p.materialId) : undefined
+  const material = rate ? round2(grams * rate.perG) : materialCost(grams, s.materialTiers, s.tierMode)
   const electricity = round2(hours * (s.printerWatts / 1000) * s.electricityPerKwh)
   const depreciation = round2(hours * (s.printerPrice / s.printerLifetimeHours))
-  const total = round2(material + electricity + depreciation + s.packagingPerItem + s.otherPerItem)
+  const inc = s.costItems ?? DEFAULT_SELL_PRICING.costItems
+  const total = round2(material
+    + (inc.electricity ? electricity : 0) + (inc.depreciation ? depreciation : 0)
+    + (inc.packaging ? s.packagingPerItem : 0) + (inc.other ? s.otherPerItem : 0))
   return {
     material, materialRate: grams ? round2(material / grams) : 0,
-    electricity, depreciation, packaging: s.packagingPerItem, other: s.otherPerItem,
+    electricity, depreciation, packaging: s.packagingPerItem, other: s.otherPerItem, included: { ...inc },
     total, perGram: grams ? round2(total / grams) : 0,
   }
 }

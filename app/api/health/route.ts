@@ -21,6 +21,18 @@ export async function GET() {
     ping = { ok: false, error: String((e as Error)?.message ?? e).slice(0, 200) }
   }
 
+  // Is the deployed Code.gs recent?
+  let script: "latest" | "old: paste the new Code.gs and Deploy → New version" | "unknown" = "unknown"
+  if (ping.ok) {
+    // catalog.save (newest action) without an id is refused before writing anything
+    try { await rpc("catalog.save", { product: {} }, { timeoutMs: 10000 }) }
+    catch (e) {
+      const m = String((e as Error)?.message)
+      if (/missing id/.test(m)) script = "latest"
+      else if (/unknown action/.test(m)) script = "old: paste the new Code.gs and Deploy → New version"
+    }
+  }
+
   return NextResponse.json({
     backend: backendMode(),
     webhookUrl: {
@@ -35,5 +47,6 @@ export async function GET() {
     },
     adminPasswordSet: !!process.env.ADMIN_PASSWORD,
     ping,
+    script,
   }, { headers: { "Cache-Control": "no-store" } })
 }

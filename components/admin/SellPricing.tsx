@@ -1,11 +1,12 @@
 "use client"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Calculator, Loader2, Save, ExternalLink, AlertCircle, Plus, Trash2, Settings2, TrendingUp } from "lucide-react"
 import {
-  calculateSellPrices, shopeeSearchUrl, DEFAULT_SELL_PRICING,
+  calculateSellPrices, shopeeSearchUrl, DEFAULT_SELL_PRICING, TIER_TABLE_ID,
   type SellPricingSettings, type MarketPrice, type ChannelPrice,
 } from "@/lib/sellPricing"
-import AiCopywriter from "./AiCopywriter"
+import AiCopywriter, { type AiResult } from "./AiCopywriter"
+import { catalogRecord } from "@/lib/catalog"
 import SlicerUpload from "./SlicerUpload"
 import type { ShopeeDraft } from "./ShopeeAdmin"
 
@@ -48,6 +49,12 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
   const [category, setCategory] = useState("")
   const [grams, setGrams] = useState("100")
   const [hours, setHours] = useState("2")
+  const [materialId, setMaterialId] = useState(DEFAULT_SELL_PRICING.materials[0].id)
+  const [ai, setAi] = useState<AiResult | null>(null)
+  const onAiResult = useCallback((r: AiResult | null) => setAi(r), [])
+  const [rowId, setRowId] = useState<string | null>(null) // set after the first save → later saves update that row
+  const [rowSaving, setRowSaving] = useState(false)
+  const [rowMsg, setRowMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -56,6 +63,7 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
         const d = await r.json()
         if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
         setSettings(d.settings); setMarket(d.market); setNotes(d.notes || [])
+        setMaterialId(d.settings.materials?.[0]?.id ?? TIER_TABLE_ID)
         if (d.market?.length) setCategory(d.market[0].category)
       } catch (e: any) {
         setNotes([`โหลดค่าตั้งค่าไม่สำเร็จ (${e.message}) — ใช้ค่าเริ่มต้นแทน`])
@@ -66,8 +74,8 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
 
   const marketRow = market.find(m => m.category === category) ?? null
   const result = useMemo(
-    () => calculateSellPrices({ grams: Number(grams) || 0, printHours: Number(hours) || 0 }, settings, marketRow),
-    [grams, hours, settings, marketRow]
+    () => calculateSellPrices({ grams: Number(grams) || 0, printHours: Number(hours) || 0, materialId }, settings, marketRow),
+    [grams, hours, materialId, settings, marketRow]
   )
   const set = <K extends keyof SellPricingSettings>(k: K, v: SellPricingSettings[K]) => { setSettings(s => ({ ...s, [k]: v })); setSaveMsg(null) }
   const num = (v: string) => (v === "" ? 0 : Number(v))
@@ -86,6 +94,29 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
       setSaveMsg({ ok: false, text: e.message })
     }
     setSaving(false)
+  }
+
+  const saveRow = async () => {
+    setRowSaving(true); setRowMsg(null)
+    const id = rowId ?? (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `p-${Date.now().toString(36)}`)
+    const product = catalogRecord({
+      id, name, category,
+      materialName: settings.materials.find(m => m.id === materialId)?.name ?? "ตามตารางขั้นบันได",
+      grams: Number(grams) || 0, hours: Number(hours) || 0,
+      cost: result.cost, channels: result.channels, settings, market: marketRow, ai,
+    })
+    try {
+      const r = await fetch("/api/admin/catalog", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
+      setRowId(id)
+      setRowMsg({ ok: true, text: d.updated ? "อัปเดตแถวเดิมในแท็บ PB3D Product 2027 แล้ว" : "บันทึกลงแท็บ PB3D Product 2027 แล้ว" })
+    } catch (e: any) {
+      setRowMsg({ ok: false, text: e.message })
+    }
+    setRowSaving(false)
   }
 
   if (loading) return <div className="py-16 flex justify-center"><Loader2 size={20} className="animate-spin text-foreground/30" /></div>
@@ -120,6 +151,13 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
               <option value="">— ไม่เทียบราคาตลาด —</option>
             </select>
           </label>
+          <label className="block">
+            <span className="text-xs text-foreground/50 mb-1.5 block">วัสดุ / เรทต้นทุน</span>
+            <select value={materialId} onChange={e => setMaterialId(e.target.value)} className={inputCls} data-testid="sp-material">
+              {settings.materials.map(m => <option key={m.id} value={m.id}>{m.name} — {m.perG} ฿/g</option>)}
+              <option value={TIER_TABLE_ID}>ตามตารางขั้นบันได (ในตั้งค่า)</option>
+            </select>
+          </label>
           <SlicerUpload onRead={v => {
             if (v.grams !== null) setGrams(String(v.grams))
             if (v.hours !== null) setHours(String(v.hours))
@@ -129,17 +167,26 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
             <Num label="เวลาพิมพ์" suffix="ชม." value={hours} onChange={setHours} testId="sp-hours" />
           </div>
 
+          <p className="text-xs text-foreground/40 -mb-2">ติ๊กเลือกต้นทุนที่ต้องการบวกเพิ่มจากค่าวัสดุ</p>
           <div className="rounded-2xl border border-foreground/8 divide-y divide-foreground/8 text-sm" data-testid="sp-cost">
-            {[
-              [`ค่าวัสดุ (${c.materialRate} ฿/g)`, c.material],
-              ["ค่าไฟ", c.electricity],
-              ["ค่าเสื่อมเครื่อง", c.depreciation],
-              ["ค่าแพ็กเกจ", c.packaging],
-              ...(c.other ? [["ค่าอื่น ๆ", c.other]] : []),
-            ].map(([k, v]) => (
-              <div key={k as string} className="flex justify-between px-4 py-2.5">
-                <span className="text-foreground/60">{k}</span><span>{baht(v as number, 2)}</span>
-              </div>
+            <div className="flex justify-between px-4 py-2.5">
+              <span className="text-foreground/60">ค่าวัสดุ ({c.materialRate} ฿/g)</span><span>{baht(c.material, 2)}</span>
+            </div>
+            {([
+              ["electricity", "ค่าไฟ", c.electricity],
+              ["depreciation", "ค่าเสื่อมเครื่อง", c.depreciation],
+              ["packaging", "ค่าแพ็กเกจ", c.packaging],
+              ["other", "ค่าอื่น ๆ", c.other],
+            ] as const).map(([key, label, v]) => (
+              <label key={key} className="flex items-center justify-between gap-3 px-4 py-2.5 cursor-pointer select-none">
+                <span className="flex items-center gap-2.5 text-foreground/60">
+                  <input type="checkbox" checked={settings.costItems[key]} data-testid={`sp-include-${key}`}
+                    onChange={e => set("costItems", { ...settings.costItems, [key]: e.target.checked })}
+                    className="w-4 h-4 accent-blue-500" />
+                  {label}
+                </span>
+                <span className={settings.costItems[key] ? "" : "line-through text-foreground/30"}>{baht(v, 2)}</span>
+              </label>
             ))}
             <div className="flex justify-between px-4 py-3 font-semibold">
               <span>ต้นทุนรวมต่อชิ้น</span><span data-testid="sp-total-cost">{baht(c.total, 2)}</span>
@@ -273,9 +320,35 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
         name={name}
         category={category}
         grams={Number(grams) || 0}
+        materialName={settings.materials.find(m => m.id === materialId)?.name ?? ""}
+        onResult={onAiResult}
         prices={Object.fromEntries(result.channels.map(r => [r.channel.name, r.recommended]))}
         onSendToShopee={onSendToShopee}
       />
+
+      {/* ── Save this product to the "PB3D Product 2027" tab ── */}
+      <section className="bg-foreground/[0.025] border border-foreground/8 rounded-3xl p-5 space-y-3" data-testid="sp-catalog">
+        <div>
+          <p className="text-sm font-medium flex items-center gap-2"><Save size={15} />บันทึกสินค้าลง Google Sheet</p>
+          <p className="text-xs text-foreground/50 mt-1">
+            บันทึกชื่อ หมวด วัสดุ น้ำหนัก เวลาพิมพ์ ต้นทุนที่ติ๊กไว้ ราคาแต่ละช่องทาง {ai ? "และข้อความจาก AI " : ""}ลงแท็บ <b>PB3D Product 2027</b>
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" disabled={rowSaving || !(Number(grams) > 0)} onClick={saveRow} data-testid="sp-catalog-save"
+            className="inline-flex items-center gap-2 bg-foreground text-background text-sm font-medium rounded-xl px-4 py-2.5 disabled:opacity-40">
+            {rowSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {rowId ? "อัปเดตแถวเดิม" : "บันทึกลงชีต"}
+          </button>
+          {rowId && (
+            <button type="button" onClick={() => { setRowId(null); setRowMsg(null) }} data-testid="sp-catalog-new"
+              className="text-xs text-foreground/50 border border-foreground/10 rounded-xl px-3 py-2.5 hover:text-foreground">
+              บันทึกเป็นสินค้าใหม่ (แถวใหม่)
+            </button>
+          )}
+        </div>
+        {rowMsg && <p role="status" className={`text-xs ${rowMsg.ok ? "text-emerald-400" : "text-red-400"}`} data-testid="sp-catalog-msg">{rowMsg.text}</p>}
+      </section>
 
       {/* ── Settings ── */}
       <details className="bg-foreground/[0.025] border border-foreground/8 rounded-3xl p-5 group" data-testid="sp-settings">
@@ -283,9 +356,36 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
           <Settings2 size={15} />ตั้งค่าต้นทุนและช่องทางขาย
         </summary>
         <div className="mt-5 space-y-6">
+          {/* material rates */}
+          <div data-testid="sp-materials">
+            <p className="text-xs font-medium text-foreground/50 mb-2">เรทต้นทุนวัสดุ (เลือกได้ตอนคำนวณ รวมค่าเส้น ชิ้นงานเสีย และเศษแล้ว)</p>
+            <div className="space-y-2">
+              {settings.materials.map((m, i) => (
+                <div key={m.id} className="flex items-end gap-2">
+                  <label className="flex-[2] block">
+                    <span className="text-xs text-foreground/50 mb-1.5 block">{i === 0 ? "ชื่อวัสดุ" : "\u00a0"}</span>
+                    <input value={m.name} className={inputCls} data-testid={`sp-material-name-${i}`}
+                      onChange={e => set("materials", settings.materials.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
+                  </label>
+                  <div className="flex-1"><Num label={i === 0 ? "เรท" : "\u00a0"} suffix="฿/g" value={m.perG} testId={`sp-material-rate-${i}`}
+                    onChange={v => set("materials", settings.materials.map((x, j) => j === i ? { ...x, perG: num(v) } : x))} /></div>
+                  <button type="button" aria-label="ลบวัสดุ" disabled={settings.materials.length <= 1}
+                    onClick={() => {
+                      set("materials", settings.materials.filter((_, j) => j !== i))
+                      if (materialId === m.id) setMaterialId(settings.materials.find((_, j) => j !== i)?.id ?? TIER_TABLE_ID)
+                    }}
+                    className="p-2.5 rounded-xl border border-foreground/10 text-foreground/50 hover:text-red-400 disabled:opacity-30"><Trash2 size={14} /></button>
+                </div>
+              ))}
+              <button type="button" data-testid="sp-material-add"
+                onClick={() => set("materials", [...settings.materials, { id: `m${Date.now().toString(36)}`, name: "วัสดุใหม่", perG: 1 }])}
+                className="text-xs text-blue-400 flex items-center gap-1"><Plus size={12} />เพิ่มวัสดุ</button>
+            </div>
+          </div>
+
           {/* tiers */}
           <div>
-            <p className="text-xs font-medium text-foreground/50 mb-2">ต้นทุนวัสดุแบบขั้นบันได</p>
+            <p className="text-xs font-medium text-foreground/50 mb-2">ต้นทุนวัสดุแบบขั้นบันได (ใช้เมื่อเลือก &quot;ตามตารางขั้นบันได&quot;)</p>
             <div className="space-y-2">
               {settings.materialTiers.map((t, i) => (
                 <div key={i} className="flex items-end gap-2">

@@ -132,6 +132,9 @@ export const db = {
     seed: (rows: any[]) => rpc<{ seeded: number }>("market.seed", { rows }).then(r => r.seeded),
     append: (rows: any[]) => rpc<{ added: number }>("market.append", { rows }).then(r => r.added),
   },
+  catalog: {
+    save: (product: Record<string, unknown>) => rpc<{ updated: boolean }>("catalog.save", { product }).then(r => r.updated),
+  },
   consent: {
     add: (entry: { necessary: boolean; analytics: boolean; marketing: boolean; user_agent: string }) =>
       rpc("consent.add", { entry: { ...entry, created_at: nowBangkok() } }),

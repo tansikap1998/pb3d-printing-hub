@@ -98,6 +98,41 @@ var TABLES = {
     ],
     numbers: ['typicalWeightG', 'low', 'typical', 'high'],
   },
+  // products priced in the admin calculator ("บันทึกลง Google Sheet")
+  catalog: {
+    sheet: 'PB3D Product 2027',
+    cols: [
+      ['id', 'ID'],
+      ['saved_at', 'บันทึกเมื่อ'],
+      ['name', 'ชื่อสินค้า'],
+      ['category', 'หมวดสินค้า'],
+      ['material', 'วัสดุ'],
+      ['material_rate', 'เรทวัสดุ (฿/g)'],
+      ['grams', 'น้ำหนัก (g)'],
+      ['print_hours', 'เวลาพิมพ์ (ชม.)'],
+      ['material_cost', 'ค่าวัสดุ'],
+      ['electricity', 'ค่าไฟ'],
+      ['depreciation', 'ค่าเสื่อมเครื่อง'],
+      ['packaging', 'ค่าแพ็กเกจ'],
+      ['other', 'ค่าอื่น ๆ'],
+      ['cost_items', 'ต้นทุนที่นับรวม'],
+      ['total_cost', 'ต้นทุนรวม/ชิ้น'],
+      ['min_profit', 'กำไรขั้นต่ำ'],
+      ['shopee_min', 'Shopee ราคาต่ำสุด'],
+      ['shopee_recommended', 'Shopee ราคาแนะนำ'],
+      ['shopee_launch', 'Shopee ราคาเปิดตัว'],
+      ['channel_prices', 'ราคาแนะนำทุกช่องทาง'],
+      ['market_typical', 'ราคาตลาดทั่วไป'],
+      ['title', 'ชื่อสำหรับลงขาย'],
+      ['short_description', 'คำโปรย'],
+      ['description', 'รายละเอียดสินค้า'],
+      ['hashtags', 'แฮชแท็ก'],
+      ['package_weight_kg', 'น้ำหนักพัสดุ (kg)'],
+      ['saved_by', 'บันทึกโดย'],
+    ],
+    numbers: ['material_rate', 'grams', 'print_hours', 'material_cost', 'electricity', 'depreciation', 'packaging',
+      'other', 'total_cost', 'shopee_min', 'shopee_recommended', 'shopee_launch', 'market_typical', 'package_weight_kg'],
+  },
   consent: {
     sheet: 'Consent',
     cols: [
@@ -354,6 +389,16 @@ var ACTIONS = {
     return { added: added };
   },
 
+  // ── catalog (PB3D Product 2027) ── save = add, or update the row with the same id
+  'catalog.save': function (b) {
+    var t = table_('catalog');
+    var p = b.product || {};
+    if (!p.id) return { ok: false, error: 'missing id' };
+    var r = findRow_(t, p.id);
+    writeRow_(t, r === -1 ? t.sheet.getLastRow() + 1 : r, p);
+    return { updated: r !== -1 };
+  },
+
   // ── consent ──
   'consent.add': function (b) {
     var t = table_('consent');
@@ -365,7 +410,7 @@ var ACTIONS = {
 var WRITE_ACTIONS = {
   'orders.create': 1, 'orders.update': 1, 'orders.submitSlip': 1, 'orders.import': 1, 'slips.attach': 1,
   'products.create': 1, 'products.update': 1, 'products.delete': 1, 'consent.add': 1,
-  'settings.set': 1, 'market.seed': 1, 'market.append': 1,
+  'settings.set': 1, 'market.seed': 1, 'market.append': 1, 'catalog.save': 1,
 };
 
 // ─── Table helpers ───────────────────────────────────────────────────────────

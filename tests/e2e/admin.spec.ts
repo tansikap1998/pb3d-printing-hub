@@ -334,6 +334,7 @@ test("health endpoint reports backend status without revealing the secret", asyn
   const h = await r.json()
   expect(h.backend).toBe("emulator")
   expect(h.ping).toEqual({ ok: true })
+  expect(h.script).toBe("latest")
   expect(h.secret).toMatchObject({ set: false, length: 0 })
   expect(h.webhookUrl.source).toContain("Vercel") // the e2e server sets the variable (empty)
   expect(JSON.stringify(h)).not.toMatch(/secret"\s*:\s*"/) // never a secret value
@@ -394,13 +395,30 @@ test.describe("Selling-price calculator", () => {
     await expect(page.getByTestId("sp-cost")).toContainText("ค่าวัสดุ (1 ฿/g)")
     await expect(page.getByTestId("sp-cost")).toContainText("฿401.00")
 
-    // change the minimum profit and save → stored in the Settings tab
+    // pick another material rate
+    await page.getByTestId("sp-material").selectOption({ label: "PETG — 1.2 ฿/g" })
+    await expect(page.getByTestId("sp-cost")).toContainText("ค่าวัสดุ (1.2 ฿/g)")
+    await expect(page.getByTestId("sp-cost")).toContainText("฿481.20")
+    // edit a rate and add a material in the settings
+    await page.getByTestId("sp-settings").locator("summary").click()
+    await page.getByTestId("sp-material-rate-2").fill("1.5")
+    await expect(page.getByTestId("sp-cost")).toContainText("฿601.50")
+    await page.getByTestId("sp-material-add").click()
+    await page.getByTestId("sp-material-name-6").fill("Resin")
+    await page.getByTestId("sp-material-rate-6").fill("3")
+    await page.getByTestId("sp-material").selectOption({ label: "Resin — 3 ฿/g" })
+    await expect(page.getByTestId("sp-cost")).toContainText("฿1,203.00")
+    await page.getByTestId("sp-material").selectOption({ label: "PLA — 1 ฿/g" })
+    await page.getByTestId("sp-settings").locator("summary").click()
+
+    // change the minimum profit and save → stored in the Settings tab (materials too)
     await page.getByTestId("sp-settings").locator("summary").click()
     await page.getByTestId("sp-min-profit").fill("60")
     await page.getByTestId("sp-save").click()
     await expect(page.getByRole("status")).toContainText("บันทึกค่าตั้งค่าลง Google Sheet แล้ว")
     const saved = JSON.parse((sheetTabs().Settings ?? []).find(r => r[0] === "sellPricing")?.[1] ?? "{}")
     expect(saved.minProfitPct).toBe(60)
+    expect(saved.materials.find((m: any) => m.name === "Resin")?.perG).toBe(3)
 
     // reload → settings come back from the sheet, market rows from MarketPrices
     await page.reload()
@@ -410,6 +428,52 @@ test.describe("Selling-price calculator", () => {
     expect((sheetTabs().MarketPrices ?? []).length).toBeGreaterThan(5)
     await expect(page.getByTestId("sp-market")).toBeVisible()
   })
+})
+
+test("cost checkboxes and saving the product to the PB3D Product 2027 tab", async ({ page }) => {
+  await loginAsAdmin(page)
+  await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+  await page.getByTestId("sp-name").fill("ขาตั้งมือถือรุ่นแมว")
+  await page.getByTestId("sp-category").selectOption({ label: "— ไม่เทียบราคาตลาด —" })
+  await expect(page.getByTestId("sp-total-cost")).toHaveText("฿126.50")
+  await page.getByTestId("sp-include-packaging").uncheck()
+  await expect(page.getByTestId("sp-total-cost")).toHaveText("฿111.50")
+  await page.getByTestId("sp-include-electricity").uncheck()
+  await page.getByTestId("sp-include-depreciation").uncheck()
+  await expect(page.getByTestId("sp-total-cost")).toHaveText("฿100.00")
+  await page.getByTestId("sp-include-depreciation").check()
+  await expect(page.getByTestId("sp-total-cost")).toHaveText("฿110.00")
+
+  await page.getByTestId("ai-generate").click()
+  await expect(page.getByTestId("ai-result")).toBeVisible()
+  await page.getByTestId("shopee-box-pick").selectOption("1")
+
+  await page.getByTestId("sp-catalog-save").click()
+  await expect(page.getByTestId("sp-catalog-msg")).toHaveText("บันทึกลงแท็บ PB3D Product 2027 แล้ว")
+  let tab = sheetTabs()["PB3D Product 2027"]
+  expect(tab).toHaveLength(2)
+  const row = Object.fromEntries(tab[0].map((h: string, i: number) => [h, tab[1][i]]))
+  expect(row).toMatchObject({
+    "ชื่อสินค้า": "ขาตั้งมือถือรุ่นแมว", "วัสดุ": "PLA", "น้ำหนัก (g)": 100, "เวลาพิมพ์ (ชม.)": 2,
+    "ค่าวัสดุ": 100, "ค่าไฟ": 0, "ค่าเสื่อมเครื่อง": 10, "ค่าแพ็กเกจ": 0, "ต้นทุนรวม/ชิ้น": 110,
+    "ต้นทุนที่นับรวม": "ค่าวัสดุ, ค่าเสื่อมเครื่อง, ค่าอื่น ๆ",
+    "ชื่อสำหรับลงขาย": "ขาตั้งโทรศัพท์ลายแมว ตั้งโต๊ะ", "น้ำหนักพัสดุ (kg)": 0.15,
+    "บันทึกโดย": ADMIN_EMAIL,
+  })
+  expect(row["Shopee ราคาแนะนำ"]).toBeGreaterThan(110)
+  expect(String(row["รายละเอียดสินค้า"])).toContain("• ปรับองศาได้ 3 ระดับ")
+
+  // saving again updates the same row; "new product" adds a row
+  await page.getByTestId("sp-grams").fill("200")
+  await page.getByTestId("sp-catalog-save").click()
+  await expect(page.getByTestId("sp-catalog-msg")).toHaveText("อัปเดตแถวเดิมในแท็บ PB3D Product 2027 แล้ว")
+  tab = sheetTabs()["PB3D Product 2027"]
+  expect(tab).toHaveLength(2)
+  await page.getByTestId("sp-catalog-new").click()
+  await page.getByTestId("sp-catalog-save").click()
+  await expect(page.getByTestId("sp-catalog-msg")).toHaveText("บันทึกลงแท็บ PB3D Product 2027 แล้ว")
+  expect(sheetTabs()["PB3D Product 2027"]).toHaveLength(3)
+  expect((await page.request.post("/api/admin/catalog", { data: { product: { id: "x" } } })).status()).toBe(400)
 })
 
 test("an existing MarketPrices tab gets the new starter categories once", async ({ page }) => {
