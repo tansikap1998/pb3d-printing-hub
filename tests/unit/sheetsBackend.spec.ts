@@ -237,3 +237,22 @@ test("setup() creates an Admins tab with the two shop emails and blank passwords
   ctx.setup() // running again does not duplicate them
   expect(state.sheets.Admins).toHaveLength(3)
 })
+
+// ─── settings + market prices ────────────────────────────────────────────────
+test("settings: set then get by key, overwrite in place", () => {
+  const s = sheet()
+  expect(s.call("settings.get", { key: "sellPricing" }).value).toBeNull()
+  s.call("settings.set", { key: "sellPricing", value: '{"a":1}' })
+  s.call("settings.set", { key: "other", value: "x" })
+  s.call("settings.set", { key: "sellPricing", value: '{"a":2}' })
+  expect(s.call("settings.get", { key: "sellPricing" }).value).toBe('{"a":2}')
+  expect(s.raw().sheets.Settings).toHaveLength(3) // header + 2 keys, no duplicate
+})
+
+test("market prices: seed once, list rows with numbers", () => {
+  const s = sheet()
+  const rows = [{ category: "ขาตั้ง", example: "x", typicalWeightG: 60, low: 79, typical: 149, high: 299, source: "test", updated: "" }]
+  expect(s.call("market.seed", { rows }).seeded).toBe(1)
+  expect(s.call("market.seed", { rows }).seeded).toBe(0) // already has rows
+  expect(s.call("market.list").rows).toEqual([{ ...rows[0], updated: "" }])
+})
