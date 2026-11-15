@@ -386,7 +386,7 @@ test.describe("Selling-price calculator", () => {
     // 100 g, 2 h with default settings → total cost ฿126.50; Shopee recommended ฿299
     await page.getByTestId("sp-grams").fill("100")
     await page.getByTestId("sp-hours").fill("2")
-    await page.getByTestId("sp-category").selectOption({ label: "— ไม่เทียบราคาตลาด —" })
+    await page.getByTestId("sp-category").selectOption({ label: "อื่น ๆ (ไม่เทียบราคาตลาด)" })
     await expect(page.getByTestId("sp-total-cost")).toHaveText("฿126.50")
     await expect(page.getByTestId("sp-row-shopee").getByTestId("sp-recommended")).toHaveText("฿299")
 
@@ -430,11 +430,41 @@ test.describe("Selling-price calculator", () => {
   })
 })
 
+test("saving to the sheet requires name, weight and print time", async ({ page }) => {
+  await loginAsAdmin(page)
+  await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+  await page.getByTestId("sp-grams").fill("0")
+  await page.getByTestId("sp-hours").fill("")
+  await page.getByTestId("sp-catalog-save").click()
+  await expect(page.getByTestId("sp-catalog-msg")).toHaveText("กรอกช่องที่มีเครื่องหมาย * ให้ครบก่อนบันทึก")
+  await expect(page.getByTestId("sp-name-error")).toHaveText("กรอกชื่อสินค้า")
+  await expect(page.getByTestId("sp-grams-error")).toHaveText("น้ำหนักต้องมากกว่า 0 g")
+  await expect(page.getByTestId("sp-hours-error")).toHaveText("เวลาพิมพ์ต้องมากกว่า 0 ชม.")
+  await expect(page.getByTestId("sp-name")).toBeFocused()
+  expect(sheetTabs()["PB3D Product 2027"]).toBeUndefined() // nothing sent
+
+  // errors clear as the fields are fixed
+  await page.getByTestId("sp-name").fill("ขา")
+  await expect(page.getByTestId("sp-name-error")).toContainText("สั้นเกินไป")
+  await page.getByTestId("sp-name").fill("ขาตั้งมือถือ")
+  await page.getByTestId("sp-grams").fill("80")
+  await page.getByTestId("sp-hours").fill("1.5")
+  await expect(page.getByTestId("sp-name-error")).toHaveCount(0)
+  await expect(page.getByTestId("sp-grams-error")).toHaveCount(0)
+  await page.getByTestId("sp-catalog-save").click()
+  await expect(page.getByTestId("sp-catalog-msg")).toHaveText("บันทึกลงแท็บ PB3D Product 2027 แล้ว")
+
+  // the API checks too
+  const r = await page.request.post("/api/admin/catalog", { data: { product: { id: "abcdef12", name: "", grams: 10, print_hours: 1, category: "x", material: "PLA" } } })
+  expect(r.status()).toBe(400)
+  expect((await r.json()).errors).toEqual({ name: "กรอกชื่อสินค้า" })
+})
+
 test("cost checkboxes and saving the product to the PB3D Product 2027 tab", async ({ page }) => {
   await loginAsAdmin(page)
   await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
   await page.getByTestId("sp-name").fill("ขาตั้งมือถือรุ่นแมว")
-  await page.getByTestId("sp-category").selectOption({ label: "— ไม่เทียบราคาตลาด —" })
+  await page.getByTestId("sp-category").selectOption({ label: "อื่น ๆ (ไม่เทียบราคาตลาด)" })
   await expect(page.getByTestId("sp-total-cost")).toHaveText("฿126.50")
   await page.getByTestId("sp-include-packaging").uncheck()
   await expect(page.getByTestId("sp-total-cost")).toHaveText("฿111.50")
