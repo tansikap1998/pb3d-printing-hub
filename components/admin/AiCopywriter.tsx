@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Sparkles, Loader2, Copy, Check, AlertCircle, ShoppingBag } from "lucide-react"
 import type { ShopeeDraft } from "./ShopeeAdmin"
 import { listingText, packageWeight, type CopyOutput } from "@/lib/aiCopy"
@@ -31,14 +31,20 @@ function CopyBtn({ text, testId, label = "คัดลอก" }: { text: string;
 }
 
 /** "AI เขียนชื่อและรายละเอียดสินค้า" — uses the product facts from the calculator above. */
-export default function AiCopywriter({ name, category, grams, prices, onSendToShopee }: {
-  name: string; category: string; grams: number
+export type AiResult = { copy: CopyOutput; pick: number; packagingG: number }
+
+export default function AiCopywriter({ name, category, grams, materialName = "", prices, onSendToShopee, onResult }: {
+  name: string; category: string; grams: number; materialName?: string
+  /** latest AI copy + chosen title, for saving to the sheet */
+  onResult?: (r: AiResult | null) => void
   /** recommended price per sales channel name, from the calculator */
   prices: Record<string, number | null>
   onSendToShopee?: (d: ShopeeDraft) => void
 }) {
   const channels = Object.keys(prices)
-  const [material, setMaterial] = useState("PLA")
+  const [material, setMaterial] = useState(materialName || "PLA")
+  // follow the material picked in the calculator (still editable here)
+  useEffect(() => { if (materialName) setMaterial(materialName) }, [materialName])
   const [color, setColor] = useState("")
   const [size, setSize] = useState("")
   const [features, setFeatures] = useState("")
@@ -49,6 +55,9 @@ export default function AiCopywriter({ name, category, grams, prices, onSendToSh
   const [copy, setCopy] = useState<CopyOutput | null>(null)
   const [pick, setPick] = useState(0) // chosen title for the Shopee box
   const [packagingG, setPackagingG] = useState("50")
+  useEffect(() => {
+    onResult?.(copy ? { copy, pick, packagingG: Number(packagingG) || 0 } : null)
+  }, [copy, pick, packagingG, onResult])
 
   const generate = async () => {
     setBusy(true); setError("")

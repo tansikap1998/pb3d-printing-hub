@@ -84,3 +84,25 @@ test("settings from the sheet are cleaned up; missing values fall back to defaul
   expect(sanitizeMarket([{ category: " ", low: 1 }, { category: "A", low: "10", typical: "", high: "x" }]))
     .toEqual([{ category: "A", example: "", typicalWeightG: null, low: 10, typical: null, high: null, source: "", updated: "" }])
 })
+
+test("material rates: picked per product, tier table as fallback", () => {
+  const s = D
+  expect(costBreakdown({ grams: 100, printHours: 0, materialId: "petg" }, s).material).toBe(120)
+  expect(costBreakdown({ grams: 100, printHours: 0, materialId: "cf" }, s).material).toBe(250)
+  expect(costBreakdown({ grams: 100, printHours: 0, materialId: "tiers" }, s).material).toBe(100)
+  expect(costBreakdown({ grams: 100, printHours: 0, materialId: "gone" }, s).material).toBe(100) // unknown → tiers
+  const custom = sanitizeSettings({ ...s, materials: [{ id: "tiers", name: "x", perG: 9 }, { name: "Resin", perG: "3" }] })
+  expect(custom.materials).toEqual([{ id: "m1", name: "Resin", perG: 3 }])
+  expect(sanitizeSettings({ minProfitPct: 40 }).materials).toEqual(s.materials) // old saved settings get defaults
+})
+
+test("cost items: only ticked operating costs are added", () => {
+  const base = costBreakdown({ grams: 100, printHours: 2 }, D)
+  expect(base.total).toBe(126.5) // 100 + 1.5 + 10 + 15
+  const noPack = costBreakdown({ grams: 100, printHours: 2 }, { ...D, costItems: { ...D.costItems, packaging: false } })
+  expect(noPack.total).toBe(111.5)
+  expect(noPack.packaging).toBe(15) // still shown, just not counted
+  const materialOnly = sanitizeSettings({ costItems: { electricity: false, depreciation: false, packaging: false, other: false } })
+  expect(costBreakdown({ grams: 100, printHours: 2 }, materialOnly).total).toBe(100)
+  expect(sanitizeSettings({ costItems: { electricity: "no" } }).costItems).toEqual(D.costItems)
+})
