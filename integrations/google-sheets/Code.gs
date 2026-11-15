@@ -7,6 +7,8 @@
  *   Products  – Shopee product links shown on the home page
  *   Consent   – cookie consent log (PDPA)
  *   Admins    – who can sign in to /admin (email + password, edit here directly)
+ *   Settings  – saved settings of the admin tools (e.g. the selling-price calculator)
+ *   MarketPrices – reference selling prices per product category (edit freely)
  * Payment slips are files in a private Google Drive folder ("PB3D Payment Slips").
  *
  * Columns are found by their title in row 1, so you may reorder columns or add
@@ -73,6 +75,28 @@ var TABLES = {
       ['disabled', 'ปิดใช้งาน'],
     ],
     booleans: ['disabled'],
+  },
+  settings: {
+    sheet: 'Settings',
+    cols: [
+      ['key', 'คีย์'],
+      ['value', 'ค่า (JSON)'],
+      ['updated_at', 'อัปเดตล่าสุด'],
+    ],
+  },
+  market: {
+    sheet: 'MarketPrices',
+    cols: [
+      ['category', 'หมวดสินค้า'],
+      ['example', 'ตัวอย่างสินค้า'],
+      ['typicalWeightG', 'น้ำหนักทั่วไป (g)'],
+      ['low', 'ราคาต่ำ (บาท)'],
+      ['typical', 'ราคาทั่วไป (บาท)'],
+      ['high', 'ราคาสูง (บาท)'],
+      ['source', 'แหล่งที่มา'],
+      ['updated', 'วันที่สำรวจ'],
+    ],
+    numbers: ['typicalWeightG', 'low', 'typical', 'high'],
   },
   consent: {
     sheet: 'Consent',
@@ -285,6 +309,37 @@ var ACTIONS = {
     return { admin: null };
   },
 
+  // ── settings (key → JSON text) ──
+  'settings.get': function (b) {
+    var t = table_('settings');
+    var row = readAll_(t).filter(function (r) { return r.key === String(b.key || ''); })[0];
+    return { value: row ? row.value : null };
+  },
+  'settings.set': function (b) {
+    var t = table_('settings');
+    var key = String(b.key || '');
+    if (!key) return { ok: false, error: 'missing key' };
+    var last = t.sheet.getLastRow(), at = -1;
+    if (last >= 2) {
+      var keys = t.sheet.getRange(2, t.col.key, last - 1, 1).getValues();
+      for (var i = 0; i < keys.length; i++) if (String(keys[i][0]) === key) { at = i + 2; break; }
+    }
+    writeRow_(t, at === -1 ? last + 1 : at, { key: key, value: String(b.value || ''), updated_at: b.now || '' });
+    return {};
+  },
+
+  // ── market reference prices ──
+  'market.list': function () {
+    return { rows: readAll_(table_('market')).filter(function (r) { return r.category !== ''; }) };
+  },
+  // fill the tab with starter rows, only when it has none yet
+  'market.seed': function (b) {
+    var t = table_('market');
+    if (t.sheet.getLastRow() >= 2) return { seeded: 0 };
+    (b.rows || []).forEach(function (r, i) { writeRow_(t, i + 2, r); });
+    return { seeded: (b.rows || []).length };
+  },
+
   // ── consent ──
   'consent.add': function (b) {
     var t = table_('consent');
@@ -296,6 +351,7 @@ var ACTIONS = {
 var WRITE_ACTIONS = {
   'orders.create': 1, 'orders.update': 1, 'orders.submitSlip': 1, 'orders.import': 1, 'slips.attach': 1,
   'products.create': 1, 'products.update': 1, 'products.delete': 1, 'consent.add': 1,
+  'settings.set': 1, 'market.seed': 1,
 };
 
 // ─── Table helpers ───────────────────────────────────────────────────────────

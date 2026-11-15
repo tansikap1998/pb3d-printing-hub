@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
 import ShopeeAdmin from "@/components/admin/ShopeeAdmin"
+import SellPricing from "@/components/admin/SellPricing"
 import {
   RefreshCw, LogOut, Package, Clock, Printer, Truck,
   CheckCircle2, XCircle, ChevronDown, Mail, Phone,
   MapPin, FileText, Layers, Weight, AlertCircle,
-  TrendingUp, User, Hash, Send, ShoppingBag, Receipt
+  TrendingUp, User, Hash, Send, ShoppingBag, Receipt, Calculator
 } from "lucide-react"
 
 // ─── Types & Config ──────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ export default function AdminPage() {
   const [lastRefresh, setLastRefresh] = useState("")
   const [refreshing, setRefreshing] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [tab, setTab] = useState<"orders" | "shopee">("orders")
+  const [tab, setTab] = useState<"orders" | "shopee" | "pricing">("orders")
   const [savedTrackingId, setSavedTrackingId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState("")
 
@@ -207,10 +208,11 @@ export default function AdminPage() {
       <main className="max-w-7xl mx-auto px-4 md:px-8 pt-24 pb-16">
 
         {/* Tabs */}
-        <div className="flex gap-2 pt-6" role="tablist">
+        <div className="flex flex-wrap gap-2 pt-6" role="tablist">
           {([
             { id: "orders", label: "คำสั่งซื้อ", Icon: Package },
             { id: "shopee", label: "สินค้า Shopee", Icon: ShoppingBag },
+            { id: "pricing", label: "คำนวณราคาขาย", Icon: Calculator },
           ] as const).map(t => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium border transition-all ${tab === t.id ? "bg-foreground text-background border-foreground" : "border-foreground/10 text-foreground/45 hover:text-foreground/80"}`}>
@@ -219,7 +221,8 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {tab === "shopee" ? <div className="pt-8"><ShopeeAdmin /></div> : <>
+        {tab === "pricing" ? <div className="pt-8"><SellPricing /></div>
+        : tab === "shopee" ? <div className="pt-8"><ShopeeAdmin /></div> : <>
         {/* Header */}
         <div className="py-8 flex items-end justify-between gap-4 flex-wrap">
           <div>

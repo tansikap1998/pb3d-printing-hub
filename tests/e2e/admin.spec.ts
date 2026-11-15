@@ -348,3 +348,99 @@ test.describe("Admins tab in the Google Sheet", () => {
     expect((await page.request.get("/api/admin/orders")).status()).toBe(200)
   })
 })
+
+test.describe("Selling-price calculator", () => {
+  test("API is admin only", async ({ request }) => {
+    expect((await request.get("/api/admin/sell-pricing")).status()).toBe(401)
+    expect((await request.put("/api/admin/sell-pricing", { data: { settings: {} } })).status()).toBe(401)
+  })
+
+  test("calculates live, seeds market prices, and saves settings to the sheet", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+    const root = page.getByTestId("sell-pricing")
+    await expect(root).toBeVisible()
+    await expect(root.getByText(/สร้างแท็บ MarketPrices/)).toBeVisible()
+
+    // 100 g, 2 h with default settings → total cost ฿126.50; Shopee recommended ฿299
+    await page.getByTestId("sp-grams").fill("100")
+    await page.getByTestId("sp-hours").fill("2")
+    await page.getByTestId("sp-category").selectOption({ label: "— ไม่เทียบราคาตลาด —" })
+    await expect(page.getByTestId("sp-total-cost")).toHaveText("฿126.50")
+    await expect(page.getByTestId("sp-row-shopee").getByTestId("sp-recommended")).toHaveText("฿299")
+
+    // flat 1 ฿/g at any weight
+    await page.getByTestId("sp-grams").fill("401")
+    await expect(page.getByTestId("sp-cost")).toContainText("ค่าวัสดุ (1 ฿/g)")
+    await expect(page.getByTestId("sp-cost")).toContainText("฿401.00")
+
+    // change the minimum profit and save → stored in the Settings tab
+    await page.getByTestId("sp-settings").locator("summary").click()
+    await page.getByTestId("sp-min-profit").fill("60")
+    await page.getByTestId("sp-save").click()
+    await expect(page.getByRole("status")).toContainText("บันทึกค่าตั้งค่าลง Google Sheet แล้ว")
+    const saved = JSON.parse((sheetTabs().Settings ?? [])[1]?.[1] ?? "{}")
+    expect(saved.minProfitPct).toBe(60)
+
+    // reload → settings come back from the sheet, market rows from MarketPrices
+    await page.reload()
+    await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+    await page.getByTestId("sp-settings").locator("summary").click()
+    await expect(page.getByTestId("sp-min-profit")).toHaveValue("60")
+    expect((sheetTabs().MarketPrices ?? []).length).toBeGreaterThan(5)
+    await expect(page.getByTestId("sp-market")).toBeVisible()
+  })
+})
+
+test("selling-price calculator fits a phone screen (cards instead of a table)", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  await loginAsAdmin(page)
+  await page.getByRole("tab", { name: "คำนวณราคาขาย" }).click()
+  await expect(page.getByTestId("sp-channel-cards")).toBeVisible()
+  await expect(page.getByTestId("sp-channels")).toBeHidden()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360)
+})
+
+test.describe("AI product copy", () => {
+  const LOG = require("path").join(process.cwd(), "test-results", "anthropic-requests.json")
+  const fs = require("fs")
+  test.beforeEach(() => { fs.rmSync(LOG, { force: true }) })
+
+  test("API is admin only", async ({ request }) => {
+    expect((await request.post("/api/admin/ai-copy", { data: { name: "x" } })).status()).toBe(401)
+  })
+
+  test("writes titles + description from the calculator's product", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: /คำนวณราคาขาย/ }).click()
+    const ai = page.getByTestId("ai-copy")
+    await expect(ai.getByTestId("ai-generate")).toBeDisabled()
+    await page.getByTestId("sp-name").fill("ขาตั้งมือถือรุ่นแมว")
+    await ai.getByTestId("ai-features").fill("ปรับองศาได้ 3 ระดับ")
+    await ai.getByTestId("ai-generate").click()
+
+    const result = ai.getByTestId("ai-result")
+    await expect(result).toBeVisible()
+    await expect(result.getByTestId("ai-title")).toHaveCount(2) // duplicate dropped
+    await expect(result.getByTestId("ai-description")).toContainText("• ปรับองศาได้ 3 ระดับ")
+    await expect(result.getByTestId("ai-description")).toContainText("#3DPrinting")
+
+    const [call] = JSON.parse(fs.readFileSync(LOG, "utf8"))
+    expect(call.headers["x-api-key"] ?? call.headers.authorization).toMatch(/test-anthropic-key/)
+    expect(call.body.model).toBe("claude-opus-5-5")
+    expect(call.body.output_config.format.type).toBe("json_schema")
+    const prompt = call.body.messages[0].content
+    expect(prompt).toContain("ขาตั้งมือถือรุ่นแมว")
+    expect(prompt).toContain("ปรับองศาได้ 3 ระดับ")
+    expect(prompt).toContain("- น้ำหนักชิ้นงาน (กรัม): 100")
+    expect(prompt).toMatch(/- ราคาขาย \(บาท\): \d+/)
+  })
+
+  test("shows a clear message when the AI declines", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: /คำนวณราคาขาย/ }).click()
+    await page.getByTestId("sp-name").fill("REFUSE-ME")
+    await page.getByTestId("ai-generate").click()
+    await expect(page.getByTestId("ai-error")).toContainText("AI ไม่สามารถเขียน")
+  })
+})

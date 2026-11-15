@@ -22,7 +22,12 @@ export default defineConfig({
     { name: "unit", testDir: "./tests/unit" },
     { name: "e2e", testDir: "./tests/e2e", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
   ],
-  webServer: {
+  webServer: [{
+    // Stand-in for the Claude API (AI product copy)
+    command: `node tests/mockAnthropic.mjs ${PORT + 99}`,
+    url: `http://localhost:${PORT + 99}`,
+    reuseExistingServer: !process.env.CI,
+  }, {
     // Runs against a production build.
     command: `npx next start -p ${PORT}`,
     url: BASE,
@@ -37,6 +42,8 @@ export default defineConfig({
       SHEETS_EMULATOR_FILE: path.join(__dirname, "test-results", "sheets.e2e.json"),
       GOOGLE_SHEETS_WEBHOOK_URL: "",
       GOOGLE_SHEETS_WEBHOOK_SECRET: "",
+      ANTHROPIC_API_KEY: "test-anthropic-key",
+      ANTHROPIC_BASE_URL: `http://localhost:${PORT + 99}`,
     },
-  },
+  }],
 })

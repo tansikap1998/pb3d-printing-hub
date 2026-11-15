@@ -10,6 +10,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@aws-sdk/client-s3": "^3.554.0",
     "@aws-sdk/s3-request-presigner": "^3.554.0",
     "@react-three/drei": "^9.121.4",
@@ -24,6 +25,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "three": "^0.171.0",
+    "zod": "^4.6.7",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

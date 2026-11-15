@@ -123,6 +123,14 @@ export const db = {
     verify: (email: string, password: string) =>
       rpc<{ admin: { email: string; name: string } | null; locked?: boolean }>("admins.verify", { email, password }),
   },
+  settings: {
+    get: (key: string) => rpc<{ value: string | null }>("settings.get", { key }).then(r => r.value),
+    set: (key: string, value: string) => rpc("settings.set", { key, value }),
+  },
+  market: {
+    list: () => rpc<{ rows: any[] }>("market.list").then(r => r.rows),
+    seed: (rows: any[]) => rpc<{ seeded: number }>("market.seed", { rows }).then(r => r.seeded),
+  },
   consent: {
     add: (entry: { necessary: boolean; analytics: boolean; marketing: boolean; user_agent: string }) =>
       rpc("consent.add", { entry: { ...entry, created_at: nowBangkok() } }),
