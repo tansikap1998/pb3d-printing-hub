@@ -15,6 +15,19 @@ test.describe("Admin auth", () => {
     await expect(page).toHaveURL(/\/admin\/login$/)
   })
 
+  test("signing in after being sent to the login page lands on the dashboard", async ({ page }) => {
+    await page.goto("/admin") // → redirected to /admin/login
+    await expect(page).toHaveURL(/\/admin\/login$/)
+    await page.getByPlaceholder("Admin Email").fill(ADMIN_EMAIL)
+    await page.getByPlaceholder("••••••••").fill("wrong")
+    await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click()
+    await expect(page.getByText("อีเมล์หรือรหัสผ่านไม่ถูกต้อง")).toBeVisible()
+    await page.getByPlaceholder("••••••••").fill("e2e-test-password")
+    await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click()
+    await expect(page).toHaveURL(/\/admin$/)
+    await expect(page.getByText("Order Dashboard")).toBeVisible()
+  })
+
   test("wrong password and non-admin email are rejected", async ({ page }) => {
     await page.goto("/admin/login")
     await page.getByPlaceholder("Admin Email").fill(ADMIN_EMAIL)

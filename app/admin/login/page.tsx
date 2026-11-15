@@ -2,12 +2,10 @@
 import ThemeToggle from '@/components/ThemeToggle'
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Loader2, Mail, Lock, AlertCircle } from "lucide-react"
 
 export default function AdminLoginPage() {
-  const router = useRouter()
   const callbackUrl = "/admin"
 
   const [email, setEmail]       = useState("")
@@ -34,7 +32,9 @@ export default function AdminLoginPage() {
       } else if (res?.error) {
         setError("อีเมล์หรือรหัสผ่านไม่ถูกต้อง")
       } else if (res?.ok) {
-        router.push(callbackUrl)
+        // full page load: router.push could reuse the cached "/admin → login" redirect
+        // from before sign-in and leave the admin stuck on this page
+        window.location.assign(callbackUrl)
       } else {
         setError("เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่")
       }
