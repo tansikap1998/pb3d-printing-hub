@@ -12,7 +12,7 @@ const price = (o: Partial<Parameters<typeof calculate>[0]>) => {
   const dimensions = o.dimensions ?? { x: 60, y: 60, z: 60 }
   return calculate({
     volumeCm3: 216, dimensions, technology: "FDM", material: "PLA",
-    infill: 25, layerHeight: 0.4, quantity: 1, shipping: "pickup", ...boxStats(dimensions), ...o,
+    infill: 15, layerHeight: 0.4, quantity: 1, shipping: "pickup", ...boxStats(dimensions), ...o,
   })
 }
 const baht = (n: number) => `฿${n.toLocaleString()}`
@@ -184,7 +184,7 @@ test.describe("Full order: upload → quote → checkout → success", () => {
 
     // order summary before paying: details + name + masked phone, never the full phone or address
     const summary = page.getByTestId("order-summary")
-    for (const t of ["ทดสอบ ระบบ", "081-xxx-5678", "cube60.stl", "PETG · black", "2 ชิ้น", "25% · 0.40 mm", "Shopee: SPX-220101ABC"])
+    for (const t of ["ทดสอบ ระบบ", "081-xxx-5678", "cube60.stl", "PETG · black", "2 ชิ้น", "15% · 0.40 mm", "Shopee: SPX-220101ABC"])
       await expect(summary).toContainText(t)
     await expect(summary).not.toContainText("0812345678")
     await expect(summary).not.toContainText("ถนนทดสอบ")
@@ -343,8 +343,8 @@ test.describe("Guards", () => {
     const ok = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.4, quantity: 1 } })
     expect(ok.status()).toBe(200)
     // without mesh stats the API falls back to the bounding-box estimate
-    expect((await ok.json()).totalPrice).toBe(price({ meshVolumeCm3: 0, surfaceCm2: 0 }).totalPrice)
+    expect((await ok.json()).totalPrice).toBe(price({ infill: 25, meshVolumeCm3: 0, surfaceCm2: 0 }).totalPrice)
     const withMesh = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.4, quantity: 1, meshVolumeCm3: 216, surfaceCm2: 216 } })
-    expect((await withMesh.json()).totalPrice).toBe(price({}).totalPrice)
+    expect((await withMesh.json()).totalPrice).toBe(price({ infill: 25 }).totalPrice)
   })
 })

@@ -63,6 +63,7 @@ const COLOR_SWATCHES = [
 ]
 
 const INFILL_OPTIONS: { v: InfillLevel; label: string; pct: string }[] = [
+  { v: 15, label: 'Standard (แนะนำ)', pct: '15%' },   // the shop's default, same as Bambu Studio
   { v: 10, label: 'Light',      pct: '10%' },
   { v: 25, label: 'Normal',     pct: '25%' },
   { v: 50, label: 'Strong',     pct: '50%' },
@@ -211,7 +212,7 @@ export default function WizardPage() {
   const [material,    setMaterial]    = useState<Material>('PLA')
   const [colorId,     setColorId]     = useState('white')
   const modelColor = COLOR_SWATCHES.find(c => c.id === colorId)?.hex ?? '#b0b4c0'
-  const [infill,      setInfill]      = useState<InfillLevel>(25)
+  const [infill,      setInfill]      = useState<InfillLevel>(15)
   const [layerHeight, setLayerHeight] = useState<LayerHeight>(0.4)
   const [shipping,    setShipping]    = useState<Shipping>('pickup')
 
@@ -808,7 +809,7 @@ export default function WizardPage() {
                         const sel = infill === opt.v
                         return (
                           <button key={opt.v} onClick={() => setInfill(opt.v)}
-                            className="py-1.5 px-1 rounded-lg text-center wb-btn"
+                            className={`py-1.5 px-1 rounded-lg text-center wb-btn ${opt.v === 15 ? 'col-span-2' : ''}`}
                             style={{
                               background: sel ? T.accentDim : T.surface2,
                               border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,

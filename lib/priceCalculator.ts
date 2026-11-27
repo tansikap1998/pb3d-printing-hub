@@ -3,7 +3,7 @@
 export type Technology  = "FDM"
 export type FDMMaterial = "PLA" | "PETG" | "ABS" | "ASA" | "TPU" | "CarbonFiber" | "Nylon"
 export type Material    = FDMMaterial
-export type InfillLevel = 10 | 25 | 50 | 80
+export type InfillLevel = 10 | 15 | 25 | 50 | 80
 export type LayerHeight = 0.08 | 0.16 | 0.24 | 0.4
 export type Shipping    = "pickup" | "postal"
 
@@ -121,6 +121,11 @@ const LAYER_SPEED: Record<number, number> = {
   0.40: 2.50,  // 0.4 mm — the shop's standard (thicker layers, fewer of them)
 }
 
+// Print time per cm³ of plastic at the shop's 0.4 setting. Calibrated on EggPuzzle.3mf:
+// Bambu Studio says 13h12m (792 min) for 284.8 cm³ printed → 2.78 min/cm³
+// (includes heating, travel and plate changes on average).
+export const MIN_PER_CM3 = 792 / 284.8
+
 // Shipping cost (THB)
 const SHIPPING_COST: Record<Shipping, number> = {
   pickup: 0,
@@ -179,7 +184,7 @@ export function calculate(input: EstimateInput): EstimateResult {
   // Formula: (actualVolume / speed_constant) / LAYER_SPEED × 60  → seconds
   // unknown heights fall back to "proportional to layer height" instead of NaN
   const speed         = LAYER_SPEED[layerHeight] ?? Math.max(0.25, layerHeight / 0.16)
-  const baseMinutes   = (actualVolume / 1.8) / speed
+  const baseMinutes   = actualVolume * MIN_PER_CM3 * (LAYER_SPEED[0.4] / speed)
   const printTimeSec  = Math.round(baseMinutes * 60)
   const printTimeMin  = Math.round(baseMinutes)
 

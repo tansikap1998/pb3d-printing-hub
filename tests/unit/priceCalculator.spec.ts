@@ -113,3 +113,12 @@ test("slicer-style weight: shell over the surface + infill of the inside (calibr
   expect(withMesh.weightG).toBeCloseTo(printedVolumeCm3(216, 216, 25) * 1.24, 0)
   expect(calculate(box).weightG).toBeCloseTo((216 * 0.2 + 216 * 0.8 * 0.25) * 1.24, 0)
 })
+
+test("print time follows the plastic volume (calibrated on Bambu Studio: EggPuzzle 13h12m)", () => {
+  // EggPuzzle.3mf at 15% infill → 284.8 cm³ of plastic → 792 min
+  const r = calculate({ ...base, volumeCm3: 2415, infill: 15, meshVolumeCm3: 508, surfaceCm2: 2727 })
+  expect(r.printTimeMin).toBeGreaterThan(792 * 0.98)
+  expect(r.printTimeMin).toBeLessThan(792 * 1.02)
+  // more infill → more plastic → longer
+  expect(calculate({ ...base, volumeCm3: 2415, infill: 50, meshVolumeCm3: 508, surfaceCm2: 2727 }).printTimeMin).toBeGreaterThan(r.printTimeMin)
+})
