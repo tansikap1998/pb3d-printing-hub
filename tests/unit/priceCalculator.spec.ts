@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test"
-import { calculate, fitsInBuildVolume, formatTime, formatTimeFull, BUILD_MAX } from "../../lib/priceCalculator"
+import { calculate, fitsInBuildVolume, formatTime, formatTimeFull, BUILD_MAX, flatRateOrder, shopeeUnitsFor } from "../../lib/priceCalculator"
 
 const base = {
   volumeCm3: 8, dimensions: { x: 20, y: 20, z: 20 }, technology: "FDM" as const,
@@ -14,7 +14,7 @@ test("small part hits the ฿59/pc minimum", () => {
 })
 
 test("postal shipping adds ฿45 once, not per piece", () => {
-  const r = calculate({ ...base, quantity: 3, shipping: "postal" })
+  const r = calculate({ ...base, material: "ABS", quantity: 3, shipping: "postal" })
   expect(r.shippingCost).toBe(45)
   expect(r.subtotal).toBe(r.pricePerPc * 3)
   expect(r.totalPrice).toBe(r.subtotal + 45)
@@ -54,8 +54,8 @@ test("time formatters", () => {
   expect(formatTime(5)).toBe("5m")
 })
 
-test("price = (material + machine) × 0.90 above the ฿59 minimum", () => {
-  const r = calculate({ ...base, volumeCm3: 500 })
+test("price = (material + machine) × 0.90 above the ฿59 minimum (non PLA/PETG)", () => {
+  const r = calculate({ ...base, material: "ABS", volumeCm3: 500 })
   expect(r.pricePerPc).toBe(Math.round((r.materialCost + r.machineCost) * 0.9))
   expect(r.pricePerPc).toBeGreaterThan(59)
 })
@@ -67,4 +67,30 @@ test("0.4 mm layer is priced (no NaN) and prints faster than 0.24 mm", () => {
   expect(thick.printTimeSec).toBeLessThan(calculate({ ...big, layerHeight: 0.24 }).printTimeSec)
   // an unexpected height still gives a number
   expect(Number.isFinite(calculate({ ...big, layerHeight: 0.3 as any }).totalPrice)).toBe(true)
+})
+
+test("PLA / PETG: grams × 3 ฿, or × 1.5 ฿ from 250 g for the whole order", () => {
+  // 100 cm³ at 50% infill → 74.4 g PLA
+  const one = calculate({ ...base, volumeCm3: 100, infill: 50 })
+  expect(one.ratePerGram).toBe(3)
+  expect(one.subtotal).toBe(Math.ceil(74.4 * 3)) // 224
+  expect(one.machineCost).toBe(0)
+  expect(one.shopeeUnits).toBe(4) // 224 / 59 = 3.8 → 4
+  // 4 pieces = 297.6 g → bulk rate for the whole order
+  const four = calculate({ ...base, volumeCm3: 100, infill: 50, quantity: 4, shipping: "postal" })
+  expect(four.totalWeightG).toBeCloseTo(297.6, 1)
+  expect(four.ratePerGram).toBe(1.5)
+  expect(four.subtotal).toBe(Math.ceil(297.6 * 1.5)) // 447
+  expect(four.totalPrice).toBe(447 + 45)
+  expect(four.shopeeUnits).toBe(8) // 447 / 59 = 7.6 → 8
+  expect(calculate({ ...base, volumeCm3: 100, infill: 50, material: "PETG" }).ratePerGram).toBe(3)
+})
+
+test("flat-rate boundary and Shopee units", () => {
+  expect(flatRateOrder(249.9)).toMatchObject({ ratePerGram: 3, subtotal: 750 })
+  expect(flatRateOrder(250)).toMatchObject({ ratePerGram: 1.5, subtotal: 375 })
+  expect(flatRateOrder(5)).toMatchObject({ subtotal: 59, shopeeUnits: 1 }) // ฿59 minimum per order
+  expect(shopeeUnitsFor(59)).toBe(1)
+  expect(shopeeUnitsFor(59.01)).toBe(2)
+  expect(shopeeUnitsFor(118)).toBe(2)
 })
