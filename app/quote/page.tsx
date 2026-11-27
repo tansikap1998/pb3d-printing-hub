@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useOrderStore } from '@/lib/store'
-import { formatTimeFull, formatTime, shopeeUnitsFor, SHOPEE_UNIT_PRICE } from '@/lib/priceCalculator'
+import { formatTimeFull, formatTime, shopeeUnitsFor, SHOPEE_UNIT_PRICE, flatRateFormula } from '@/lib/priceCalculator'
 import ShopeeOrderHint from '@/components/ShopeeOrderHint'
 import {
   FileText, ChevronLeft, User, MapPin, Phone, Mail,
@@ -140,7 +140,7 @@ export default function QuotePage() {
   const setupCost = subtotal - matCost - machCost > 0 ? subtotal - matCost - machCost : Math.round(totalPrice * 0.10)
   // PLA / PETG are priced by weight only: one bar
   const breakdown = result.ratePerGram ? [
-    { label: `Material (${result.ratePerGram} ฿/g)`, value: subtotal, pct: 100, color: '#3b82f6' },
+    { label: `Material (${flatRateFormula(result.totalWeightG ?? weightG)})`, value: subtotal, pct: 100, color: '#3b82f6' },
   ] : [
     { label: 'Material & Filament', value: matCost,   pct: Math.round((matCost  / subtotal) * 100), color: '#3b82f6' },
     { label: 'Machine Time',        value: machCost,  pct: Math.round((machCost / subtotal) * 100), color: '#8b5cf6' },

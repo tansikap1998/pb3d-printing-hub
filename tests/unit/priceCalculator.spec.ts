@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test"
-import { calculate, fitsInBuildVolume, formatTime, formatTimeFull, BUILD_MAX, flatRateOrder, shopeeUnitsFor } from "../../lib/priceCalculator"
+import { calculate, fitsInBuildVolume, formatTime, formatTimeFull, BUILD_MAX, flatRateOrder, flatRateFormula, shopeeUnitsFor } from "../../lib/priceCalculator"
 
 const base = {
   volumeCm3: 8, dimensions: { x: 20, y: 20, z: 20 }, technology: "FDM" as const,
@@ -69,26 +69,31 @@ test("0.4 mm layer is priced (no NaN) and prints faster than 0.24 mm", () => {
   expect(Number.isFinite(calculate({ ...big, layerHeight: 0.3 as any }).totalPrice)).toBe(true)
 })
 
-test("PLA / PETG: grams × 3 ฿, or × 1.5 ฿ from 250 g for the whole order", () => {
+test("PLA / PETG: first 250 g at 3 ฿/g, the rest of the order at 1.5 ฿/g", () => {
   // 100 cm³ at 50% infill → 74.4 g PLA
   const one = calculate({ ...base, volumeCm3: 100, infill: 50 })
   expect(one.ratePerGram).toBe(3)
   expect(one.subtotal).toBe(Math.ceil(74.4 * 3)) // 224
   expect(one.machineCost).toBe(0)
   expect(one.shopeeUnits).toBe(4) // 224 / 59 = 3.8 → 4
-  // 4 pieces = 297.6 g → bulk rate for the whole order
+  // 4 pieces = 297.6 g → 250 × 3 + 47.6 × 1.5 = 821.4 → 822
   const four = calculate({ ...base, volumeCm3: 100, infill: 50, quantity: 4, shipping: "postal" })
   expect(four.totalWeightG).toBeCloseTo(297.6, 1)
-  expect(four.ratePerGram).toBe(1.5)
-  expect(four.subtotal).toBe(Math.ceil(297.6 * 1.5)) // 447
-  expect(four.totalPrice).toBe(447 + 45)
-  expect(four.shopeeUnits).toBe(8) // 447 / 59 = 7.6 → 8
+  expect(four.subtotal).toBe(822)
+  expect(four.totalPrice).toBe(822 + 45)
+  expect(four.shopeeUnits).toBe(14) // 822 / 59 = 13.9 → 14
   expect(calculate({ ...base, volumeCm3: 100, infill: 50, material: "PETG" }).ratePerGram).toBe(3)
 })
 
-test("flat-rate boundary and Shopee units", () => {
-  expect(flatRateOrder(249.9)).toMatchObject({ ratePerGram: 3, subtotal: 750 })
-  expect(flatRateOrder(250)).toMatchObject({ ratePerGram: 1.5, subtotal: 375 })
+test("tiered price never drops as the order gets heavier; Shopee units", () => {
+  expect(flatRateOrder(249.9).subtotal).toBe(750) // 749.7 → 750
+  expect(flatRateOrder(250).subtotal).toBe(750)
+  expect(flatRateOrder(300).subtotal).toBe(825) // 750 + 50 × 1.5
+  expect(flatRateOrder(1000).subtotal).toBe(1875) // 750 + 750 × 1.5
+  let last = 0
+  for (let g = 1; g <= 600; g += 7) { const p = flatRateOrder(g).subtotal; expect(p).toBeGreaterThanOrEqual(last); last = p }
+  expect(flatRateFormula(297.6)).toBe("250 g × 3 ฿ + 47.6 g × 1.5 ฿")
+  expect(flatRateFormula(74.4)).toBe("74.4 g × 3 ฿")
   expect(flatRateOrder(5)).toMatchObject({ subtotal: 59, shopeeUnits: 1 }) // ฿59 minimum per order
   expect(shopeeUnitsFor(59)).toBe(1)
   expect(shopeeUnitsFor(59.01)).toBe(2)

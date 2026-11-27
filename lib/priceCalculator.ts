@@ -33,7 +33,7 @@ export interface EstimateResult {
   shippingCost: number       // flat shipping fee (total)
   subtotal:     number       // price of all pieces (before shipping)
   totalPrice:   number       // subtotal + shippingCost
-  /** PLA/PETG flat-rate pricing: THB per gram used (null for other materials) */
+  /** PLA/PETG weight pricing: base THB per gram (the first 250 g); null for other materials */
   ratePerGram?: number | null
   /** total grams for the whole order (weightG × quantity) */
   totalWeightG?: number
@@ -42,21 +42,34 @@ export interface EstimateResult {
 }
 
 // ─── PLA / PETG: simple per-gram price ────────────────────────────────────────
-// product price = total grams × rate; 3 ฿/g, or 1.5 ฿/g once the order reaches 250 g
+// tiered by the order's total grams: the first 250 g at 3 ฿/g, every gram above that at 1.5 ฿/g
 export const FLAT_RATE_MATERIALS: Material[] = ["PLA", "PETG"]
 export const FLAT_RATE = { perG: 3, bulkPerG: 1.5, bulkFromG: 250 }
 /** price of one unit of the Shopee "3D print service" listing */
 export const SHOPEE_UNIT_PRICE = 59
 
-export function flatRateFor(totalGrams: number): number {
-  return totalGrams >= FLAT_RATE.bulkFromG ? FLAT_RATE.bulkPerG : FLAT_RATE.perG
+const g1 = (g: number) => Math.round(g * 10) / 10
+
+/** Grams charged at each rate for an order of totalGrams. */
+export function flatRateTiers(totalGrams: number): { grams: number; perG: number }[] {
+  const g = g1(Math.max(0, totalGrams))
+  const first = Math.min(g, FLAT_RATE.bulkFromG)
+  const rest = g1(Math.max(0, g - FLAT_RATE.bulkFromG))
+  return rest > 0
+    ? [{ grams: first, perG: FLAT_RATE.perG }, { grams: rest, perG: FLAT_RATE.bulkPerG }]
+    : [{ grams: first, perG: FLAT_RATE.perG }]
+}
+
+/** "250 g × 3 ฿ + 47.6 g × 1.5 ฿" */
+export function flatRateFormula(totalGrams: number): string {
+  return flatRateTiers(totalGrams).map(t => `${t.grams.toLocaleString()} g × ${t.perG} ฿`).join(" + ")
 }
 
 /** PLA/PETG order price from the total grams of every piece in the order. */
 export function flatRateOrder(totalWeightG: number) {
-  const ratePerGram = flatRateFor(totalWeightG)
-  const subtotal = Math.max(MINIMUM_PRICE_PER_PC, Math.ceil(Math.round(totalWeightG * 10) / 10 * ratePerGram))
-  return { ratePerGram, subtotal, shopeeUnits: shopeeUnitsFor(subtotal) }
+  const raw = flatRateTiers(totalWeightG).reduce((sum, t) => sum + t.grams * t.perG, 0)
+  const subtotal = Math.max(MINIMUM_PRICE_PER_PC, Math.ceil(Math.round(raw * 100) / 100))
+  return { ratePerGram: FLAT_RATE.perG, subtotal, shopeeUnits: shopeeUnitsFor(subtotal) }
 }
 
 /** Units to order in the ฿59 Shopee listing so the paid total covers the price. */

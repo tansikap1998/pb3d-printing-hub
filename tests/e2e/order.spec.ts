@@ -82,6 +82,7 @@ test.describe("Upload / configure", () => {
     // how many ฿59 units to buy in Shopee
     await expect(page.getByTestId("shopee-units").first()).toHaveText(`${order.shopeeUnits} ชิ้น`)
     await expect(page.getByTestId("shopee-units-calc").first()).toContainText(`÷ 59 = ${order.shopeeUnits} ชิ้น`)
+    await expect(page.getByTestId("shopee-order-link").first()).toHaveAttribute("href", "https://shopee.co.th/product/9883965/24267343976")
   })
 
   test("removing the only file disables Next again", async ({ page }) => {
