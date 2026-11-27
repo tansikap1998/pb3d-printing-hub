@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test"
-import { calculate, fitsInBuildVolume, formatTime, formatTimeFull, BUILD_MAX, flatRateOrder, flatRateFormula, shopeeUnitsFor } from "../../lib/priceCalculator"
+import { calculate, fitsInBuildVolume, formatTime, formatTimeFull, BUILD_MAX, flatRateOrder, flatRateFormula, shopeeUnitsFor, printedVolumeCm3 } from "../../lib/priceCalculator"
 
 const base = {
   volumeCm3: 8, dimensions: { x: 20, y: 20, z: 20 }, technology: "FDM" as const,
@@ -98,4 +98,18 @@ test("tiered price never drops as the order gets heavier; Shopee units", () => {
   expect(shopeeUnitsFor(59)).toBe(1)
   expect(shopeeUnitsFor(59.01)).toBe(2)
   expect(shopeeUnitsFor(118)).toBe(2)
+})
+
+test("slicer-style weight: shell over the surface + infill of the inside (calibrated on EggPuzzle.3mf)", () => {
+  // EggPuzzle.3mf: solid 508 cm³, surface 2727 cm², Bambu Studio 2 walls / 15% infill → 357.98 g
+  const v = printedVolumeCm3(508, 2727, 15)
+  expect(v * 1.26).toBeGreaterThan(357.98 * 0.98)
+  expect(v * 1.26).toBeLessThan(357.98 * 1.02)
+  // thin parts are all shell: never more than the solid volume
+  expect(printedVolumeCm3(10, 1000, 15)).toBe(10)
+  // calculate() uses it when mesh stats are given, otherwise the bounding-box fallback
+  const box = { ...base, volumeCm3: 216, infill: 25 as const }
+  const withMesh = calculate({ ...box, meshVolumeCm3: 216, surfaceCm2: 216 })
+  expect(withMesh.weightG).toBeCloseTo(printedVolumeCm3(216, 216, 25) * 1.24, 0)
+  expect(calculate(box).weightG).toBeCloseTo((216 * 0.2 + 216 * 0.8 * 0.25) * 1.24, 0)
 })

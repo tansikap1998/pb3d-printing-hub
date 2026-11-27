@@ -21,6 +21,10 @@ export interface EstimateInput {
   quantity:    number
   shipping:    Shipping
   isAnyColor?: boolean
+  /** solid volume of the mesh (cm³) and its surface area (cm²): when given, weight follows
+   *  the slicer model (walls + infill) instead of the bounding-box guess */
+  meshVolumeCm3?: number
+  surfaceCm2?: number
 }
 
 export interface EstimateResult {
@@ -139,6 +143,18 @@ export function fitsInBuildVolume(dims: { x: number; y: number; z: number }): bo
   return dims.x <= BUILD_MAX.x && dims.y <= BUILD_MAX.y && dims.z <= BUILD_MAX.z
 }
 
+// ─── Printed volume ───────────────────────────────────────────────────────────
+
+/** Walls + top/bottom shell thickness (mm). 2 walls with a 0.4 mm nozzle ≈ 0.9 mm;
+ *  calibrated so EggPuzzle.3mf matches Bambu Studio (358 g at 15% infill). */
+export const SHELL_MM = 0.9
+
+/** Plastic a slicer would lay down: a solid shell over the surface + infill% of the inside. */
+export function printedVolumeCm3(solidCm3: number, surfaceCm2: number, infillPct: number): number {
+  const shell = Math.min(solidCm3, surfaceCm2 * (SHELL_MM / 10))
+  return shell + (solidCm3 - shell) * (infillPct / 100)
+}
+
 // ─── Core calculator ──────────────────────────────────────────────────────────
 
 export function calculate(input: EstimateInput): EstimateResult {
@@ -147,11 +163,13 @@ export function calculate(input: EstimateInput): EstimateResult {
     infill, layerHeight, quantity, shipping, isAnyColor
   } = input
 
-  // --- Volume breakdown ---
-  // Shell wall = 20% of bounding volume, always solid
-  const shellVolume  = volumeCm3 * 0.20
-  const innerVolume  = (volumeCm3 - shellVolume) * (infill / 100)
-  const actualVolume = shellVolume + innerVolume   // cm³ of material used
+  // --- Volume of plastic ---
+  // With the mesh's real volume + surface: shell + infill (matches slicers).
+  // Without (old callers / STEP): 20% of the bounding volume as shell + infill of the rest.
+  const { meshVolumeCm3, surfaceCm2 } = input
+  const actualVolume = meshVolumeCm3 && meshVolumeCm3 > 0 && surfaceCm2 && surfaceCm2 > 0
+    ? printedVolumeCm3(meshVolumeCm3, surfaceCm2, infill)
+    : volumeCm3 * 0.20 + volumeCm3 * 0.80 * (infill / 100)
 
   // --- Weight ---
   const weightG = Math.round(actualVolume * DENSITY[material] * 10) / 10
