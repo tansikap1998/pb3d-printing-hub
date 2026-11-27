@@ -1,6 +1,6 @@
 import { test, expect, Page } from "@playwright/test"
 import { calculate, flatRateOrder } from "../../lib/priceCalculator"
-import { boxStl, PNG_1PX, isolateNetwork, resetDb, createOrder, sheetOrder } from "../helpers"
+import { boxStl, box3mf, PNG_1PX, isolateNetwork, resetDb, createOrder, sheetOrder } from "../helpers"
 
 const CUBE = { name: "cube60.stl", mimeType: "model/stl", buffer: boxStl(60, 60, 60) }
 const SMALL = { name: "small20.stl", mimeType: "model/stl", buffer: boxStl(20, 20, 20) }
@@ -37,6 +37,41 @@ test.describe("Upload / configure", () => {
     await page.goto("/upload")
     await expect(page.getByRole("button", { name: /ถัดไป/ })).toBeDisabled()
     await expect(liveQuote(page)).toHaveText("—")
+  })
+
+  for (const production of [false, true]) {
+    test(`3MF upload works (${production ? "Bambu / Orca style, mesh in a separate file" : "plain 3MF"})`, async ({ page }) => {
+      await page.goto("/upload")
+      await page.locator('input[type="file"]').setInputFiles({
+        name: production ? "Feelings_Totem.3mf" : "plain.3mf", mimeType: "model/3mf", buffer: box3mf(60, 60, 60, { production }),
+      })
+      await expect(page.getByText("60×60×60 mm · 216.0 cm³")).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByText("อัปโหลดล้มเหลว")).toHaveCount(0)
+      await expect(liveQuote(page)).toHaveText(baht(price({}).totalPrice))
+      await expect(page.getByRole("button", { name: /ถัดไป/ })).toBeEnabled()
+    })
+  }
+
+  test("a broken 3MF says why it failed", async ({ page }) => {
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles({ name: "broken.3mf", mimeType: "model/3mf", buffer: Buffer.from("not a zip") })
+    await expect(page.getByText("อัปโหลดล้มเหลว: ไฟล์ 3MF เสียหรือไม่ใช่ไฟล์ zip")).toBeVisible({ timeout: 10_000 })
+  })
+
+  test("Bambu-style 3MF where each object file reuses id 1", async ({ page }) => {
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles({ name: "panels.3mf", mimeType: "model/3mf", buffer: box3mf(30, 30, 30, { production: true, copies: 3, separateFiles: true }) })
+    // three 30 mm cubes 10 mm apart → 110 × 30 × 30 overall
+    await expect(page.getByText("110×30×30 mm")).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText("อัปโหลดล้มเหลว")).toHaveCount(0)
+  })
+
+  test("Bambu-style 3MF with two plate objects is measured as a whole", async ({ page }) => {
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles({ name: "two.3mf", mimeType: "model/3mf", buffer: box3mf(30, 30, 30, { production: true, copies: 2 }) })
+    // two 30 mm cubes 10 mm apart → 70 × 30 × 30 overall
+    await expect(page.getByText("70×30×30 mm")).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText("อัปโหลดล้มเหลว")).toHaveCount(0)
   })
 
   test("STL upload works even when S3 storage is unavailable, and price is live", async ({ page }) => {

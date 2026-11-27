@@ -7,6 +7,7 @@ import * as THREE from "three"
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
 // @ts-ignore
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader'
+import { load3MF } from '@/lib/threeMf'
 import { Canvas, useLoader } from "@react-three/fiber"
 import { OrbitControls, Stage, Center } from "@react-three/drei"
 import Link from 'next/link'
@@ -94,6 +95,8 @@ interface ModelFile {
   quantity: number
   uploading: boolean
   error?: boolean
+  /** why reading the file failed, shown under the file name */
+  errorMsg?: string
   subPieces?: SubPiece[]
   autoSplit?: boolean
 }
@@ -113,9 +116,27 @@ function ModelSTL({ url, scale, color }: { url: string; scale: [number, number, 
   )
 }
 
+// Our reader handles Bambu/Orca/Prusa "production" 3MF files; three's loader is the fallback.
+const threeMfCache = new Map<string, Promise<THREE.Group>>()
+function read3MF(url: string): Promise<THREE.Group> {
+  if (!threeMfCache.has(url)) {
+    threeMfCache.set(url, load3MF(url).catch(err => {
+      console.warn('3MF reader failed, trying three.js loader:', err)
+      return new Promise<THREE.Group>((res, rej) => new (ThreeMFLoader as any)().load(url, res, undefined, () => rej(err)))
+    }))
+  }
+  return threeMfCache.get(url)!
+}
+
 function Model3MF({ url, scale, color, activeChildIndices }: { url: string; scale: [number, number, number]; color: string; activeChildIndices?: number[] }) {
-  const group = useLoader(ThreeMFLoader as any, url)
+  const [group, setGroup] = useState<THREE.Group | null>(null)
   useEffect(() => {
+    let alive = true
+    read3MF(url).then(g => { if (alive) setGroup(g.clone()) }).catch(() => {})
+    return () => { alive = false }
+  }, [url])
+  useEffect(() => {
+    if (!group) return
     group.children.forEach((child: THREE.Object3D, i: number) => {
       child.visible = activeChildIndices ? activeChildIndices.includes(i) : true
     })
@@ -127,6 +148,7 @@ function Model3MF({ url, scale, color, activeChildIndices }: { url: string; scal
       mats.forEach(m => { (m as THREE.MeshStandardMaterial).color?.set(color); m.needsUpdate = true })
     })
   }, [group, color, activeChildIndices?.join(',')])  // eslint-disable-line react-hooks/exhaustive-deps
+  if (!group) return null
   return <primitive object={group} scale={scale} />
 }
 
@@ -354,9 +376,7 @@ export default function WizardPage() {
         let volumeCm3 = 0, dims = { x: 0, y: 0, z: 0 }
 
         if (is3mf) {
-          const group = await new Promise<THREE.Group>((res, rej) =>
-            new (ThreeMFLoader as any)().load(blobUrl, res, undefined, rej)
-          )
+          const group = await read3MF(blobUrl)
           const totalSize = new THREE.Vector3()
           new THREE.Box3().setFromObject(group).getSize(totalSize)
           volumeCm3 = Math.abs(totalSize.x * totalSize.y * totalSize.z) / 1000
@@ -458,8 +478,14 @@ export default function WizardPage() {
           ? { ...m, originalDimensions: dims, originalVolumeCm3: volumeCm3, s3Key: key, uploading: false }
           : m
         ))
-      } catch {
-        setModels(prev => prev.map(m => m.id === modelId ? { ...m, uploading: false, error: true } : m))
+      } catch (err) {
+        console.error('Reading model failed:', file.name, err)
+        const raw = err instanceof Error ? err.message : String(err)
+        const errorMsg = /[\u0E00-\u0E7F]/.test(raw) ? raw          // our own Thai messages
+          : raw === 'Empty model' ? 'ไม่พบชิ้นงานในไฟล์'
+          : /zip|inflate|compression|invalid/i.test(raw) ? 'เปิดไฟล์ไม่ได้ (ไฟล์อาจเสียหรือบีบอัดแบบที่ไม่รองรับ)'
+          : raw.slice(0, 120)
+        setModels(prev => prev.map(m => m.id === modelId ? { ...m, uploading: false, error: true, errorMsg } : m))
       }
     }))
   }
@@ -898,7 +924,7 @@ export default function WizardPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{model.name}</p>
                       <p className="text-xs mt-0.5" style={{ color: model.error ? '#ef4444' : T.muted }}>
-                        {model.error ? 'อัปโหลดล้มเหลว'
+                        {model.error ? `อัปโหลดล้มเหลว${model.errorMsg ? `: ${model.errorMsg}` : ''}`
                          : model.uploading ? 'กำลังวิเคราะห์…'
                          : `${model.originalDimensions.x.toFixed(0)}×${model.originalDimensions.y.toFixed(0)}×${model.originalDimensions.z.toFixed(0)} mm · ${model.originalVolumeCm3.toFixed(1)} cm³`}
                       </p>

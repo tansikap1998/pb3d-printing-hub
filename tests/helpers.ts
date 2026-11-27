@@ -105,3 +105,39 @@ export function sheetOrder(id: string): Record<string, any> | undefined {
   const r = rows.find(x => x[titles.indexOf("Order ID")] === id)
   return r && Object.fromEntries(titles.map((t: string, i: number) => [t, r[i]]))
 }
+
+/** Box as 3MF. production=true mimics Bambu Studio / OrcaSlicer: the mesh lives in
+ *  3D/Objects/object_1.model and the main model only references it (p:path). */
+export function box3mf(x: number, y: number, z: number, { production = false, copies = 1, separateFiles = false } = {}): Buffer {
+  const { zipSync, strToU8 } = require("fflate")
+  const v = [[0, 0, 0], [x, 0, 0], [x, y, 0], [0, y, 0], [0, 0, z], [x, 0, z], [x, y, z], [0, y, z]]
+  const f = [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5], [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7]]
+  const mesh = `<mesh><vertices>${v.map(p => `<vertex x="${p[0]}" y="${p[1]}" z="${p[2]}"/>`).join("")}</vertices>` +
+    `<triangles>${f.map(t => `<triangle v1="${t[0]}" v2="${t[1]}" v3="${t[2]}"/>`).join("")}</triangles></mesh>`
+  const NS = `xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"`
+  const PNS = `xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"`
+  const items = Array.from({ length: copies }, (_, i) =>
+    `<item objectid="2" transform="1 0 0 0 1 0 0 0 1 ${128 + i * (x + 10)} 128 0" printable="1"/>`).join("")
+  const files: Record<string, Uint8Array> = {
+    "[Content_Types].xml": strToU8(`<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`),
+    "_rels/.rels": strToU8(`<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`),
+  }
+  if (production && separateFiles) {
+    // every plate object in its own file, each file numbering its object id="1" (as slicers do)
+    const objs: string[] = [], its: string[] = []
+    for (let i = 0; i < copies; i++) {
+      files[`3D/Objects/object_${i + 1}.model`] = strToU8(`<?xml version="1.0"?><model unit="millimeter" ${NS}><resources><object id="1" type="model">${mesh}</object></resources><build/></model>`)
+      objs.push(`<object id="${i + 2}" name="Part ${i + 1}" type="model"><components><component p:path="/3D/Objects/object_${i + 1}.model" objectid="1"/></components></object>`)
+      its.push(`<item objectid="${i + 2}" transform="1 0 0 0 1 0 0 0 1 ${128 + i * (x + 10)} 128 0" printable="1"/>`)
+    }
+    files["3D/3dmodel.model"] = strToU8(`<?xml version="1.0"?><model unit="millimeter" ${NS} ${PNS} requiredextensions="p"><resources>${objs.join("")}</resources><build>${its.join("")}</build></model>`)
+  } else if (production) {
+    files["3D/Objects/object_1.model"] = strToU8(`<?xml version="1.0"?><model unit="millimeter" ${NS}><resources><object id="1" type="model">${mesh}</object></resources><build/></model>`)
+    files["3D/3dmodel.model"] = strToU8(`<?xml version="1.0"?><model unit="millimeter" ${NS} ${PNS} requiredextensions="p"><resources>` +
+      `<object id="2" name="Totem" type="model"><components><component p:path="/3D/Objects/object_1.model" objectid="1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/></components></object>` +
+      `</resources><build>${items}</build></model>`)
+  } else {
+    files["3D/3dmodel.model"] = strToU8(`<?xml version="1.0"?><model unit="millimeter" ${NS}><resources><object id="2" type="model">${mesh}</object></resources><build>${items}</build></model>`)
+  }
+  return Buffer.from(zipSync(files))
+}
