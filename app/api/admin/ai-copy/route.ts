@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod"
 import { isAdminRequest } from "@/lib/adminSession"
+import { aiErrorResponse } from "@/lib/aiErrors"
 import {
   AI_MODEL, CopyInputSchema, CopyOutputSchema, SYSTEM_PROMPT, buildUserPrompt, cleanOutput, hasEnoughInput,
 } from "@/lib/aiCopy"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 300 // Vercel Fluid allows up to 5 min; Opus can take over a minute
 
 // POST { name, category, grams, material, color, size, features, channel, tone, price }
 //   → { copy: { titles, short_description, description, bullet_points, hashtags } }
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (!hasEnoughInput(input))
     return NextResponse.json({ error: "กรอกชื่อสินค้าหรือจุดเด่นอย่างน้อยหนึ่งช่อง" }, { status: 400 })
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY.trim(), maxRetries: 2, timeout: 55_000 })
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY.trim(), maxRetries: 1, timeout: 140_000 })
   try {
     const res = await client.messages.parse({
       model: AI_MODEL,
@@ -37,11 +38,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AI ตอบกลับไม่สมบูรณ์ กรุณาลองใหม่" }, { status: 502 })
     return NextResponse.json({ copy: cleanOutput(res.parsed_output) })
   } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError)
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY ไม่ถูกต้อง ตรวจสอบใน Vercel" }, { status: 503 })
-    if (e instanceof Anthropic.RateLimitError)
-      return NextResponse.json({ error: "เรียกใช้ AI ถี่เกินไป รอสักครู่แล้วลองใหม่" }, { status: 429 })
-    console.error("ai-copy", e)
-    return NextResponse.json({ error: "เรียก AI ไม่สำเร็จ กรุณาลองใหม่" }, { status: 502 })
+    return aiErrorResponse(e, "ai-copy")
   }
 }

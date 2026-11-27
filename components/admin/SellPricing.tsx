@@ -348,6 +348,7 @@ export default function SellPricing({ onSendToShopee }: { onSendToShopee?: (d: S
         category={category}
         grams={Number(grams) || 0}
         materialName={settings.materials.find(m => m.id === materialId)?.name ?? ""}
+        materialOptions={settings.materials.map(m => m.name)}
         onResult={onAiResult}
         prices={Object.fromEntries(result.channels.map(r => [r.channel.name, r.recommended]))}
         onSendToShopee={onSendToShopee}

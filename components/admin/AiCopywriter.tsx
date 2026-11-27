@@ -31,10 +31,46 @@ function CopyBtn({ text, testId, label = "คัดลอก" }: { text: string;
 }
 
 /** "AI เขียนชื่อและรายละเอียดสินค้า" — uses the product facts from the calculator above. */
+export const COLOR_OPTIONS = [
+  "ขาว", "ดำ", "เทา", "ครีม / เบจ", "แดง", "ส้ม", "เหลือง", "เขียว", "ฟ้า", "น้ำเงิน", "ชมพู", "ม่วง", "น้ำตาล",
+  "ทอง (Silk)", "เงิน (Silk)", "ใส / โปร่งแสง", "หลายสี (ตามภาพ)", "เลือกสีได้ (แจ้งในแชท)",
+]
+const OTHER = "__other__"
+
+/** Dropdown with an "อื่น ๆ (พิมพ์เอง)" choice that reveals a text box. */
+function SelectOrType({ label, value, onChange, options, placeholder, testId, emptyLabel }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[]
+  placeholder?: string; testId: string; emptyLabel?: string
+}) {
+  const known = value === "" || options.includes(value)
+  const [typing, setTyping] = useState(!known)
+  useEffect(() => { if (!options.includes(value) && value !== "") setTyping(true) }, [value, options])
+  return (
+    <label className="block">
+      <span className="text-xs text-foreground/50 mb-1.5 block">{label}</span>
+      <select value={typing ? OTHER : value} data-testid={testId} className={inputCls}
+        onChange={e => {
+          if (e.target.value === OTHER) { setTyping(true); onChange("") }
+          else { setTyping(false); onChange(e.target.value) }
+        }}>
+        {emptyLabel !== undefined && <option value="">{emptyLabel}</option>}
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        <option value={OTHER}>อื่น ๆ (พิมพ์เอง)</option>
+      </select>
+      {typing && (
+        <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} autoFocus
+          className={inputCls + " mt-2"} data-testid={`${testId}-custom`} />
+      )}
+    </label>
+  )
+}
+
 export type AiResult = { copy: CopyOutput; pick: number; packagingG: number }
 
-export default function AiCopywriter({ name, category, grams, materialName = "", prices, onSendToShopee, onResult }: {
+export default function AiCopywriter({ name, category, grams, materialName = "", materialOptions = [], prices, onSendToShopee, onResult }: {
   name: string; category: string; grams: number; materialName?: string
+  /** material names from the calculator settings, for the dropdown */
+  materialOptions?: string[]
   /** latest AI copy + chosen title, for saving to the sheet */
   onResult?: (r: AiResult | null) => void
   /** recommended price per sales channel name, from the calculator */
@@ -46,7 +82,8 @@ export default function AiCopywriter({ name, category, grams, materialName = "",
   // follow the material picked in the calculator (still editable here)
   useEffect(() => { if (materialName) setMaterial(materialName) }, [materialName])
   const [color, setColor] = useState("")
-  const [size, setSize] = useState("")
+  const [dims, setDims] = useState({ w: "", l: "", h: "" })
+  const size = [dims.w, dims.l, dims.h].every(v => Number(v) > 0) ? `กว้าง ${dims.w} × ยาว ${dims.l} × สูง ${dims.h} cm` : ""
   const [features, setFeatures] = useState("")
   const [channel, setChannel] = useState(channels[0] ?? "")
   const [tone, setTone] = useState<(typeof TONES)[number][0]>("friendly")
@@ -90,12 +127,20 @@ export default function AiCopywriter({ name, category, grams, materialName = "",
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3">
-        <label className="block"><span className="text-xs text-foreground/50 mb-1.5 block">วัสดุ</span>
-          <input value={material} onChange={e => setMaterial(e.target.value)} className={inputCls} data-testid="ai-material" /></label>
-        <label className="block"><span className="text-xs text-foreground/50 mb-1.5 block">สี</span>
-          <input value={color} onChange={e => setColor(e.target.value)} placeholder="เช่น ขาว / ดำ / สั่งสีได้" className={inputCls} /></label>
-        <label className="block"><span className="text-xs text-foreground/50 mb-1.5 block">ขนาด</span>
-          <input value={size} onChange={e => setSize(e.target.value)} placeholder="เช่น 8 × 6 × 10 cm" className={inputCls} /></label>
+        <SelectOrType label="วัสดุ" value={material} onChange={setMaterial} testId="ai-material"
+          options={materialOptions.length ? materialOptions : ["PLA", "PETG", "ABS / ASA", "TPU (ยืดหยุ่น)"]} placeholder="เช่น PLA Wood" />
+        <SelectOrType label="สี" value={color} onChange={setColor} testId="ai-color" options={COLOR_OPTIONS}
+          emptyLabel="— ไม่ระบุ —" placeholder="เช่น ขาวมุก" />
+        <div>
+          <span className="text-xs text-foreground/50 mb-1.5 block">ขนาด (cm) กว้าง × ยาว × สูง</span>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(["w", "l", "h"] as const).map((k, i) => (
+              <input key={k} type="number" inputMode="decimal" min={0} step="any" value={dims[k]} data-testid={`ai-size-${k}`}
+                placeholder={["กว้าง", "ยาว", "สูง"][i]} onChange={e => setDims(d => ({ ...d, [k]: e.target.value }))}
+                className={inputCls + " px-2 text-center"} />
+            ))}
+          </div>
+        </div>
       </div>
       <label className="block"><span className="text-xs text-foreground/50 mb-1.5 block">จุดเด่น / รายละเอียดที่อยากให้ใส่</span>
         <textarea value={features} onChange={e => setFeatures(e.target.value)} rows={3} data-testid="ai-features"
@@ -120,7 +165,7 @@ export default function AiCopywriter({ name, category, grams, materialName = "",
       <button type="button" onClick={generate} disabled={busy || (!name.trim() && !features.trim())} data-testid="ai-generate"
         className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-sm font-medium rounded-xl px-4 py-2.5 transition-colors">
         {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-        {busy ? "กำลังเขียน… (ราว 10–30 วินาที)" : copy ? "เขียนใหม่" : "ให้ AI เขียน"}
+        {busy ? "กำลังเขียน… (ราว 20–90 วินาที)" : copy ? "เขียนใหม่" : "ให้ AI เขียน"}
       </button>
       {!name.trim() && !features.trim() && <p className="text-xs text-foreground/40">กรอกชื่อสินค้าด้านบน หรือจุดเด่น ก่อนกดให้ AI เขียน</p>}
       {error && <p className="text-xs text-red-400 flex items-start gap-1.5" data-testid="ai-error"><AlertCircle size={13} className="shrink-0 mt-0.5" />{error}</p>}
