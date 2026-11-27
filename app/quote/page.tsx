@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useOrderStore } from '@/lib/store'
-import { formatTimeFull, formatTime } from '@/lib/priceCalculator'
+import { formatTimeFull, formatTime, shopeeUnitsFor, SHOPEE_UNIT_PRICE } from '@/lib/priceCalculator'
+import ShopeeOrderHint from '@/components/ShopeeOrderHint'
 import {
   FileText, ChevronLeft, User, MapPin, Phone, Mail,
   Shield, Truck, Clock, Weight, CheckCircle2,
@@ -137,7 +138,10 @@ export default function QuotePage() {
   const matCost  = result.materialCost ?? Math.round(totalPrice * 0.55)
   const machCost = result.machineCost  ?? Math.round(totalPrice * 0.35)
   const setupCost = subtotal - matCost - machCost > 0 ? subtotal - matCost - machCost : Math.round(totalPrice * 0.10)
-  const breakdown = [
+  // PLA / PETG are priced by weight only: one bar
+  const breakdown = result.ratePerGram ? [
+    { label: `Material (${result.ratePerGram} ฿/g)`, value: subtotal, pct: 100, color: '#3b82f6' },
+  ] : [
     { label: 'Material & Filament', value: matCost,   pct: Math.round((matCost  / subtotal) * 100), color: '#3b82f6' },
     { label: 'Machine Time',        value: machCost,  pct: Math.round((machCost / subtotal) * 100), color: '#8b5cf6' },
     { label: 'Setup & Handling',    value: setupCost, pct: Math.round((setupCost/ subtotal) * 100), color: '#10b981' },
@@ -188,6 +192,7 @@ export default function QuotePage() {
       `น้ำหนัก / Weight: ${Number(weightG).toFixed(0)} g · เวลาพิมพ์ / Print time: ${printDisplay}`,
       `จัดส่ง / Shipping: ${shippingCost === 0 ? 'รับเอง (ฟรี)' : `฿${shippingCost}`}`,
       `ยอดรวม / Total: ฿${Number(totalPrice).toLocaleString()}`,
+      `สั่งผ่าน Shopee: บริการพิมพ์ 3D ชิ้นละ ฿${SHOPEE_UNIT_PRICE} จำนวน ${shopeeUnitsFor(subtotal)} ชิ้น`,
     ].join('\n')
     // open LINE first: browsers block pop-ups opened after an await
     window.open(LINE_URL, '_blank', 'noopener,noreferrer')
@@ -288,6 +293,8 @@ export default function QuotePage() {
                 </div>
               ))}
             </div>
+
+            <ShopeeOrderHint price={subtotal} ratePerGram={result.ratePerGram} totalWeightG={result.totalWeightG ?? weightG} />
 
             {/* Mobile price card */}
             <div className="lg:hidden bg-foreground/[0.03] border border-foreground/10 rounded-3xl p-6 space-y-3">

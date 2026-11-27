@@ -12,7 +12,8 @@ import { OrbitControls, Stage, Center } from "@react-three/drei"
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useOrderStore } from '@/lib/store'
-import { formatTimeFull, fitsInBuildVolume, BUILD_MAX, calculate } from '@/lib/priceCalculator'
+import ShopeeOrderHint from '@/components/ShopeeOrderHint'
+import { formatTimeFull, fitsInBuildVolume, BUILD_MAX, calculate, flatRateOrder, shopeeUnitsFor, FLAT_RATE_MATERIALS } from '@/lib/priceCalculator'
 import type { Shipping, Material, InfillLevel, LayerHeight } from '@/lib/priceCalculator'
 import {
   UploadCloud, X, FileText, Plus, Minus, ChevronRight, ChevronLeft,
@@ -243,10 +244,19 @@ export default function WizardPage() {
         }
       }
       const shippingCost = shipping === 'pickup' ? 0 : 45
+      const totalWeightG = Math.round(weightG * 10) / 10
+      // PLA / PETG: whole order priced by total grams (3 ฿/g, 1.5 ฿/g from 250 g)
+      let ratePerGram: number | null = null, shopeeUnits = shopeeUnitsFor(subtotal)
+      if (FLAT_RATE_MATERIALS.includes(material as any)) {
+        const flat = flatRateOrder(totalWeightG)
+        ratePerGram = flat.ratePerGram; subtotal = flat.subtotal; shopeeUnits = flat.shopeeUnits
+        materialCost = subtotal; machineCost = 0
+      }
       return {
-        weightG: Math.round(weightG * 10) / 10, printTimeSec, printTimeMin, materialCost, machineCost,
+        weightG: totalWeightG, printTimeSec, printTimeMin, materialCost, machineCost,
         pricePerPc: totalQty > 0 ? Math.round(subtotal / totalQty) : 0,
         subtotal, shippingCost, totalPrice: subtotal + shippingCost,
+        ratePerGram, totalWeightG, shopeeUnits,
       } as ReturnType<typeof calculate>
     } catch { return null }
   })()
@@ -1030,6 +1040,8 @@ export default function WizardPage() {
                     ))}
                   </div>
                 </div>
+
+                {estimate && <ShopeeOrderHint compact price={estimate.subtotal} ratePerGram={estimate.ratePerGram} totalWeightG={estimate.totalWeightG} />}
 
                 {/* Next button */}
                 <button onClick={nextStep} disabled={!canProceed}

@@ -31,8 +31,37 @@ export interface EstimateResult {
   materialCost: number       // filament cost per pc
   machineCost:  number       // machine time cost per pc
   shippingCost: number       // flat shipping fee (total)
-  subtotal:     number       // pricePerPc × quantity
+  subtotal:     number       // price of all pieces (before shipping)
   totalPrice:   number       // subtotal + shippingCost
+  /** PLA/PETG flat-rate pricing: THB per gram used (null for other materials) */
+  ratePerGram?: number | null
+  /** total grams for the whole order (weightG × quantity) */
+  totalWeightG?: number
+  /** how many ฿59 units to order in the Shopee service listing (= subtotal ÷ 59, rounded up) */
+  shopeeUnits?: number
+}
+
+// ─── PLA / PETG: simple per-gram price ────────────────────────────────────────
+// product price = total grams × rate; 3 ฿/g, or 1.5 ฿/g once the order reaches 250 g
+export const FLAT_RATE_MATERIALS: Material[] = ["PLA", "PETG"]
+export const FLAT_RATE = { perG: 3, bulkPerG: 1.5, bulkFromG: 250 }
+/** price of one unit of the Shopee "3D print service" listing */
+export const SHOPEE_UNIT_PRICE = 59
+
+export function flatRateFor(totalGrams: number): number {
+  return totalGrams >= FLAT_RATE.bulkFromG ? FLAT_RATE.bulkPerG : FLAT_RATE.perG
+}
+
+/** PLA/PETG order price from the total grams of every piece in the order. */
+export function flatRateOrder(totalWeightG: number) {
+  const ratePerGram = flatRateFor(totalWeightG)
+  const subtotal = Math.max(MINIMUM_PRICE_PER_PC, Math.ceil(Math.round(totalWeightG * 10) / 10 * ratePerGram))
+  return { ratePerGram, subtotal, shopeeUnits: shopeeUnitsFor(subtotal) }
+}
+
+/** Units to order in the ฿59 Shopee listing so the paid total covers the price. */
+export function shopeeUnitsFor(price: number): number {
+  return Math.max(1, Math.ceil(Math.round(price * 100) / 100 / SHOPEE_UNIT_PRICE))
 }
 
 // ─── Pricing tables ───────────────────────────────────────────────────────────
@@ -123,6 +152,21 @@ export function calculate(input: EstimateInput): EstimateResult {
   const printTimeSec  = Math.round(baseMinutes * 60)
   const printTimeMin  = Math.round(baseMinutes)
 
+  // --- PLA / PETG: grams × rate for the whole order ---
+  if (FLAT_RATE_MATERIALS.includes(material)) {
+    const q = Math.max(1, Math.round(quantity))
+    const totalWeightG = Math.round(weightG * q * 10) / 10
+    const { ratePerGram, subtotal, shopeeUnits } = flatRateOrder(totalWeightG)
+    const shippingCost = SHIPPING_COST[shipping]
+    return {
+      weightG, printTimeSec, printTimeMin,
+      pricePerPc: Math.round((subtotal / q) * 100) / 100,
+      materialCost: subtotal, machineCost: 0,
+      shippingCost, subtotal, totalPrice: subtotal + shippingCost,
+      ratePerGram, totalWeightG, shopeeUnits,
+    }
+  }
+
   // --- Material cost ---
   let pricePerGram = PRICE_PER_GRAM[material] ?? 2.0
   if (isAnyColor) pricePerGram = Math.max(1.0, pricePerGram - 0.5) // slight discount for any-color
@@ -141,6 +185,9 @@ export function calculate(input: EstimateInput): EstimateResult {
   const totalPrice   = subtotal + shippingCost
 
   return {
+    ratePerGram: null,
+    totalWeightG: Math.round(weightG * quantity * 10) / 10,
+    shopeeUnits: shopeeUnitsFor(subtotal),
     weightG,
     printTimeSec,
     printTimeMin,

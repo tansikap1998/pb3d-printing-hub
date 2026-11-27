@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test"
-import { calculate } from "../../lib/priceCalculator"
+import { calculate, flatRateOrder } from "../../lib/priceCalculator"
 import { boxStl, PNG_1PX, isolateNetwork, resetDb, createOrder, sheetOrder } from "../helpers"
 
 const CUBE = { name: "cube60.stl", mimeType: "model/stl", buffer: boxStl(60, 60, 60) }
@@ -75,8 +75,13 @@ test.describe("Upload / configure", () => {
     await page.locator('input[type="file"]').setInputFiles([CUBE, SMALL])
     await expect(page.getByText("20×20×20 mm · 8.0 cm³")).toBeVisible()
     await expect(page.getByText("60×60×60 mm · 216.0 cm³")).toBeVisible()
-    const expected = price({}).pricePerPc + price({ volumeCm3: 8, dimensions: { x: 20, y: 20, z: 20 } }).pricePerPc
-    await expect(liveQuote(page)).toHaveText(baht(expected))
+    // PLA: the whole order is priced by total grams (3 ฿/g, 1.5 ฿/g from 250 g)
+    const grams = price({}).weightG + price({ volumeCm3: 8, dimensions: { x: 20, y: 20, z: 20 } }).weightG
+    const order = flatRateOrder(grams)
+    await expect(liveQuote(page)).toHaveText(baht(order.subtotal))
+    // how many ฿59 units to buy in Shopee
+    await expect(page.getByTestId("shopee-units").first()).toHaveText(`${order.shopeeUnits} ชิ้น`)
+    await expect(page.getByTestId("shopee-units-calc").first()).toContainText(`÷ 59 = ${order.shopeeUnits} ชิ้น`)
   })
 
   test("removing the only file disables Next again", async ({ page }) => {
@@ -248,6 +253,7 @@ test.describe("Ported from the -qe site", () => {
     const text = await page.evaluate(() => navigator.clipboard.readText())
     expect(text).toContain("cube60.stl ×1")
     expect(text).toContain(`฿${price({}).totalPrice.toLocaleString()}`)
+    expect(text).toContain(`สั่งผ่าน Shopee: บริการพิมพ์ 3D ชิ้นละ ฿59 จำนวน ${price({}).shopeeUnits} ชิ้น`)
     expect(text.split("\n").length).toBeGreaterThan(4) // real line breaks, not "\\n"
   })
 
