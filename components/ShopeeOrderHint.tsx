@@ -1,9 +1,10 @@
 "use client"
 import { ShoppingBag, ExternalLink } from "lucide-react"
-import { SHOPEE_UNIT_PRICE, shopeeUnitsFor, FLAT_RATE } from "@/lib/priceCalculator"
+import { SHOPEE_UNIT_PRICE, shopeeUnitsFor, FLAT_RATE, flatRateFormula } from "@/lib/priceCalculator"
 
 /** Shopee listing for "3D print service, ฿59 per unit" (set NEXT_PUBLIC_SHOPEE_SERVICE_URL in Vercel). */
-export const SHOPEE_SERVICE_URL = process.env.NEXT_PUBLIC_SHOPEE_SERVICE_URL || ""
+export const SHOPEE_SERVICE_URL =
+  process.env.NEXT_PUBLIC_SHOPEE_SERVICE_URL || "https://shopee.co.th/product/9883965/24267343976"
 
 /** "Order through Shopee: buy N units of the ฿59 listing" for the current quote. */
 export default function ShopeeOrderHint({ price, ratePerGram, totalWeightG, compact = false }: {
@@ -21,13 +22,13 @@ export default function ShopeeOrderHint({ price, ratePerGram, totalWeightG, comp
       </p>
       <p className="text-xs text-foreground/55" data-testid="shopee-units-calc">
         {ratePerGram && totalWeightG
-          ? <>{totalWeightG.toLocaleString()} g × {ratePerGram} ฿/g = ฿{price.toLocaleString()} → </>
+          ? <>{flatRateFormula(totalWeightG)} = ฿{price.toLocaleString()} → </>
           : <>ราคาชิ้นงาน ฿{price.toLocaleString()} → </>}
         ÷ {SHOPEE_UNIT_PRICE} = {units} ชิ้น (ยอดใน Shopee ฿{paid.toLocaleString()} ไม่รวมค่าส่ง)
       </p>
       {!compact && (
         <p className="text-xs text-foreground/45">
-          PLA / PETG คิดกรัมละ {FLAT_RATE.perG} บาท · ตั้งแต่ {FLAT_RATE.bulkFromG} g ขึ้นไป กรัมละ {FLAT_RATE.bulkPerG} บาท
+          PLA / PETG: {FLAT_RATE.bulkFromG} g แรก กรัมละ {FLAT_RATE.perG} บาท · ส่วนที่เกิน {FLAT_RATE.bulkFromG} g กรัมละ {FLAT_RATE.bulkPerG} บาท
           · สั่งแล้วใส่เลขคำสั่งซื้อ Shopee ในช่องด้านล่าง เพื่อให้ร้านจับคู่กับไฟล์งาน
         </p>
       )}
