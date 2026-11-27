@@ -5,10 +5,16 @@ import { boxStl, box3mf, PNG_1PX, isolateNetwork, resetDb, createOrder, sheetOrd
 const CUBE = { name: "cube60.stl", mimeType: "model/stl", buffer: boxStl(60, 60, 60) }
 const SMALL = { name: "small20.stl", mimeType: "model/stl", buffer: boxStl(20, 20, 20) }
 
-const price = (o: Partial<Parameters<typeof calculate>[0]>) => calculate({
-  volumeCm3: 216, dimensions: { x: 60, y: 60, z: 60 }, technology: "FDM", material: "PLA",
-  infill: 25, layerHeight: 0.4, quantity: 1, shipping: "pickup", ...o,
-})
+// The upload page measures the real mesh: for a box, volume = x·y·z and surface = 2(xy + yz + zx)
+const boxStats = (d: { x: number; y: number; z: number }) =>
+  ({ meshVolumeCm3: (d.x * d.y * d.z) / 1000, surfaceCm2: (2 * (d.x * d.y + d.y * d.z + d.z * d.x)) / 100 })
+const price = (o: Partial<Parameters<typeof calculate>[0]>) => {
+  const dimensions = o.dimensions ?? { x: 60, y: 60, z: 60 }
+  return calculate({
+    volumeCm3: 216, dimensions, technology: "FDM", material: "PLA",
+    infill: 25, layerHeight: 0.4, quantity: 1, shipping: "pickup", ...boxStats(dimensions), ...o,
+  })
+}
 const baht = (n: number) => `฿${n.toLocaleString()}`
 const liveQuote = (page: Page) => page.locator("p", { hasText: "Live Quote" }).locator("xpath=following-sibling::p[1]")
 
@@ -336,6 +342,9 @@ test.describe("Guards", () => {
     expect(bad.status()).toBe(400)
     const ok = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.4, quantity: 1 } })
     expect(ok.status()).toBe(200)
-    expect((await ok.json()).totalPrice).toBe(price({}).totalPrice)
+    // without mesh stats the API falls back to the bounding-box estimate
+    expect((await ok.json()).totalPrice).toBe(price({ meshVolumeCm3: 0, surfaceCm2: 0 }).totalPrice)
+    const withMesh = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.4, quantity: 1, meshVolumeCm3: 216, surfaceCm2: 216 } })
+    expect((await withMesh.json()).totalPrice).toBe(price({}).totalPrice)
   })
 })

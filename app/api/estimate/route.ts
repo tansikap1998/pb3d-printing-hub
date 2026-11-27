@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
       quantity,
       shipping: shipping ?? "pickup",
       isAnyColor: isAnyColor ?? false,
+      meshVolumeCm3: Number(body.meshVolumeCm3) > 0 ? Number(body.meshVolumeCm3) : undefined,
+      surfaceCm2: Number(body.surfaceCm2) > 0 ? Number(body.surfaceCm2) : undefined,
     }
 
     const result = calculate(input)

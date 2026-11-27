@@ -8,6 +8,7 @@ import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
 // @ts-ignore
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader'
 import { load3MF } from '@/lib/threeMf'
+import { objectStats, geometryStats } from '@/lib/meshStats'
 import { Canvas, useLoader } from "@react-three/fiber"
 import { OrbitControls, Stage, Center } from "@react-three/drei"
 import Link from 'next/link'
@@ -80,8 +81,10 @@ const STEPS = ['อัปโหลด & ตั้งค่า', 'จัดส่
 interface SubPiece {
   id: string
   childIndex: number
-  volumeCm3: number
+  volumeCm3: number          // bounding box (fallback)
   dimensions: { x: number; y: number; z: number }
+  meshVolumeCm3?: number     // real solid volume
+  surfaceCm2?: number
 }
 
 interface ModelFile {
@@ -91,7 +94,10 @@ interface ModelFile {
   previewUrl?: string  // converted STL blob URL for STEP files
   s3Key?: string
   originalDimensions: { x: number; y: number; z: number }
-  originalVolumeCm3: number
+  originalVolumeCm3: number   // bounding box (fallback)
+  /** real solid volume and surface area: weight is estimated like a slicer does */
+  meshVolumeCm3?: number
+  surfaceCm2?: number
   quantity: number
   uploading: boolean
   error?: boolean
@@ -229,7 +235,7 @@ export default function WizardPage() {
   const sz = orig.z > 0 ? customDims.z / orig.z : 1
   const meshScale: [number, number, number] = [sx, sy, sz]
 
-  const scaledVolume = (primary?.originalVolumeCm3 ?? 0) * sx * sy * sz
+  const scaledVolume = (primary?.meshVolumeCm3 || primary?.originalVolumeCm3 || 0) * sx * sy * sz
   const totalQty     = models.reduce((a, m) => a + m.quantity, 0)
   // Auto-split models are not oversize — pieces are estimated individually
   const isOversize   = primary?.autoSplit ? false : !fitsInBuildVolume(customDims)
@@ -248,12 +254,15 @@ export default function WizardPage() {
       for (const m of models) {
         const [kx, ky, kz] = m.id === primary.id ? [sx, sy, sz] : [1, 1, 1]
         const k = kx * ky * kz
+        const ka = Math.pow(k, 2 / 3) // area grows with the square of the scale
         const parts = m.autoSplit && m.subPieces && m.subPieces.length > 0
-          ? m.subPieces.map(p => ({ v: p.volumeCm3 * k, d: { x: p.dimensions.x * kx, y: p.dimensions.y * ky, z: p.dimensions.z * kz } }))
-          : [{ v: m.originalVolumeCm3 * k, d: { x: m.originalDimensions.x * kx, y: m.originalDimensions.y * ky, z: m.originalDimensions.z * kz } }]
+          ? m.subPieces.map(p => ({ v: p.volumeCm3 * k, d: { x: p.dimensions.x * kx, y: p.dimensions.y * ky, z: p.dimensions.z * kz },
+              mv: (p.meshVolumeCm3 ?? 0) * k, sa: (p.surfaceCm2 ?? 0) * ka }))
+          : [{ v: m.originalVolumeCm3 * k, d: { x: m.originalDimensions.x * kx, y: m.originalDimensions.y * ky, z: m.originalDimensions.z * kz },
+              mv: (m.meshVolumeCm3 ?? 0) * k, sa: (m.surfaceCm2 ?? 0) * ka }]
         for (const part of parts) {
           const e = calculate({
-            volumeCm3: part.v, dimensions: part.d,
+            volumeCm3: part.v, dimensions: part.d, meshVolumeCm3: part.mv, surfaceCm2: part.sa,
             technology: 'FDM', material, infill, layerHeight,
             quantity: 1, shipping: 'pickup',
           })
@@ -374,6 +383,7 @@ export default function WizardPage() {
         const blobUrl = URL.createObjectURL(file)
         const is3mf   = file.name.toLowerCase().endsWith('.3mf')
         let volumeCm3 = 0, dims = { x: 0, y: 0, z: 0 }
+        let stats: { volumeCm3: number; surfaceCm2: number } | null = null
 
         if (is3mf) {
           const group = await read3MF(blobUrl)
@@ -381,6 +391,7 @@ export default function WizardPage() {
           new THREE.Box3().setFromObject(group).getSize(totalSize)
           volumeCm3 = Math.abs(totalSize.x * totalSize.y * totalSize.z) / 1000
           dims = { x: totalSize.x, y: totalSize.y, z: totalSize.z }
+          stats = objectStats(group)
 
           // Auto-split: if total BB exceeds threshold and the 3MF has multiple objects
           // ThreeMFLoader wraps each <object> as a child of the root Group
@@ -408,7 +419,9 @@ export default function WizardPage() {
                 const sz = new THREE.Vector3()
                 new THREE.Box3().setFromObject(obj).getSize(sz)
                 const vol = Math.abs(sz.x * sz.y * sz.z) / 1000
-                return { id: `piece-${i}`, childIndex: i, volumeCm3: vol, dimensions: { x: sz.x, y: sz.y, z: sz.z } }
+                const st = objectStats(obj)
+                return { id: `piece-${i}`, childIndex: i, volumeCm3: vol, dimensions: { x: sz.x, y: sz.y, z: sz.z },
+                  meshVolumeCm3: st.volumeCm3, surfaceCm2: st.surfaceCm2 }
               })
               .filter(p => p.volumeCm3 > 0)
 
@@ -420,6 +433,8 @@ export default function WizardPage() {
                 ...m,
                 originalDimensions: largest.dimensions,
                 originalVolumeCm3: totalVol,
+                meshVolumeCm3: subPieces.reduce((a, p) => a + (p.meshVolumeCm3 ?? 0), 0),
+                surfaceCm2: subPieces.reduce((a, p) => a + (p.surfaceCm2 ?? 0), 0),
                 s3Key: undefined, uploading: false,
                 subPieces, autoSplit: true,
               } : m))
@@ -455,6 +470,7 @@ export default function WizardPage() {
           if (![size.x, size.y, size.z].every(Number.isFinite)) throw new Error('Invalid STL')
           volumeCm3 = Math.abs(size.x * size.y * size.z) / 1000
           dims = { x: size.x, y: size.y, z: size.z }
+          stats = geometryStats(geo)
         }
 
         // Upload the original file to S3 (best-effort). A storage failure must not
@@ -475,7 +491,8 @@ export default function WizardPage() {
         if (!(volumeCm3 > 0)) throw new Error('Empty model')
 
         setModels(prev => prev.map(m => m.id === modelId
-          ? { ...m, originalDimensions: dims, originalVolumeCm3: volumeCm3, s3Key: key, uploading: false }
+          ? { ...m, originalDimensions: dims, originalVolumeCm3: volumeCm3, s3Key: key, uploading: false,
+              ...(stats && stats.volumeCm3 > 0 ? { meshVolumeCm3: stats.volumeCm3, surfaceCm2: stats.surfaceCm2 } : {}) }
           : m
         ))
       } catch (err) {
@@ -848,6 +865,8 @@ export default function WizardPage() {
                       try {
                         pieceEst = calculate({
                           volumeCm3: p.volumeCm3 * sx * sy * sz,
+                          meshVolumeCm3: (p.meshVolumeCm3 ?? 0) * sx * sy * sz,
+                          surfaceCm2: (p.surfaceCm2 ?? 0) * Math.pow(sx * sy * sz, 2 / 3),
                           dimensions: { x: p.dimensions.x * sx, y: p.dimensions.y * sy, z: p.dimensions.z * sz },
                           technology: 'FDM', material, infill, layerHeight,
                           quantity: 1, shipping: 'pickup',
@@ -860,7 +879,7 @@ export default function WizardPage() {
                             <p className="text-xs font-semibold">ชิ้นที่ {i + 1}</p>
                             <p className="text-2xs mt-0.5" style={{ color: T.muted }}>
                               {(p.dimensions.x * sx).toFixed(0)}×{(p.dimensions.y * sy).toFixed(0)}×{(p.dimensions.z * sz).toFixed(0)} mm
-                              &nbsp;·&nbsp;{(p.volumeCm3 * sx * sy * sz).toFixed(2)} cm³
+                              &nbsp;·&nbsp;{((p.meshVolumeCm3 || p.volumeCm3) * sx * sy * sz).toFixed(2)} cm³
                             </p>
                           </div>
                           <p className="text-xs font-bold shrink-0" style={{ color: T.accent }}>
@@ -926,7 +945,7 @@ export default function WizardPage() {
                       <p className="text-xs mt-0.5" style={{ color: model.error ? '#ef4444' : T.muted }}>
                         {model.error ? `อัปโหลดล้มเหลว${model.errorMsg ? `: ${model.errorMsg}` : ''}`
                          : model.uploading ? 'กำลังวิเคราะห์…'
-                         : `${model.originalDimensions.x.toFixed(0)}×${model.originalDimensions.y.toFixed(0)}×${model.originalDimensions.z.toFixed(0)} mm · ${model.originalVolumeCm3.toFixed(1)} cm³`}
+                         : `${model.originalDimensions.x.toFixed(0)}×${model.originalDimensions.y.toFixed(0)}×${model.originalDimensions.z.toFixed(0)} mm · ${(model.meshVolumeCm3 || model.originalVolumeCm3).toFixed(1)} cm³`}
                       </p>
                     </div>
                     {!model.uploading && !model.error && (
