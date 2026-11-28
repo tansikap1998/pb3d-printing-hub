@@ -5,13 +5,14 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useOrderStore } from '@/lib/store'
-import { formatTimeFull, formatTime, shopeeUnitsFor, SHOPEE_UNIT_PRICE, flatRateFormula } from '@/lib/priceCalculator'
-import ShopeeOrderHint from '@/components/ShopeeOrderHint'
+import { formatTimeFull, formatTime } from '@/lib/priceCalculator'
+import { thaiDate, quoteSentence, type Quote } from '@/lib/quotePricing'
+import { DEFAULT_QUOTE_CONFIG, type QuoteConfig } from '@/lib/quoteConfig'
 import {
   FileText, ChevronLeft, User, MapPin, Phone, Mail,
   Shield, Truck, Clock, Weight, CheckCircle2,
   Layers, Loader2, AlertCircle, Zap,
-  Package, Store, ArrowRight, BarChart3, MessageCircle
+  Package, Store, ArrowRight, BarChart3, MessageCircle, Download, CalendarDays, StickyNote
 } from 'lucide-react'
 
 const MATERIAL_COLORS: Record<string, string> = {
@@ -106,7 +107,17 @@ const LINE_URL = 'https://lin.ee/R8Vd7q5'
 export default function QuotePage() {
   const router = useRouter()
   const { estimateData, _hasHydrated } = useOrderStore()
-  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '', shopeeReference: '' })
+  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '' })
+  const [notes, setNotes] = useState('')
+  const [cfg, setCfg] = useState<QuoteConfig>(DEFAULT_QUOTE_CONFIG)
+  useEffect(() => {
+    fetch('/api/quote-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.config) setCfg(d.config) }).catch(() => {})
+  }, [])
+  // quote number + date for the printable / PDF quote (stable for this visit)
+  const [quoteNo] = useState(() => {
+    const d = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10).replace(/-/g, '')
+    return `Q${d}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -123,8 +134,12 @@ export default function QuotePage() {
   if (!estimateData || !isValidQuoteData(estimateData)) return null
 
   const { models, technology, infill, layerHeight, result } = estimateData
+  const quote: Quote | null = result.quote ?? null
+  const isPickup  = (estimateData.shipping ?? 'pickup') !== 'postal'
   const totalQty  = models.reduce((a: number, m: any) => a + m.quantity, 0)
-  const isValid   = !!(customer.name.trim() && customer.phone.trim() && customer.address.trim())
+  // pick-up orders don't need an address
+  const isValid   = !!(customer.name.trim() && customer.phone.trim() && (isPickup || customer.address.trim()))
+  const today     = thaiDate(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10))
 
   const subtotal     = result.subtotal     ?? result.totalPrice
   const shippingCost = result.shippingCost ?? 0
@@ -138,10 +153,10 @@ export default function QuotePage() {
   const matCost  = result.materialCost ?? Math.round(totalPrice * 0.55)
   const machCost = result.machineCost  ?? Math.round(totalPrice * 0.35)
   const setupCost = subtotal - matCost - machCost > 0 ? subtotal - matCost - machCost : Math.round(totalPrice * 0.10)
-  // PLA / PETG are priced by weight only: one bar
-  const breakdown = result.ratePerGram ? [
-    { label: `Material (${flatRateFormula(result.totalWeightG ?? weightG)})`, value: subtotal, pct: 100, color: '#3b82f6' },
-  ] : [
+  const BAR_COLORS = ['#3b82f6', '#f59e0b', '#ec4899', '#a855f7', '#ef4444', '#10b981']
+  const breakdown = quote ? quote.items.map((it, i) => ({
+    label: it.label, value: it.amount, pct: Math.round((it.amount / Math.max(1, quote.total)) * 100), color: BAR_COLORS[i % BAR_COLORS.length], detail: it.detail,
+  })) : [
     { label: 'Material & Filament', value: matCost,   pct: Math.round((matCost  / subtotal) * 100), color: '#3b82f6' },
     { label: 'Machine Time',        value: machCost,  pct: Math.round((machCost / subtotal) * 100), color: '#8b5cf6' },
     { label: 'Setup & Handling',    value: setupCost, pct: Math.round((setupCost/ subtotal) * 100), color: '#10b981' },
@@ -154,29 +169,33 @@ export default function QuotePage() {
       const fileNames = models.map((m: any) => m.name).join(', ')
       const uniq = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)))
       const materials = uniq(models.map((m: any) => m.material)).join(', ') || 'PLA'
-      const colors    = uniq(models.map((m: any) => m.colorId)).join(', ') || 'various'
-      const shippingLabel = (estimateData.shipping ?? (shippingCost > 0 ? 'postal' : 'pickup')) === 'postal'
-        ? `ส่งไปรษณีย์ (+฿${shippingCost})` : 'รับเอง (ฟรี)'
-      const shopeeRef = customer.shopeeReference.trim().slice(0, 200)
-      const notes = `จัดส่ง: ${shippingLabel}` + (shopeeRef ? `\nShopee: ${shopeeRef}` : '')
+      const colors    = uniq(models.flatMap((m: any) => m.colors ?? [m.colorId])).join(', ') || 'various'
+      const perFileColors = models.map((m: any) => `${m.name}: ${(m.colors ?? [m.colorId]).join(' + ')}`).join('\n')
       const printTimeMin = result.printTimeMin ?? Math.round((result.printTimeSec ?? 0) / 60)
+      const opts = estimateData.options ?? { sanding: false, painting: false, rush: false }
+      const addons = [opts.sanding && cfg.addons.sanding.label, opts.painting && cfg.addons.painting.label,
+        models.some((m: any) => (m.colors?.length ?? 1) > 1) && cfg.addons.multiColor.label].filter(Boolean).join(', ')
 
       // Orders are created on the server; the browser never touches the order sheet.
       const res = await fetch('/api/orders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer: { name: customer.name, phone: customer.phone, email: customer.email, address: customer.address },
+          customer: { name: customer.name, phone: customer.phone, email: customer.email, address: isPickup ? (customer.address || 'รับที่ร้าน') : customer.address },
           fileName: fileNames, technology, material: materials, color: colors,
-          infill, layerHeight, quantity: totalQty, notes,
-          volumeCm3: models.reduce((a: number, m: any) => a + (m.originalVolumeCm3 ?? m.volumeCm3 ?? 0), 0),
+          infill, layerHeight, quantity: totalQty,
+          notes: [`สีแต่ละไฟล์:\n${perFileColors}`, notes.trim() && `หมายเหตุลูกค้า: ${notes.trim()}`].filter(Boolean).join('\n\n'),
+          volumeCm3: models.reduce((a: number, m: any) => a + (m.meshVolumeCm3 ?? m.originalVolumeCm3 ?? 0), 0),
           weightG, printTimeMin, totalPrice, subtotal,
+          priceItems: quote?.items ?? [], expectedDate: quote?.expectedDate ?? '',
+          rush: !!quote?.rushApplied, addons, shippingMethod: isPickup ? 'pickup' : 'postal',
+          fileWarnings: models.flatMap((m: any) => (m.warnings ?? []).map((w: string) => `${m.name}: ${w}`)).join('\n'),
         }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to place order')
       router.push(`/checkout/${data.id}`)
     } catch (e: any) {
-      setError(e?.message && e.message !== 'Failed to fetch' ? e.message : 'Failed to place order. Please try again.')
+      setError(e?.message && e.message !== 'Failed to fetch' ? e.message : 'ส่งคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่')
     } finally {
       setLoading(false)
     }
@@ -191,11 +210,12 @@ export default function QuotePage() {
       `Infill: ${infill}% · Layer: ${Number(layerHeight).toFixed(2)} mm`,
       `น้ำหนัก / Weight: ${Number(weightG).toFixed(0)} g · เวลาพิมพ์ / Print time: ${printDisplay}`,
       `จัดส่ง / Shipping: ${shippingCost === 0 ? 'รับเอง (ฟรี)' : `฿${shippingCost}`}`,
-      `ยอดรวม / Total: ฿${Number(totalPrice).toLocaleString()}`,
-      `สั่งผ่าน Shopee: บริการพิมพ์ 3D ชิ้นละ ฿${SHOPEE_UNIT_PRICE} จำนวน ${shopeeUnitsFor(subtotal)} ชิ้น`,
+      ...(quote ? [`รายการ: ${quoteSentence(quote)}`, `คาดว่าได้รับ: ${thaiDate(quote.expectedDate)}`] : []),
+      `ยอดรวม (ประมาณการ) / Total: ฿${Number(totalPrice).toLocaleString()}`,
+      ...(cfg.payment.shopeeEnabled && quote ? [`สั่งผ่าน Shopee: บริการพิมพ์ 3D ชิ้นละ ฿${cfg.payment.shopeeUnitPrice} จำนวน ${quote.shopeeUnits} ชิ้น`] : []),
     ].join('\n')
     // open LINE first: browsers block pop-ups opened after an await
-    window.open(LINE_URL, '_blank', 'noopener,noreferrer')
+    window.open(cfg.contact.lineUrl || LINE_URL, '_blank', 'noopener,noreferrer')
     try {
       await navigator.clipboard.writeText(summary)
       setNotice('คัดลอกใบเสนอราคาแล้ว วางในแชท LINE ได้เลย / Quote copied — paste it in LINE.')
@@ -205,7 +225,10 @@ export default function QuotePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-body selection:bg-blue-500/20 pb-32">
+    <>
+    <PrintableQuote quoteNo={quoteNo} date={today} customer={customer} models={models} quote={quote}
+      total={totalPrice} infill={infill} isPickup={isPickup} cfg={cfg} />
+    <div className="min-h-screen bg-background text-foreground font-body selection:bg-blue-500/20 pb-32 print:hidden">
 
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 h-16 px-6 md:px-10 flex items-center justify-between bg-background/85 backdrop-blur-xl border-b border-foreground/[0.06]">
@@ -229,8 +252,21 @@ export default function QuotePage() {
       <main className="max-w-[1200px] mx-auto px-4 md:px-8 pt-24">
 
         <div className="py-8">
-          <h1 className="font-semibold tracking-tight text-[clamp(1.8rem,5vw,3rem)] leading-[1.1]">Confirm Order</h1>
-          <p className="text-foreground/40 text-sm mt-2">Review your parts and fill in shipping details</p>
+          <h1 className="font-semibold tracking-tight text-[clamp(1.8rem,5vw,3rem)] leading-[1.1]">ใบเสนอราคา</h1>
+          <p className="text-foreground/40 text-sm mt-2">
+            เลขที่ {quoteNo} · ราคานี้เป็นราคาประมาณการ ร้านจะตรวจไฟล์และยืนยันราคาก่อนให้ชำระเงิน
+          </p>
+          <div className="flex flex-wrap gap-2 mt-4">
+            <button onClick={() => window.print()} data-testid="download-pdf"
+              className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-xl border border-foreground/15 hover:bg-foreground/5">
+              <Download size={14} /> ดาวน์โหลด PDF / พิมพ์ใบเสนอราคา
+            </button>
+            {quote && (
+              <span className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-500" data-testid="quote-expected-date">
+                <CalendarDays size={14} /> คาดว่าได้รับ {thaiDate(quote.expectedDate)}{quote.rushApplied ? ' (งานด่วน)' : ''}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -259,7 +295,7 @@ export default function QuotePage() {
                             style={{ color: col, borderColor: `${col}35`, background: `${col}12` }}>
                             {model.material}
                           </span>
-                          <span className="text-xs text-foreground/35 capitalize">{model.colorId}</span>
+                          <span className="text-xs text-foreground/35">{(model.colors ?? [model.colorId]).join(' + ')}</span>
                           {model.dimensions?.x > 0 && (
                             <span className="text-xs text-foreground/25">
                               {model.dimensions.x.toFixed(0)}×{model.dimensions.y.toFixed(0)}×{model.dimensions.z.toFixed(0)} mm
@@ -271,7 +307,7 @@ export default function QuotePage() {
                         <div className="bg-foreground/8 border border-foreground/12 rounded-xl px-3 py-1.5">
                           <p className="font-header text-sm">×{model.quantity}</p>
                         </div>
-                        <p className="text-xs text-foreground/30 mt-1">{(model.originalVolumeCm3 ?? model.volumeCm3 ?? 0).toFixed(1)} cm³</p>
+                        <p className="text-xs text-foreground/30 mt-1">{(model.meshVolumeCm3 ?? model.originalVolumeCm3 ?? model.volumeCm3 ?? 0).toFixed(1)} cm³</p>
                       </div>
                     </div>
                   )
@@ -294,7 +330,25 @@ export default function QuotePage() {
               ))}
             </div>
 
-            <ShopeeOrderHint price={subtotal} ratePerGram={result.ratePerGram} totalWeightG={result.totalWeightG ?? weightG} />
+            {/* Itemised quote (all screens) */}
+            {quote && (
+              <section className="bg-foreground/[0.03] border border-foreground/10 rounded-3xl p-5 space-y-2" data-testid="quote-items">
+                <p className="text-sm font-medium text-foreground/50">รายการราคา</p>
+                {quote.items.map(it => (
+                  <div key={it.key} className="flex justify-between gap-4 text-sm py-1.5 border-b border-foreground/8">
+                    <div className="min-w-0">
+                      <p className="font-medium">{it.label}</p>
+                      <p className="text-xs text-foreground/45">{it.detail}</p>
+                    </div>
+                    <span className="font-semibold shrink-0">฿{it.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between pt-1 font-semibold">
+                  <span>รวม (ประมาณการ)</span><span data-testid="quote-total">฿{quote.total.toLocaleString()}</span>
+                </div>
+                <p className="text-xs text-foreground/45" data-testid="quote-sentence">{quoteSentence(quote)}</p>
+              </section>
+            )}
 
             {/* Mobile price card */}
             <div className="lg:hidden bg-foreground/[0.03] border border-foreground/10 rounded-3xl p-6 space-y-3">
@@ -327,13 +381,11 @@ export default function QuotePage() {
                 </div>
                 <InputField label="Email" icon={Mail} type="email" value={customer.email}
                   onChange={v => setCustomer(p => ({ ...p, email: v }))} placeholder="john@example.com" />
-                <InputField label="เลขคำสั่งซื้อ Shopee หรือชื่อร้าน (ถ้ามี) / Shopee order no. (optional)" icon={Package}
-                  value={customer.shopeeReference}
-                  onChange={v => setCustomer(p => ({ ...p, shopeeReference: v }))}
-                  placeholder="ช่วยให้เราจับคู่กับออเดอร์เดิมได้" />
-                <TextareaField label="Delivery Address" icon={MapPin} value={customer.address}
+                <TextareaField label={isPickup ? 'ที่อยู่ (ไม่บังคับ: เลือกรับที่ร้าน)' : 'ที่อยู่จัดส่ง'} icon={MapPin} value={customer.address}
                   onChange={v => setCustomer(p => ({ ...p, address: v }))}
-                  placeholder="123 Street, Bangkok 10xxx" required />
+                  placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์" required={!isPickup} />
+                <TextareaField label="หมายเหตุ / รายละเอียดสี (เช่น หัวสีแดง ตัวสีขาว)" icon={StickyNote} value={notes}
+                  onChange={setNotes} placeholder="บอกร้านเพิ่มเติมได้ที่นี่" />
               </div>
             </section>
 
@@ -368,7 +420,7 @@ export default function QuotePage() {
                 </p>
                 {breakdown.map(item => (
                   <div key={item.label}>
-                    <div className="flex justify-between items-center mb-1.5">
+                    <div className="flex justify-between items-center mb-1.5" title={(item as any).detail}>
                       <span className="text-sm text-background/60">{item.label}</span>
                       <span className="font-header text-sm text-background">฿{item.value.toLocaleString()}</span>
                     </div>
@@ -423,7 +475,7 @@ export default function QuotePage() {
                 className="w-full py-5 rounded-2xl bg-background text-foreground font-header text-base uppercase tracking-[0.15em] transition-all disabled:opacity-25 hover:bg-background/80 active:scale-[0.98] flex items-center justify-center gap-3 shadow-xl">
                 {loading
                   ? <><Loader2 size={17} className="animate-spin" />Processing…</>
-                  : <><Zap size={17} />Place Order</>
+                  : <><Zap size={17} />ส่งให้ร้านตรวจไฟล์</>
                 }
               </button>
               {!isValid && (
@@ -437,7 +489,7 @@ export default function QuotePage() {
                 { icon: Shield,       label: 'Secure',   desc: 'Encrypted checkout' },
                 { icon: Truck,        label: 'Tracked',  desc: 'Real-time updates'  },
                 { icon: CheckCircle2, label: 'QC Check', desc: 'Quality verified'   },
-                { icon: ArrowRight,   label: 'Fast',     desc: '3–7 business days'  },
+                { icon: ArrowRight,   label: 'Fast',     desc: quote ? `ได้รับ ${thaiDate(quote.expectedDate)}` : '3–7 business days' },
               ].map(b => (
                 <div key={b.label} className="flex items-center gap-2.5 p-3 rounded-2xl bg-foreground/[0.03] border border-foreground/10">
                   <div className="w-8 h-8 rounded-lg bg-foreground/8 border border-foreground/12 flex items-center justify-center shrink-0">
@@ -472,10 +524,70 @@ export default function QuotePage() {
           <button onClick={handleConfirm} disabled={!isValid || loading}
             className="flex-1 py-4 rounded-2xl font-header text-sm uppercase tracking-[0.15em] transition-all disabled:opacity-30 flex items-center justify-center gap-2 bg-foreground text-background shadow-2xl active:scale-[0.98]">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={14} />}
-            {loading ? 'Processing…' : isValid ? 'Place Order →' : 'Complete Form'}
+            {loading ? 'Processing…' : isValid ? 'ส่งให้ร้านตรวจ →' : 'กรอกข้อมูลให้ครบ'}
           </button>
         </div>
       </div>
+    </div>
+    </>
+  )
+}
+
+/** The quote as a printable page (window.print → "Save as PDF"). Hidden on screen. */
+function PrintableQuote({ quoteNo, date, customer, models, quote, total, infill, isPickup, cfg }: {
+  quoteNo: string; date: string; customer: { name: string; phone: string; email: string; address: string }
+  models: any[]; quote: Quote | null; total: number; infill: number; isPickup: boolean; cfg: QuoteConfig
+}) {
+  return (
+    <div className="hidden print:block text-black bg-white p-8 text-[12px] leading-relaxed" data-testid="printable-quote">
+      <div className="flex justify-between items-start border-b border-black/20 pb-4 mb-4">
+        <div>
+          <p className="text-2xl font-bold tracking-tight">PB3D HUB</p>
+          <p>บริการพิมพ์ 3 มิติ · pb3d-printing-hub.vercel.app</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-semibold">ใบเสนอราคา / Quotation</p>
+          <p>เลขที่ {quoteNo}</p>
+          <p>วันที่ {date} · ยืนราคา 7 วัน</p>
+        </div>
+      </div>
+      {(customer.name || customer.phone) && (
+        <div className="mb-4">
+          <p className="font-semibold">ลูกค้า</p>
+          <p>{customer.name} {customer.phone && `· ${customer.phone}`} {customer.email && `· ${customer.email}`}</p>
+          {customer.address && <p className="whitespace-pre-line">{customer.address}</p>}
+        </div>
+      )}
+      <table className="w-full border-collapse mb-4">
+        <thead>
+          <tr className="border-b border-black/30 text-left"><th className="py-1.5">ไฟล์ชิ้นงาน</th><th>วัสดุ / สี</th><th className="text-right">จำนวน</th></tr>
+        </thead>
+        <tbody>
+          {models.map((m: any) => (
+            <tr key={m.id} className="border-b border-black/10">
+              <td className="py-1.5">{m.name}</td>
+              <td>{m.material} · {(m.colors ?? [m.colorId]).join(' + ')} · infill {infill}%</td>
+              <td className="text-right">{m.quantity}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <table className="w-full border-collapse mb-4">
+        <thead><tr className="border-b border-black/30 text-left"><th className="py-1.5">รายการ</th><th>รายละเอียด</th><th className="text-right">จำนวนเงิน (บาท)</th></tr></thead>
+        <tbody>
+          {(quote?.items ?? []).map(it => (
+            <tr key={it.key} className="border-b border-black/10">
+              <td className="py-1.5">{it.label}</td><td>{it.detail}</td><td className="text-right">{it.amount.toLocaleString()}</td>
+            </tr>
+          ))}
+          <tr><td className="py-2 font-bold" colSpan={2}>รวมทั้งสิ้น (ประมาณการ)</td><td className="text-right font-bold">{Number(total).toLocaleString()}</td></tr>
+        </tbody>
+      </table>
+      {quote && <p>คาดว่าจะได้รับงาน: <b>{thaiDate(quote.expectedDate)}</b> ({isPickup ? 'รับที่ร้าน' : 'จัดส่งพัสดุ'}{quote.rushApplied ? ' · งานด่วน' : ''})</p>}
+      <p className="mt-3 text-black/70">
+        หมายเหตุ: ราคานี้คำนวณจากไฟล์โดยอัตโนมัติ อาจคลาดเคลื่อนได้ ร้านจะตรวจไฟล์และยืนยันราคาจริงก่อนชำระเงิน
+      </p>
+      <p className="mt-1 text-black/70">ชำระเงิน: PromptPay / โอนเข้าบัญชี {cfg.payment.bankName} {cfg.payment.bankAccount} ({cfg.payment.accountName}){cfg.payment.shopeeEnabled ? ' หรือสั่งผ่าน Shopee' : ''}</p>
     </div>
   )
 }

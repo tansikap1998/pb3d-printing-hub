@@ -45,8 +45,40 @@ var TABLES = {
       ['tracking_number', 'เลขพัสดุ'],
       ['slip_file_id', 'สลิป (Drive file ID)'],
       ['updated_at', 'อัปเดตล่าสุด'],
+      // quote → shop confirms the price → customer pays
+      ['estimate_price', 'ราคาประมาณการ (บาท)'],
+      ['price_items', 'รายการราคา'],
+      ['shop_note', 'ข้อความจากร้าน'],
+      ['expected_date', 'วันที่คาดว่าจะได้รับ'],
+      ['rush', 'งานด่วน'],
+      ['addons', 'บริการเสริม'],
+      ['shipping_method', 'การรับสินค้า'],
+      ['payment_method', 'วิธีชำระ'],
+      ['shopee_ref', 'เลขคำสั่งซื้อ Shopee'],
+      ['file_warnings', 'คำเตือนไฟล์'],
     ],
-    numbers: ['quantity', 'infill', 'layer_height', 'volume_cm3', 'weight_g', 'print_time_min', 'base_price', 'total_price'],
+    numbers: ['quantity', 'infill', 'layer_height', 'volume_cm3', 'weight_g', 'print_time_min', 'base_price', 'total_price', 'estimate_price'],
+    booleans: ['rush'],
+  },
+  // "ไม่มีไฟล์ 3D": customers send photos / a description to get a design or scan quote
+  requests: {
+    sheet: 'NoFileRequests',
+    cols: [
+      ['id', 'Request ID'],
+      ['created_at', 'วันที่ส่ง'],
+      ['status', 'สถานะ'],
+      ['name', 'ชื่อ'],
+      ['phone', 'เบอร์โทร'],
+      ['email', 'อีเมล'],
+      ['line_id', 'LINE ID'],
+      ['service', 'ต้องการ'],
+      ['description', 'รายละเอียด'],
+      ['size', 'ขนาดโดยประมาณ'],
+      ['quantity', 'จำนวน'],
+      ['photo_ids', 'รูป (Drive file IDs)'],
+      ['shop_note', 'บันทึกร้าน'],
+    ],
+    numbers: ['quantity'],
   },
   products: {
     sheet: 'Products',
@@ -146,7 +178,9 @@ var TABLES = {
   },
 };
 
-var ORDER_STATUSES = ['pending', 'awaiting_verification', 'confirmed', 'printing', 'shipped', 'delivered', 'cancelled'];
+// reviewing: the shop checks the file and confirms the price · pending: waiting for payment
+var ORDER_STATUSES = ['reviewing', 'pending', 'awaiting_verification', 'confirmed', 'printing', 'finishing', 'shipped', 'delivered', 'cancelled'];
+var STATUS_RULE_VERSION = '2';
 var SLIP_FOLDER_NAME = 'PB3D Payment Slips';
 
 // ─── Entry points ────────────────────────────────────────────────────────────
@@ -191,7 +225,9 @@ function setup() {
     secret = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
     props.setProperty('WEBHOOK_SECRET', secret);
   }
-  table_('orders'); table_('products'); table_('consent');
+  table_('orders'); table_('products'); table_('consent'); table_('requests');
+  // asks Google for permission to send e-mail (order notifications) the first time setup runs
+  Logger.log('E-mail quota left today: ' + MailApp.getRemainingDailyQuota());
   var admins = table_('admins');
   if (admins.sheet.getLastRow() < 2) {
     // starter rows: fill in the passwords in the sheet (blank password = cannot sign in)
@@ -253,7 +289,7 @@ var ACTIONS = {
     if (cur.status !== 'pending' && cur.status !== 'awaiting_verification') return { order: null, conflict: true, status: cur.status };
     var blob = Utilities.newBlob(Utilities.base64Decode(b.base64), b.mimeType, cur.id + '-' + Date.now() + '.' + b.ext);
     var file = slipFolder_().createFile(blob);
-    var o = assign_(cur, { status: 'awaiting_verification', slip_file_id: file.getId(), updated_at: b.now || '' });
+    var o = assign_(cur, { status: 'awaiting_verification', slip_file_id: file.getId(), payment_method: 'promptpay', updated_at: b.now || '' });
     writeRow_(t, r, o);
     return { order: o };
   },
@@ -399,6 +435,30 @@ var ACTIONS = {
     return { updated: r !== -1 };
   },
 
+  // ── "no 3D file" requests (photos go to a private Drive folder, like slips) ──
+  'requests.create': function (b) {
+    var t = table_('requests');
+    var r = b.request || {};
+    if (!r.id) return { ok: false, error: 'missing id' };
+    var ids = (b.photos || []).slice(0, 5).map(function (p, i) {
+      var blob = Utilities.newBlob(Utilities.base64Decode(p.base64), p.mimeType, r.id + '-' + (i + 1) + '.' + p.ext);
+      return slipFolder_().createFile(blob).getId();
+    });
+    var row = assign_({}, r, { photo_ids: ids.join(', '), status: r.status || 'new' });
+    writeRow_(t, t.sheet.getLastRow() + 1, row);
+    return { request: row };
+  },
+
+  // ── e-mail (sent from the Google account that owns this script) ──
+  'mail.send': function (b) {
+    var to = String(b.to || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: 'bad address' };
+    var opts = { to: to, subject: String(b.subject || '').slice(0, 250), htmlBody: String(b.html || ''), name: String(b.fromName || 'PB3D Hub') };
+    if (b.replyTo) opts.replyTo = String(b.replyTo);
+    MailApp.sendEmail(opts);
+    return { sent: true };
+  },
+
   // ── consent ──
   'consent.add': function (b) {
     var t = table_('consent');
@@ -410,6 +470,7 @@ var ACTIONS = {
 var WRITE_ACTIONS = {
   'orders.create': 1, 'orders.update': 1, 'orders.submitSlip': 1, 'orders.import': 1, 'slips.attach': 1,
   'products.create': 1, 'products.update': 1, 'products.delete': 1, 'consent.add': 1,
+  'requests.create': 1, 'mail.send': 1,
   'settings.set': 1, 'market.seed': 1, 'market.append': 1, 'catalog.save': 1,
 };
 
@@ -438,9 +499,14 @@ function table_(name) {
   if (created) {
     sheet.setFrozenRows(1);
     if (name === 'admins') sheet.getRange(2, col.password, sheet.getMaxRows() - 1, 1).setNumberFormat('@');
-    if (name === 'orders') {
+  }
+  // status dropdown: set on a new tab, and once more whenever the list of statuses changes
+  if (name === 'orders') {
+    var props = PropertiesService.getScriptProperties();
+    if (created || props.getProperty('STATUS_RULE_VERSION') !== STATUS_RULE_VERSION) {
       var rule = SpreadsheetApp.newDataValidation().requireValueInList(ORDER_STATUSES, true).setAllowInvalid(false).build();
       sheet.getRange(2, col.status, sheet.getMaxRows() - 1, 1).setDataValidation(rule);
+      props.setProperty('STATUS_RULE_VERSION', STATUS_RULE_VERSION);
     }
   }
   return { def: def, sheet: sheet, col: col, width: titles.length };

@@ -6,11 +6,12 @@ import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
 import ShopeeAdmin, { type ShopeeDraft } from "@/components/admin/ShopeeAdmin"
 import SellPricing from "@/components/admin/SellPricing"
+import QuoteSettings from "@/components/admin/QuoteSettings"
 import {
   RefreshCw, LogOut, Package, Clock, Printer, Truck,
   CheckCircle2, XCircle, ChevronDown, Mail, Phone,
   MapPin, FileText, Layers, Weight, AlertCircle,
-  TrendingUp, User, Hash, Send, ShoppingBag, Receipt, Calculator
+  TrendingUp, User, Hash, Send, ShoppingBag, Receipt, Calculator, SlidersHorizontal
 } from "lucide-react"
 
 // ─── Types & Config ──────────────────────────────────────────────────────────
@@ -20,22 +21,25 @@ interface Order {
   customer: { name: string; email: string; phone: string; address: string }
   items: { fileName: string; material: string; technology: string; color: string; infill: number; layerHeight: number; quantity: number; notes: string }
   pricing: { total: number; weightG: number; printTimeMin: number }
-  delivery: { trackingNumber: string | null }
+  delivery: { trackingNumber: string | null; method: string; expectedDate: string }
   hasSlip?: boolean
+  review: { estimate: number | null; items: { label: string; detail?: string; amount: number }[]; shopNote: string; addons: string; rush: boolean; warnings: string; payment: string; shopeeRef: string }
 }
 
 const STATUS: Record<string, { label: string; th: string; color: string; bg: string; border: string; dot: string }> = {
+  reviewing: { label: "Review",    th: "รอตรวจไฟล์/ยืนยันราคา", color: "text-sky-400", bg: "bg-sky-400/10", border: "border-sky-400/25", dot: "bg-sky-400" },
   pending:   { label: "Pending",   th: "รอชำระเงิน",    color: "text-amber-400",  bg: "bg-amber-400/10",  border: "border-amber-400/25",  dot: "bg-amber-400"  },
   awaiting_verification: { label: "Slip", th: "รอตรวจสลิป", color: "text-yellow-300", bg: "bg-yellow-300/10", border: "border-yellow-300/25", dot: "bg-yellow-300" },
   confirmed: { label: "Confirmed", th: "ยืนยันแล้ว",  color: "text-blue-400",   bg: "bg-blue-400/10",   border: "border-blue-400/25",   dot: "bg-blue-400"   },
   printing:  { label: "Printing",  th: "กำลังพิมพ์",  color: "text-purple-400", bg: "bg-purple-400/10", border: "border-purple-400/25", dot: "bg-purple-400" },
+  finishing: { label: "Finishing", th: "กำลังเก็บงาน", color: "text-fuchsia-400", bg: "bg-fuchsia-400/10", border: "border-fuchsia-400/25", dot: "bg-fuchsia-400" },
   shipped:   { label: "Shipped",   th: "จัดส่งแล้ว",  color: "text-orange-400", bg: "bg-orange-400/10", border: "border-orange-400/25", dot: "bg-orange-400" },
   delivered: { label: "Delivered", th: "ส่งถึงแล้ว",  color: "text-emerald-400",bg: "bg-emerald-400/10",border: "border-emerald-400/25",dot: "bg-emerald-400"},
   cancelled: { label: "Cancelled", th: "ยกเลิก",      color: "text-red-400",    bg: "bg-red-400/10",    border: "border-red-400/25",    dot: "bg-red-400"    },
 }
-const STATUS_FLOW = ["pending","confirmed","printing","shipped","delivered"]
+const STATUS_FLOW = ["reviewing","pending","confirmed","printing","finishing","shipped","delivered"]
 // awaiting_verification sits between pending and confirmed in the progress bar
-const flowIndex = (status: string) => status === "awaiting_verification" ? 0 : STATUS_FLOW.indexOf(status)
+const flowIndex = (status: string) => status === "awaiting_verification" ? 1 : STATUS_FLOW.indexOf(status)
 
 
 function formatDate(iso: string) {
@@ -89,7 +93,7 @@ export default function AdminPage() {
   const [lastRefresh, setLastRefresh] = useState("")
   const [refreshing, setRefreshing] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [tab, setTab] = useState<"orders" | "shopee" | "pricing">("orders")
+  const [tab, setTab] = useState<"orders" | "shopee" | "pricing" | "quote">("orders")
   const [shopeeDraft, setShopeeDraft] = useState<ShopeeDraft | null>(null)
   const clearShopeeDraft = useCallback(() => setShopeeDraft(null), [])
   const [savedTrackingId, setSavedTrackingId] = useState<string | null>(null)
@@ -107,8 +111,14 @@ export default function AdminPage() {
         customer: { name: o.customer_name, email: o.customer_email || '', phone: o.customer_phone || '', address: o.customer_address || '' },
         items: { fileName: o.file_name, material: o.material, technology: o.technology, color: o.color, infill: o.infill, layerHeight: o.layer_height, quantity: o.quantity, notes: o.notes || '' },
         pricing: { total: Number(o.total_price) || 0, weightG: Number(o.weight_g) || 0, printTimeMin: o.print_time_min || 0 },
-        delivery: { trackingNumber: o.tracking_number || null },
+        delivery: { trackingNumber: o.tracking_number || null, method: o.shipping_method || '', expectedDate: o.expected_date || '' },
         hasSlip: !!o.has_slip,
+        review: {
+          estimate: o.estimate_price === '' || o.estimate_price == null ? null : Number(o.estimate_price),
+          items: (() => { try { return JSON.parse(o.price_items || '[]') } catch { return [] } })(),
+          shopNote: o.shop_note || '', addons: o.addons || '', rush: o.rush === true || o.rush === 'TRUE',
+          warnings: o.file_warnings || '', payment: o.payment_method || '', shopeeRef: o.shopee_ref || '',
+        },
       })))
       setLoadError("")
     } catch (e: any) { console.error(e); setLoadError(e?.message || "โหลดคำสั่งซื้อไม่สำเร็จ") }
@@ -123,7 +133,7 @@ export default function AdminPage() {
   }, [loadOrders])
 
   /** Admin writes go through the server (admin session check), never straight to the sheet. */
-  const adminPatch = async (id: string, body: { status?: string; trackingNumber?: string | null }) => {
+  const adminPatch = async (id: string, body: { status?: string; trackingNumber?: string | null; totalPrice?: number; shopNote?: string; expectedDate?: string }) => {
     const r = await fetch(`/api/admin/orders/${id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     })
@@ -143,16 +153,18 @@ export default function AdminPage() {
     } catch (e: any) { console.error(e); alert("บันทึกเลขพัสดุไม่สำเร็จ: " + (e?.message || "")) }
   }
 
-  const sendEmail = (order: Order, newStatus: string, trackingOverride?: string | null) => {
-    if (!order.customer.email) return
-    const msgMap: Record<string, string> = {
-      confirmed: "✅ ยืนยันรับออเดอร์แล้ว", printing: "🖨️ เริ่มพิมพ์ชิ้นงานแล้ว",
-      shipped: "🚚 จัดส่งพัสดุแล้ว", delivered: "📦 พัสดุส่งถึงแล้ว", cancelled: "❌ ยกเลิกคำสั่งซื้อ",
-    }
-    const tracking = trackingOverride ?? order.delivery.trackingNumber
-    const subject = `[PB3D] ${msgMap[newStatus] || newStatus} — Order #${order.id.slice(-6)}`
-    const body = `เรียนคุณ ${order.customer.name}\n\n${msgMap[newStatus] || newStatus}\n\nOrder: #${order.id.slice(-6)}\nไฟล์: ${order.items.fileName}\nวัสดุ: ${order.items.material} × ${order.items.quantity} ชิ้น\nราคา: ฿${order.pricing.total}${newStatus === "shipped" && tracking ? "\n\n📮 เลขพัสดุ: " + tracking : ""}\n\nขอบคุณที่ใช้บริการ PB3D Printing`
-    window.location.href = `mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  // review a new order: confirm (or correct) the price → the customer is e-mailed a payment link
+  const [priceInputs, setPriceInputs] = useState<Record<string, string>>({})
+  const [noteInputs, setNoteInputs] = useState<Record<string, string>>({})
+  const confirmPrice = async (order: Order) => {
+    const price = Number(priceInputs[order.id] ?? order.pricing.total)
+    if (!(price > 0)) { alert("กรุณากรอกราคา"); return }
+    setUpdatingId(order.id)
+    try {
+      await adminPatch(order.id, { status: "pending", totalPrice: price, shopNote: noteInputs[order.id] ?? order.review.shopNote })
+      await loadOrders()
+    } catch (e: any) { alert("ยืนยันราคาไม่สำเร็จ: " + (e?.message || "")) }
+    setUpdatingId(null)
   }
 
   const updateStatus = async (id: string, newStatus: string) => {
@@ -160,13 +172,12 @@ export default function AdminPage() {
     const tracking = newStatus === "shipped"
       ? ((trackingInputs[id] ?? current?.delivery.trackingNumber ?? "").trim() || null)
       : null
-    if (newStatus === "shipped" && !tracking) { alert("กรุณากรอกเลขพัสดุก่อน"); return }
+    if (newStatus === "shipped" && !tracking && current?.delivery.method !== "pickup") { alert("กรุณากรอกเลขพัสดุก่อน"); return }
     if (newStatus === "cancelled" && !confirm("ยืนยันการยกเลิกคำสั่งซื้อนี้?")) return
     setUpdatingId(id)
     try {
       await adminPatch(id, { status: newStatus, ...(tracking ? { trackingNumber: tracking } : {}) })
-      await loadOrders()
-      if (current) sendEmail(current, newStatus, tracking)
+      await loadOrders()  // the server e-mails the customer about the new status
     } catch (e: any) { console.error(e); alert("อัปเดตสถานะไม่สำเร็จ: " + (e?.message || "")) }
     setUpdatingId(null)
   }
@@ -215,6 +226,7 @@ export default function AdminPage() {
             { id: "orders", label: "คำสั่งซื้อ", Icon: Package },
             { id: "shopee", label: "สินค้า Shopee", Icon: ShoppingBag },
             { id: "pricing", label: "คำนวณราคาขาย", Icon: Calculator },
+            { id: "quote", label: "ตั้งค่าราคาลูกค้า", Icon: SlidersHorizontal },
           ] as const).map(t => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium border transition-all ${tab === t.id ? "bg-foreground text-background border-foreground" : "border-foreground/10 text-foreground/45 hover:text-foreground/80"}`}>
@@ -223,7 +235,8 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {tab === "pricing" ? <div className="pt-8"><SellPricing onSendToShopee={d => { setShopeeDraft(d); setTab("shopee"); window.scrollTo({ top: 0 }) }} /></div>
+        {tab === "quote" ? <div className="pt-8"><QuoteSettings /></div>
+        : tab === "pricing" ? <div className="pt-8"><SellPricing onSendToShopee={d => { setShopeeDraft(d); setTab("shopee"); window.scrollTo({ top: 0 }) }} /></div>
         : tab === "shopee" ? <div className="pt-8"><ShopeeAdmin draft={shopeeDraft} onDraftUsed={clearShopeeDraft} /></div> : <>
         {/* Header */}
         <div className="py-8 flex items-end justify-between gap-4 flex-wrap">
@@ -240,6 +253,7 @@ export default function AdminPage() {
         {/* Stat cards */}
         <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
           <StatCard label="All Orders" value={orders.length}        color="text-foreground"          active={filter==="all"}       onClick={()=>setFilter("all")} />
+          <StatCard label="รอตรวจไฟล์" value={counts.reviewing||0}  color="text-sky-400"        active={filter==="reviewing"}  onClick={()=>setFilter("reviewing")} />
           <StatCard label="Pending"    value={counts.pending||0}    color="text-amber-400"      active={filter==="pending"}    onClick={()=>setFilter("pending")} />
           <StatCard label="Slip Sent"  value={counts.awaiting_verification||0} color="text-yellow-300" active={filter==="awaiting_verification"} onClick={()=>setFilter("awaiting_verification")} />
           <StatCard label="Confirmed"  value={counts.confirmed||0}  color="text-blue-400"       active={filter==="confirmed"}  onClick={()=>setFilter("confirmed")} />
@@ -257,6 +271,12 @@ export default function AdminPage() {
         )}
 
         {/* Pending alert */}
+        {(counts.reviewing || 0) > 0 && (
+          <div className="flex items-center gap-3 px-5 py-3.5 bg-sky-400/8 border border-sky-400/25 rounded-2xl mb-3">
+            <AlertCircle size={15} className="text-sky-400 shrink-0" />
+            <p className="text-sm text-sky-400 font-medium">{counts.reviewing} คำสั่งซื้อรอตรวจไฟล์และยืนยันราคา</p>
+          </div>
+        )}
         {pendingCount > 0 && (
           <div className="flex items-center gap-3 px-5 py-3.5 bg-amber-400/8 border border-amber-400/25 rounded-2xl mb-6">
             <AlertCircle size={15} className="text-amber-400 shrink-0" />
@@ -360,6 +380,38 @@ export default function AdminPage() {
                       </div>
                     </div>
 
+                    {/* Review & confirm price */}
+                    {(order.status === "reviewing" || order.review.items.length > 0) && (
+                      <div className="bg-sky-400/[0.04] border border-sky-400/20 rounded-2xl p-5 space-y-3" data-testid="review-panel">
+                        <p className="text-xs font-medium text-sky-400">ใบเสนอราคา (ประมาณการจากไฟล์){order.review.rush ? " · งานด่วน" : ""}</p>
+                        {order.review.items.map((it, i) => (
+                          <div key={i} className="flex justify-between gap-3 text-sm">
+                            <span className="text-foreground/60">{it.label}{it.detail ? <span className="text-foreground/35 text-xs"> · {it.detail}</span> : null}</span>
+                            <span>฿{Number(it.amount).toLocaleString()}</span>
+                          </div>
+                        ))}
+                        {order.review.warnings && <p className="text-xs text-amber-400 whitespace-pre-line">⚠ {order.review.warnings}</p>}
+                        {order.delivery.expectedDate && <p className="text-xs text-foreground/45">ลูกค้าเห็นวันที่ได้รับ: {order.delivery.expectedDate} · {order.delivery.method === "pickup" ? "รับที่ร้าน" : "จัดส่งพัสดุ"}</p>}
+                        {order.review.payment && <p className="text-xs text-foreground/60">ชำระผ่าน: {order.review.payment === "shopee" ? `Shopee (${order.review.shopeeRef})` : "PromptPay / โอน"}</p>}
+                        {order.status === "reviewing" && (
+                          <div className="grid sm:grid-cols-[160px_1fr_auto] gap-2 pt-2">
+                            <input type="number" min={1} step="1" data-testid="review-price"
+                              value={priceInputs[order.id] ?? String(order.pricing.total)}
+                              onChange={e => setPriceInputs(p => ({ ...p, [order.id]: e.target.value }))}
+                              className="bg-foreground/[0.04] border border-foreground/10 rounded-xl px-3 py-2.5 text-sm" aria-label="ราคาจริง" />
+                            <input type="text" data-testid="review-note" placeholder="ข้อความถึงลูกค้า (ถ้ามี) เช่น ปรับราคาเพราะต้องใช้ support เยอะ"
+                              value={noteInputs[order.id] ?? order.review.shopNote}
+                              onChange={e => setNoteInputs(p => ({ ...p, [order.id]: e.target.value }))}
+                              className="bg-foreground/[0.04] border border-foreground/10 rounded-xl px-3 py-2.5 text-sm" />
+                            <button onClick={() => confirmPrice(order)} disabled={isUpdating} data-testid="review-confirm"
+                              className="px-5 py-2.5 rounded-xl bg-sky-500 text-white text-sm font-medium disabled:opacity-40">
+                              {isUpdating ? "..." : "ยืนยันราคา → แจ้งลูกค้าชำระเงิน"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Tracking input */}
                     <div className="bg-foreground/[0.02] border border-foreground/6 rounded-2xl p-5">
                       <p className="text-xs font-medium text-foreground/35 flex items-center gap-2 mb-3">
@@ -387,11 +439,12 @@ export default function AdminPage() {
                       {[
                         { s: "confirmed", label: "✓ Confirm",   cls: "border-blue-400/25 text-blue-400 hover:bg-blue-400",    idx: 0 },
                         { s: "printing",  label: "⬡ Printing",  cls: "border-purple-400/25 text-purple-400 hover:bg-purple-400", idx: 1 },
+                        { s: "finishing", label: "✦ เก็บงาน",   cls: "border-fuchsia-400/25 text-fuchsia-400 hover:bg-fuchsia-400", idx: 2 },
                         { s: "shipped",   label: "→ Ship",      cls: "border-orange-400/25 text-orange-400 hover:bg-orange-400", idx: 2 },
                         { s: "delivered", label: "✓ Delivered", cls: "border-emerald-400/25 text-emerald-400 hover:bg-emerald-400", idx: 3 },
                       ].map(btn => (
                         <button key={btn.s}
-                          disabled={isCancelled || statusIdx >= STATUS_FLOW.indexOf(btn.s) || isUpdating}
+                          disabled={isCancelled || order.status === "reviewing" || statusIdx >= STATUS_FLOW.indexOf(btn.s) || isUpdating}
                           onClick={() => updateStatus(order.id, btn.s)}
                           className={`px-5 py-2.5 rounded-xl border text-xs font-medium uppercase tracking-wider transition-all hover:text-black disabled:opacity-20 disabled:cursor-not-allowed ${btn.cls}`}>
                           {isUpdating ? "..." : btn.label}

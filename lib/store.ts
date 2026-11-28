@@ -8,6 +8,8 @@ interface EstimateData {
   layerHeight: number;
   shipping?: string;
   result: any;
+  /** add-ons picked on the upload page */
+  options?: { sanding: boolean; painting: boolean; rush: boolean };
 }
 
 interface OrderStore {

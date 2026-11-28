@@ -73,12 +73,27 @@ export const sampleOrder = (over: Record<string, any> = {}) => ({
 })
 
 /** Create an order through the public API, like /quote does. */
-export async function createOrder(request: APIRequestContext, over: Record<string, any> = {}): Promise<string> {
+/** Create an order through the public API. New orders wait for the shop to confirm the price
+ *  ("reviewing"); by default this also confirms it straight in the sheet so it waits for payment. */
+export async function createOrder(request: APIRequestContext, over: Record<string, any> = {}, { review = false } = {}): Promise<string> {
   const r = await request.post("/api/orders", { data: sampleOrder(over) })
   if (r.status() !== 201) throw new Error(`createOrder ${r.status()} ${await r.text()}`)
-  return (await r.json()).id
+  const id = (await r.json()).id
+  if (!review) confirmPriceInSheet(id)
+  return id
+}
+export function confirmPriceInSheet(id: string) {
+  const { emulatorPost } = require("../lib/sheetsEmulator")
+  emulatorPost(EMULATOR_FILE, "s", { secret: "s", action: "orders.update", id, patch: { status: "pending" } })
+}
+/** E-mails the emulator "sent" (Apps Script MailApp). */
+export function sentMail(): { to: string; subject: string; html: string }[] {
+  try { return JSON.parse(readFileSync(EMULATOR_FILE, "utf8")).mail ?? [] } catch { return [] }
 }
 
+export async function submitSlipRaw(request: APIRequestContext, id: string) {
+  return request.post(`/api/orders/${id}/slip`, { multipart: { file: { name: "slip.png", mimeType: "image/png", buffer: PNG_1PX } } })
+}
 /** Upload a slip through the public API, like /checkout does. */
 export async function submitSlip(request: APIRequestContext, id: string) {
   const r = await request.post(`/api/orders/${id}/slip`, {

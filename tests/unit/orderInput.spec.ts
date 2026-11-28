@@ -8,12 +8,12 @@ const good = {
   volumeCm3: 216, weightG: 107.1, printTimeMin: 47.6, totalPrice: 410, subtotal: 365,
 }
 
-test("valid order becomes a pending row; status/ids cannot be injected", () => {
+test("valid order becomes a 'reviewing' row (shop confirms the price first); status/ids cannot be injected", () => {
   const r = validateNewOrder({ ...good, status: "delivered", id: "x", tracking_number: "T", slip_url: "x" })
   expect(r.ok).toBe(true)
   if (!r.ok) return
   expect(r.row).toMatchObject({
-    status: "pending", customer_name: "สมชาย", customer_email: "a@b.co", material: "PETG",
+    status: "reviewing", estimate_price: 410, shipping_method: "pickup", customer_name: "สมชาย", customer_email: "a@b.co", material: "PETG",
     quantity: 2, base_price: 365, total_price: 410, print_time_min: 48,
   })
   expect(Object.keys(r.row)).not.toContain("id")
@@ -25,7 +25,8 @@ test("rejects missing contact details, bad email, bad prices and settings", () =
   const bad = (patch: any) => validateNewOrder({ ...good, ...patch }).ok
   expect(bad({ customer: { ...good.customer, name: "" } })).toBe(false)
   expect(bad({ customer: { ...good.customer, phone: " " } })).toBe(false)
-  expect(bad({ customer: { ...good.customer, address: "" } })).toBe(false)
+  expect(bad({ customer: { ...good.customer, address: "" }, shippingMethod: "postal" })).toBe(false)
+  expect(bad({ customer: { ...good.customer, address: "" } })).toBe(true) // pick-up: no address needed
   expect(bad({ customer: { ...good.customer, email: "nope" } })).toBe(false)
   expect(bad({ customer: { ...good.customer, email: "" } })).toBe(true) // email optional
   expect(bad({ totalPrice: 0 })).toBe(false)
@@ -53,4 +54,17 @@ test("uuid check", () => {
   expect(isUuid("11111111-2222-4333-8444-555555555555")).toBe(true)
   expect(isUuid("../../etc/passwd")).toBe(false)
   expect(isUuid("abc")).toBe(false)
+})
+
+test("itemised quote, expected date and options are kept; junk is dropped", () => {
+  const r = validateNewOrder({
+    ...good, shippingMethod: "postal", rush: true, addons: "ขัดผิว", expectedDate: "2026-12-01",
+    priceItems: [{ key: "print", label: "ค่าพิมพ์ PLA", detail: "100 g × 3 ฿", amount: 300, extra: "x" }, { label: "", amount: 5 }, { label: "bad", amount: "x" }],
+  })
+  expect(r.ok).toBe(true)
+  if (!r.ok) return
+  expect(JSON.parse(String(r.row.price_items))).toEqual([{ label: "ค่าพิมพ์ PLA", detail: "100 g × 3 ฿", amount: 300 }])
+  expect(r.row).toMatchObject({ expected_date: "2026-12-01", rush: "TRUE", addons: "ขัดผิว", shipping_method: "postal" })
+  const bad = validateNewOrder({ ...good, expectedDate: "tomorrow" })
+  expect(bad.ok && bad.row.expected_date).toBeNull()
 })

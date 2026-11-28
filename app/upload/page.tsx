@@ -8,14 +8,16 @@ import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
 // @ts-ignore
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader'
 import { load3MF } from '@/lib/threeMf'
-import { objectStats, geometryStats } from '@/lib/meshStats'
+import { objectStats, geometryStats, fileWarnings } from '@/lib/meshStats'
 import { Canvas, useLoader } from "@react-three/fiber"
 import { OrbitControls, Stage, Center } from "@react-three/drei"
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useOrderStore } from '@/lib/store'
 import ShopeeOrderHint from '@/components/ShopeeOrderHint'
-import { formatTimeFull, fitsInBuildVolume, BUILD_MAX, calculate, flatRateOrder, shopeeUnitsFor, FLAT_RATE_MATERIALS } from '@/lib/priceCalculator'
+import { formatTimeFull, fitsInBuildVolume, BUILD_MAX, calculate } from '@/lib/priceCalculator'
+import { DEFAULT_QUOTE_CONFIG, type QuoteConfig } from '@/lib/quoteConfig'
+import { computeQuote, thaiDate, type Quote } from '@/lib/quotePricing'
 import type { Shipping, Material, InfillLevel, LayerHeight } from '@/lib/priceCalculator'
 import {
   UploadCloud, X, FileText, Plus, Minus, ChevronRight, ChevronLeft,
@@ -39,6 +41,11 @@ const T = {
 } as const
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+const MATERIAL_DOTS: Record<string, string> = {
+  PLA: '#3b82f6', PETG: '#8b5cf6', ABS: '#f59e0b', ASA: '#10b981', TPU: '#ec4899', CarbonFiber: '#94a3b8',
+}
+const INFILL_LABELS: Record<number, string> = { 10: 'เบา', 15: 'มาตรฐาน (แนะนำ)', 20: 'มาตรฐาน', 25: 'แข็งแรง', 30: 'แข็งแรง', 50: 'แข็งแรงมาก', 80: 'แข็งมาก', 100: 'ตัน 100%' }
 
 const MATERIALS: { id: Material; label: string; hint: string; dot: string }[] = [
   { id: 'PLA',         label: 'PLA',          hint: 'โปรโตไทป์',    dot: '#3b82f6' },
@@ -102,6 +109,10 @@ interface ModelFile {
   quantity: number
   uploading: boolean
   error?: boolean
+  /** automatic file check: possible inch units, open mesh… */
+  warnings?: string[]
+  /** colours chosen for this file (several = multi-colour); empty = the order's main colour */
+  colorIds?: string[]
   /** why reading the file failed, shown under the file name */
   errorMsg?: string
   subPieces?: SubPiece[]
@@ -209,10 +220,31 @@ export default function WizardPage() {
   const [envFailed,       setEnvFailed]      = useState(false)
 
   // Print settings
+  // Rates, materials, colours, add-ons… are set by the shop in the admin page
+  const [cfg, setCfg] = useState<QuoteConfig>(DEFAULT_QUOTE_CONFIG)
+  const [infillTouched, setInfillTouched] = useState(false)
+  useEffect(() => {
+    fetch('/api/quote-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.config) setCfg(d.config) }).catch(() => {})
+  }, [])
+  const materialOptions = cfg.materials.filter(m => m.enabled)
+  const colorOptions = cfg.colors.filter(c => c.enabled)
+
   const [material,    setMaterial]    = useState<Material>('PLA')
   const [colorId,     setColorId]     = useState('white')
-  const modelColor = COLOR_SWATCHES.find(c => c.id === colorId)?.hex ?? '#b0b4c0'
   const [infill,      setInfill]      = useState<InfillLevel>(15)
+  const [sanding,  setSanding]  = useState(false)
+  const [painting, setPainting] = useState(false)
+  const [rush,     setRush]     = useState(false)
+  // keep choices valid when the shop's settings arrive or change
+  useEffect(() => {
+    if (!materialOptions.some(m => m.id === material) && materialOptions[0]) setMaterial(materialOptions[0].id)
+    if (!colorOptions.some(c => c.id === colorId) && colorOptions[0]) setColorId(colorOptions[0].id)
+    if (!infillTouched && cfg.infillOptions.includes(cfg.defaultInfill)) setInfill(cfg.defaultInfill)
+    else if (!cfg.infillOptions.includes(infill)) setInfill(cfg.defaultInfill)
+  }, [cfg]) // eslint-disable-line react-hooks/exhaustive-deps
+  const colorHex = (id: string) => cfg.colors.find(c => c.id === id)?.hex ?? '#b0b4c0'
+  const colorName = (id: string) => cfg.colors.find(c => c.id === id)?.name ?? id
+  const colorsOf = (m: { colorIds?: string[] }) => (m.colorIds && m.colorIds.length ? m.colorIds : [colorId])
   const [layerHeight, setLayerHeight] = useState<LayerHeight>(0.4)
   const [shipping,    setShipping]    = useState<Shipping>('pickup')
 
@@ -235,6 +267,7 @@ export default function WizardPage() {
   const sy = orig.y > 0 ? customDims.y / orig.y : 1
   const sz = orig.z > 0 ? customDims.z / orig.z : 1
   const meshScale: [number, number, number] = [sx, sy, sz]
+  const modelColor = colorHex(primary ? colorsOf(primary)[0] : colorId)
 
   const scaledVolume = (primary?.meshVolumeCm3 || primary?.originalVolumeCm3 || 0) * sx * sy * sz
   const totalQty     = models.reduce((a, m) => a + m.quantity, 0)
@@ -251,8 +284,8 @@ export default function WizardPage() {
     if (!primary || isOversize || otherOversize) return null
     if (models.some(m => m.uploading || m.error || !(m.originalVolumeCm3 > 0))) return null
     try {
-      let weightG = 0, printTimeSec = 0, printTimeMin = 0, materialCost = 0, machineCost = 0, subtotal = 0
-      for (const m of models) {
+      // weight and print time of ONE piece of each file (sum of its parts), then the itemised quote
+      const quoteParts = models.map(m => {
         const [kx, ky, kz] = m.id === primary.id ? [sx, sy, sz] : [1, 1, 1]
         const k = kx * ky * kz
         const ka = Math.pow(k, 2 / 3) // area grows with the square of the scale
@@ -261,35 +294,26 @@ export default function WizardPage() {
               mv: (p.meshVolumeCm3 ?? 0) * k, sa: (p.surfaceCm2 ?? 0) * ka }))
           : [{ v: m.originalVolumeCm3 * k, d: { x: m.originalDimensions.x * kx, y: m.originalDimensions.y * ky, z: m.originalDimensions.z * kz },
               mv: (m.meshVolumeCm3 ?? 0) * k, sa: (m.surfaceCm2 ?? 0) * ka }]
+        let w = 0, min = 0
         for (const part of parts) {
           const e = calculate({
             volumeCm3: part.v, dimensions: part.d, meshVolumeCm3: part.mv, surfaceCm2: part.sa,
-            technology: 'FDM', material, infill, layerHeight,
-            quantity: 1, shipping: 'pickup',
+            technology: 'FDM', material, infill, layerHeight, quantity: 1, shipping: 'pickup',
           })
-          weightG      += e.weightG      * m.quantity
-          printTimeSec += e.printTimeSec * m.quantity
-          printTimeMin += e.printTimeMin * m.quantity
-          materialCost += e.materialCost * m.quantity
-          machineCost  += e.machineCost  * m.quantity
-          subtotal     += e.pricePerPc   * m.quantity
+          w += e.weightG; min += e.printTimeSec / 60
         }
-      }
-      const shippingCost = shipping === 'pickup' ? 0 : 45
-      const totalWeightG = Math.round(weightG * 10) / 10
-      // PLA / PETG: whole order priced by total grams (3 ฿/g, 1.5 ฿/g from 250 g)
-      let ratePerGram: number | null = null, shopeeUnits = shopeeUnitsFor(subtotal)
-      if (FLAT_RATE_MATERIALS.includes(material as any)) {
-        const flat = flatRateOrder(totalWeightG)
-        ratePerGram = flat.ratePerGram; subtotal = flat.subtotal; shopeeUnits = flat.shopeeUnits
-        materialCost = subtotal; machineCost = 0
-      }
+        return { name: m.name, weightG: w, printMin: min, quantity: m.quantity, colors: colorsOf(m).length }
+      })
+      const quote: Quote = computeQuote({ material, parts: quoteParts, sanding, painting, rush, shipping }, cfg)
       return {
-        weightG: totalWeightG, printTimeSec, printTimeMin, materialCost, machineCost,
-        pricePerPc: totalQty > 0 ? Math.round(subtotal / totalQty) : 0,
-        subtotal, shippingCost, totalPrice: subtotal + shippingCost,
-        ratePerGram, totalWeightG, shopeeUnits,
-      } as ReturnType<typeof calculate>
+        quote,
+        weightG: quote.totalWeightG, totalWeightG: quote.totalWeightG,
+        printTimeSec: quote.totalPrintMin * 60, printTimeMin: quote.totalPrintMin,
+        materialCost: quote.printPrice, machineCost: 0,
+        pricePerPc: totalQty > 0 ? Math.round(quote.subtotal / totalQty) : 0,
+        subtotal: quote.subtotal, shippingCost: quote.shipping, totalPrice: quote.total,
+        shopeeUnits: quote.shopeeUnits, ratePerGram: null as number | null,
+      }
     } catch { return null }
   })()
 
@@ -359,8 +383,11 @@ export default function WizardPage() {
     if (!estimate) return
     // Stamp the chosen material/colour onto every model so the quote page,
     // the order record and the admin dashboard all show what was selected.
-    const orderModels = models.map(m => ({ ...m, material, colorId }))
-    setEstimateData({ models: orderModels, technology: 'FDM', infill, layerHeight, shipping, result: estimate })
+    const orderModels = models.map(m => ({ ...m, material, colorId: colorsOf(m)[0], colors: colorsOf(m).map(colorName) }))
+    setEstimateData({
+      models: orderModels, technology: 'FDM', infill, layerHeight, shipping, result: estimate,
+      options: { sanding, painting, rush: !!estimate.quote.rushApplied },
+    })
     router.push('/quote')
   }
 
@@ -384,7 +411,7 @@ export default function WizardPage() {
         const blobUrl = URL.createObjectURL(file)
         const is3mf   = file.name.toLowerCase().endsWith('.3mf')
         let volumeCm3 = 0, dims = { x: 0, y: 0, z: 0 }
-        let stats: { volumeCm3: number; surfaceCm2: number } | null = null
+        let stats: { volumeCm3: number; surfaceCm2: number; openEdges: number } | null = null
 
         if (is3mf) {
           const group = await read3MF(blobUrl)
@@ -434,6 +461,7 @@ export default function WizardPage() {
                 ...m,
                 originalDimensions: largest.dimensions,
                 originalVolumeCm3: totalVol,
+                warnings: fileWarnings(dims, stats),
                 meshVolumeCm3: subPieces.reduce((a, p) => a + (p.meshVolumeCm3 ?? 0), 0),
                 surfaceCm2: subPieces.reduce((a, p) => a + (p.surfaceCm2 ?? 0), 0),
                 s3Key: undefined, uploading: false,
@@ -492,7 +520,7 @@ export default function WizardPage() {
         if (!(volumeCm3 > 0)) throw new Error('Empty model')
 
         setModels(prev => prev.map(m => m.id === modelId
-          ? { ...m, originalDimensions: dims, originalVolumeCm3: volumeCm3, s3Key: key, uploading: false,
+          ? { ...m, originalDimensions: dims, originalVolumeCm3: volumeCm3, s3Key: key, uploading: false, warnings: fileWarnings(dims, stats),
               ...(stats && stats.volumeCm3 > 0 ? { meshVolumeCm3: stats.volumeCm3, surfaceCm2: stats.surfaceCm2 } : {}) }
           : m
         ))
@@ -509,6 +537,14 @@ export default function WizardPage() {
   }
 
   const removeModel = (id: string) => setModels(prev => prev.filter(m => m.id !== id))
+  // per-file colours: several colours on one file = multi-colour (charged per extra colour)
+  const toggleModelColor = (id: string, color: string) => setModels(prev => prev.map(m => {
+    if (m.id !== id) return m
+    if (!cfg.addons.multiColor.enabled) return { ...m, colorIds: [color] }
+    const cur = colorsOf(m)
+    const next = cur.includes(color) ? cur.filter(c => c !== color) : [...cur, color]
+    return { ...m, colorIds: next.length ? next : cur }
+  }))
   const updateQty   = (id: string, qty: number) =>
     setModels(prev => prev.map(m => m.id === id ? { ...m, quantity: Math.max(1, qty) } : m))
 
@@ -544,6 +580,9 @@ export default function WizardPage() {
           PB3D<span style={{ color: T.accent }}>HUB</span>
         </Link>
         <div className="flex items-center gap-3">
+          <Link href="/no-file" className="hidden sm:inline text-sm hover:opacity-60" style={{ color: T.muted }}>ไม่มีไฟล์ 3D?</Link>
+          <a href={cfg.contact.lineUrl || 'https://lin.ee/R8Vd7q5'} target="_blank" rel="noopener noreferrer"
+            className="text-sm font-medium px-3 py-1.5 rounded-lg" style={{ background: '#06C755', color: '#fff' }}>ทัก LINE</a>
           <ThemeToggle />
           <Link href="/" className="flex items-center gap-1.5 text-sm hover:opacity-60 transition-opacity"
             style={{ color: T.muted }}>
@@ -805,11 +844,11 @@ export default function WizardPage() {
                   <div className="rounded-xl p-3" style={{ background: T.surface, border: `1px solid ${T.border}`, minWidth: 0 }}>
                     <p className="text-2xs font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>Infill</p>
                     <div className="grid grid-cols-2 gap-1">
-                      {INFILL_OPTIONS.map(opt => {
+                      {cfg.infillOptions.map(v => ({ v, label: INFILL_LABELS[v] ?? `${v}%`, pct: `${v}%` })).map(opt => {
                         const sel = infill === opt.v
                         return (
-                          <button key={opt.v} onClick={() => setInfill(opt.v)}
-                            className={`py-1.5 px-1 rounded-lg text-center wb-btn ${opt.v === 15 ? 'col-span-2' : ''}`}
+                          <button key={opt.v} onClick={() => { setInfill(opt.v); setInfillTouched(true) }} data-testid={`infill-${opt.v}`}
+                            className="py-1.5 px-1 rounded-lg text-center wb-btn"
                             style={{
                               background: sel ? T.accentDim : T.surface2,
                               border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
@@ -948,6 +987,33 @@ export default function WizardPage() {
                          : model.uploading ? 'กำลังวิเคราะห์…'
                          : `${model.originalDimensions.x.toFixed(0)}×${model.originalDimensions.y.toFixed(0)}×${model.originalDimensions.z.toFixed(0)} mm · ${(model.meshVolumeCm3 || model.originalVolumeCm3).toFixed(1)} cm³`}
                       </p>
+                      {!model.uploading && !model.error && (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2" data-testid="file-colors">
+                          <span className="text-2xs mr-0.5" style={{ color: T.muted }}>
+                            สี{cfg.addons.multiColor.enabled ? ' (เลือกได้หลายสี)' : ''}:
+                          </span>
+                          {colorOptions.map(c => {
+                            const chosen = colorsOf(model).includes(c.id)
+                            return (
+                              <button key={c.id} title={c.name} aria-label={`${model.name} สี${c.name}`} aria-pressed={chosen}
+                                onClick={() => toggleModelColor(model.id, c.id)}
+                                className="w-4 h-4 rounded-full wb-btn"
+                                style={{ background: c.hex, border: chosen ? `2px solid ${T.accent}` : `1px solid ${T.border}`,
+                                  boxShadow: chosen ? `0 0 0 1.5px ${T.surface}, 0 0 0 3px ${T.accent}` : 'none' }} />
+                            )
+                          })}
+                          <span className="text-2xs" style={{ color: T.muted }}>{colorsOf(model).map(colorName).join(' + ')}</span>
+                        </div>
+                      )}
+                      {(model.warnings ?? []).map(w => (
+                        <p key={w} className="text-2xs mt-1.5 flex items-start gap-1" style={{ color: '#d97706' }} data-testid="file-warning">
+                          <AlertTriangle size={11} className="shrink-0 mt-px" />{w}
+                          {/นิ้ว/.test(w) && model.id === primary?.id && (
+                            <button className="ml-1 underline" data-testid="convert-inch"
+                              onClick={() => setCustomDims({ x: orig.x * 25.4, y: orig.y * 25.4, z: orig.z * 25.4 })}>แปลงเป็น mm (×25.4)</button>
+                          )}
+                        </p>
+                      ))}
                     </div>
                     {!model.uploading && !model.error && (
                       <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg"
@@ -991,19 +1057,21 @@ export default function WizardPage() {
                 {/* Material */}
                 <div>
                   <p className="text-2xs font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>วัสดุ</p>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {MATERIALS.map(m => {
+                  <div className="grid gap-1.5">
+                    {materialOptions.map(m => {
                       const sel = material === m.id
                       return (
-                        <button key={m.id} onClick={() => setMaterial(m.id)}
-                          className="p-2.5 rounded-xl text-left wb-btn"
+                        <button key={m.id} onClick={() => setMaterial(m.id)} data-testid={`material-${m.id}`}
+                          className="p-2.5 rounded-xl text-left wb-btn flex items-start gap-2"
                           style={{
                             background: sel ? T.accentDim : T.surface2,
                             border:     sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                           }}>
-                          <div className="w-2.5 h-2.5 rounded-full mb-1.5" style={{ background: m.dot }} />
-                          <p className="text-xs font-semibold leading-tight">{m.label}</p>
-                          <p className="text-2xs mt-0.5 leading-tight" style={{ color: T.muted }}>{m.hint}</p>
+                          <div className="w-2.5 h-2.5 rounded-full mt-1 shrink-0" style={{ background: MATERIAL_DOTS[m.id] ?? '#94a3b8' }} />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold leading-tight">{m.name}</p>
+                            <p className="text-2xs mt-0.5 leading-snug" style={{ color: T.muted }}>{m.desc}</p>
+                          </div>
                         </button>
                       )
                     })}
@@ -1012,10 +1080,12 @@ export default function WizardPage() {
 
                 {/* Color */}
                 <div>
-                  <p className="text-2xs font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>สี</p>
+                  <p className="text-2xs font-semibold uppercase tracking-widest mb-2" style={{ color: T.muted }}>
+                    สีหลัก <span className="normal-case tracking-normal font-normal">· {colorName(colorId)}</span>
+                  </p>
                   <div className="flex flex-wrap gap-2">
-                    {COLOR_SWATCHES.map(c => (
-                      <button key={c.id} onClick={() => setColorId(c.id)} title={c.id}
+                    {colorOptions.map(c => (
+                      <button key={c.id} onClick={() => setColorId(c.id)} title={c.name} aria-label={`สี${c.name}`}
                         className="w-6 h-6 rounded-full transition-transform wb-btn"
                         style={{
                           background: c.hex,
@@ -1048,6 +1118,39 @@ export default function WizardPage() {
                 )}
               </div>
 
+              {/* Add-ons + rush */}
+              <div className="px-4 pb-4 space-y-2" data-testid="addons">
+                <p className="text-2xs font-semibold uppercase tracking-widest" style={{ color: T.muted }}>บริการเสริม</p>
+                {([
+                  ['sanding', sanding, setSanding] as const,
+                  ['painting', painting, setPainting] as const,
+                ]).filter(([k]) => cfg.addons[k].enabled).map(([k, on, set]) => (
+                  <label key={k} className="flex items-start gap-2 text-xs cursor-pointer select-none">
+                    <input type="checkbox" checked={on} onChange={e => set(e.target.checked)} className="mt-0.5 accent-blue-500" data-testid={`addon-${k}`} />
+                    <span><b>{cfg.addons[k].label}</b> <span style={{ color: T.muted }}>· {cfg.addons[k].desc} (+{cfg.addons[k].pct}%)</span></span>
+                  </label>
+                ))}
+                {cfg.rush.enabled && (
+                  <label className={`flex items-start gap-2 text-xs select-none ${estimate && !estimate.quote.rushAvailable ? 'opacity-50' : 'cursor-pointer'}`}>
+                    <input type="checkbox" checked={rush && !!estimate?.quote.rushAvailable} disabled={!!estimate && !estimate.quote.rushAvailable}
+                      onChange={e => setRush(e.target.checked)} className="mt-0.5 accent-blue-500" data-testid="addon-rush" />
+                    <span>
+                      <b>{cfg.rush.label}</b> <span style={{ color: T.muted }}>+{cfg.rush.pct}%</span>
+                      {estimate && !estimate.quote.rushAvailable && (
+                        <span className="block" style={{ color: T.muted }} data-testid="rush-unavailable">
+                          งานนี้พิมพ์นานเกิน {cfg.rush.maxPrintHours} ชม. ทำด่วนภายใน 1 วันไม่ทัน
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                )}
+                {cfg.addons.multiColor.enabled && (
+                  <p className="text-2xs" style={{ color: T.muted }}>
+                    หลายสี: เลือกสีเพิ่มในแต่ละไฟล์ด้านซ้าย (+฿{cfg.addons.multiColor.perExtraColor}/สี/ชิ้น) หรือเขียนรายละเอียดในหมายเหตุตอนสั่งซื้อ
+                  </p>
+                )}
+              </div>
+
               {/* Quote card + nav — pinned to bottom */}
               <div className="p-4 space-y-3" style={{ borderTop: `1px solid ${T.border}` }}>
 
@@ -1073,21 +1176,28 @@ export default function WizardPage() {
                   <p className="text-4xl font-bold leading-none tracking-tight mb-3">
                     {estimate ? `฿${estimate.totalPrice.toLocaleString()}` : '—'}
                   </p>
-                  <div className="space-y-1.5 pt-2 border-t border-background/10 text-xs">
-                    {[
-                      { l: `ชิ้นงาน (${totalQty} pcs)`, v: estimate ? `฿${estimate.subtotal.toLocaleString()}` : '—', c: T.bg },
-                      { l: 'จัดส่ง', v: estimate ? (estimate.shippingCost === 0 ? 'ฟรี (รับเอง)' : `฿${estimate.shippingCost}`) : '—',
-                        c: estimate?.shippingCost === 0 ? 'rgb(22 163 74)' : T.bg },
-                    ].map(r => (
-                      <div key={r.l} className="flex justify-between">
-                        <span style={{ color: 'rgb(var(--background) / 0.5)' }}>{r.l}</span>
-                        <span className="font-semibold" style={{ color: r.c }}>{r.v}</span>
+                  <div className="space-y-1.5 pt-2 border-t border-background/10 text-xs" data-testid="live-items">
+                    {(estimate ? estimate.quote.items : []).map(it => (
+                      <div key={it.key} className="flex justify-between gap-2" title={it.detail}>
+                        <span style={{ color: 'rgb(var(--background) / 0.55)' }}>{it.label}</span>
+                        <span className="font-semibold">฿{it.amount.toLocaleString()}</span>
                       </div>
                     ))}
+                    {estimate && estimate.shippingCost === 0 && (
+                      <div className="flex justify-between"><span style={{ color: 'rgb(var(--background) / 0.55)' }}>จัดส่ง</span><span className="font-semibold" style={{ color: 'rgb(22 163 74)' }}>ฟรี (รับเอง)</span></div>
+                    )}
+                    {estimate && (
+                      <p className="pt-1.5" style={{ color: 'rgb(var(--background) / 0.55)' }} data-testid="expected-date">
+                        คาดว่าได้รับ {thaiDate(estimate.quote.expectedDate)} (ประมาณ {estimate.quote.expectedDays} วัน)
+                      </p>
+                    )}
+                    <p className="pt-1 text-2xs" style={{ color: 'rgb(var(--background) / 0.45)' }}>ราคาประมาณการ ร้านจะตรวจไฟล์และยืนยันราคาก่อนชำระเงิน</p>
                   </div>
                 </div>
 
-                {estimate && <ShopeeOrderHint compact price={estimate.subtotal} ratePerGram={estimate.ratePerGram} totalWeightG={estimate.totalWeightG} />}
+                {estimate && cfg.payment.shopeeEnabled && (
+                  <ShopeeOrderHint compact price={estimate.subtotal} unitPrice={cfg.payment.shopeeUnitPrice} url={cfg.payment.shopeeUrl} />
+                )}
 
                 {/* Next button */}
                 <button onClick={nextStep} disabled={!canProceed}
@@ -1111,7 +1221,7 @@ export default function WizardPage() {
               <div className="grid grid-cols-2 gap-3">
                 {([
                   { id: 'pickup' as Shipping, Icon: Store,  label: 'รับเอง',       sub: 'ฟรี',   sc: T.green },
-                  { id: 'postal' as Shipping, Icon: Truck,  label: 'ส่งไปรษณีย์', sub: '+฿45', sc: T.muted },
+                  { id: 'postal' as Shipping, Icon: Truck,  label: 'ส่งไปรษณีย์', sub: `+฿${cfg.shipping.postal}`, sc: T.muted },
                 ]).map(opt => {
                   const sel = shipping === opt.id
                   return (
@@ -1135,12 +1245,14 @@ export default function WizardPage() {
               <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: T.muted }}>สรุปคำสั่งซื้อ</p>
               {[
                 { l: 'จำนวน',       v: `${totalQty} ชิ้น` },
-                { l: 'วัสดุ',       v: MATERIALS.find(m => m.id === material)?.label ?? material },
+                { l: 'วัสดุ',       v: cfg.materials.find(m => m.id === material)?.name ?? material },
                 { l: 'Infill',      v: `${infill}%` },
                 { l: 'Layer',       v: `${layerHeight} mm` },
                 { l: 'ขนาด',        v: `${customDims.x.toFixed(0)}×${customDims.y.toFixed(0)}×${customDims.z.toFixed(0)} mm` },
-                { l: 'จัดส่ง',      v: shipping === 'pickup' ? 'รับเอง (ฟรี)' : 'ไปรษณีย์ (+฿45)' },
-                { l: 'ราคารวม',     v: estimate ? `฿${estimate.totalPrice.toLocaleString()}` : '—' },
+                { l: 'จัดส่ง',      v: shipping === 'pickup' ? 'รับเอง (ฟรี)' : `ไปรษณีย์ (+฿${cfg.shipping.postal})` },
+                ...(estimate ? estimate.quote.items.filter(it => it.key !== 'shipping').map(it => ({ l: it.label, v: `฿${it.amount.toLocaleString()}` })) : []),
+                { l: 'ราคารวม (ประมาณการ)', v: estimate ? `฿${estimate.totalPrice.toLocaleString()}` : '—' },
+                { l: 'คาดว่าได้รับ', v: estimate ? thaiDate(estimate.quote.expectedDate) : '—' },
               ].map((row, i, arr) => (
                 <div key={row.l} className="flex justify-between py-3"
                   style={{ borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : 'none' }}>

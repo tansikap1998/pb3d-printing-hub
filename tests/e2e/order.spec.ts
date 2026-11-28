@@ -1,6 +1,8 @@
 import { test, expect, Page } from "@playwright/test"
 import { calculate, flatRateOrder } from "../../lib/priceCalculator"
-import { boxStl, box3mf, PNG_1PX, isolateNetwork, resetDb, createOrder, sheetOrder } from "../helpers"
+import { computeQuote } from "../../lib/quotePricing"
+import { DEFAULT_QUOTE_CONFIG } from "../../lib/quoteConfig"
+import { boxStl, box3mf, PNG_1PX, isolateNetwork, resetDb, createOrder, sheetOrder, confirmPriceInSheet } from "../helpers"
 
 const CUBE = { name: "cube60.stl", mimeType: "model/stl", buffer: boxStl(60, 60, 60) }
 const SMALL = { name: "small20.stl", mimeType: "model/stl", buffer: boxStl(20, 20, 20) }
@@ -16,6 +18,14 @@ const price = (o: Partial<Parameters<typeof calculate>[0]>) => {
   })
 }
 const baht = (n: number) => `฿${n.toLocaleString()}`
+/** What the upload page shows: weight/time from calculate(), price from the itemised quote. */
+const quoteFor = (o: { material?: any; infill?: number; quantity?: number; shipping?: "pickup" | "postal"; sanding?: boolean; painting?: boolean; rush?: boolean; colors?: number } = {}) => {
+  const e = price({ material: o.material ?? "PLA", infill: o.infill ?? 15 })
+  return computeQuote({
+    material: o.material ?? "PLA", parts: [{ name: "cube60.stl", weightG: e.weightG, printMin: e.printTimeSec / 60, quantity: o.quantity ?? 1, colors: o.colors ?? 1 }],
+    sanding: !!o.sanding, painting: !!o.painting, rush: !!o.rush, shipping: o.shipping ?? "pickup",
+  }, DEFAULT_QUOTE_CONFIG)
+}
 const liveQuote = (page: Page) => page.locator("p", { hasText: "Live Quote" }).locator("xpath=following-sibling::p[1]")
 
 test.beforeEach(async ({ page }) => { await resetDb(); await isolateNetwork(page) })
@@ -87,12 +97,14 @@ test.describe("Upload / configure", () => {
     await expect(page.getByText("อัปโหลดล้มเหลว")).toHaveCount(0)
     await expect(liveQuote(page)).toHaveText(baht(price({}).totalPrice))
 
-    // material changes the price
-    await page.getByRole("button", { name: /^ABS/ }).click()
-    await expect(liveQuote(page)).toHaveText(baht(price({ material: "ABS" }).totalPrice))
+    // material changes the price (TPU: grams + machine hours)
+    await page.getByTestId("material-TPU").click()
+    await expect(liveQuote(page)).toHaveText(baht(quoteFor({ material: "TPU" }).total))
     // infill changes the price
-    await page.getByRole("button", { name: /Very Strong/ }).click()
-    await expect(liveQuote(page)).toHaveText(baht(price({ material: "ABS", infill: 80 }).totalPrice))
+    await page.getByTestId("infill-100").click()
+    await expect(liveQuote(page)).toHaveText(baht(quoteFor({ material: "TPU", infill: 100 }).total))
+    // materials the shop has switched off are not offered
+    await expect(page.getByTestId("material-ABS")).toHaveCount(0)
     await expect(page.getByRole("button", { name: /ถัดไป/ })).toBeEnabled()
   })
 
@@ -142,68 +154,96 @@ test.describe("Full order: upload → quote → checkout → success", () => {
     await page.goto("/upload")
     await page.locator('input[type="file"]').setInputFiles(CUBE)
     await expect(page.getByText("60×60×60 mm · 216.0 cm³")).toBeVisible()
-    await page.getByRole("button", { name: /^PETG/ }).click()
-    await page.getByTitle("black").click()
+    await page.getByTestId("material-PETG").click()
+    await page.getByRole("button", { name: "สีดำ", exact: true }).click()
     // quantity 2
     const qtyRow = page.locator("p", { hasText: /^จำนวน$/ }).locator("xpath=..")
     await qtyRow.locator("button").last().click()
     await expect(qtyRow.getByText("2", { exact: true })).toBeVisible()
+    // add-ons: sanding + rush → itemised live quote
+    await page.getByTestId("addon-sanding").check()
+    await page.getByTestId("addon-rush").check()
+    const live = page.getByTestId("live-items")
+    await expect(live).toContainText("ขัดผิว")
+    await expect(live).toContainText("งานด่วน")
+    await expect(page.getByTestId("expected-date")).toContainText("คาดว่าได้รับ")
+    await expect(liveQuote(page)).toHaveText(baht(quoteFor({ material: "PETG", quantity: 2, sanding: true, rush: true }).total))
 
     await page.getByRole("button", { name: /ถัดไป/ }).click()
     await expect(page.getByRole("heading", { name: "จัดส่ง & ยืนยัน" })).toBeVisible()
     await page.getByRole("button", { name: /ส่งไปรษณีย์/ }).click()
-    const p = price({ material: "PETG", quantity: 2, shipping: "postal" })
-    await expect(page.getByText(baht(p.totalPrice))).toBeVisible()
+    const q = quoteFor({ material: "PETG", quantity: 2, sanding: true, rush: true, shipping: "postal" })
+    await expect(page.getByText(baht(q.total))).toBeVisible()
     await page.getByRole("button", { name: /ย้อนกลับ/ }).click()
     await expect(page.getByRole("button", { name: /ถัดไป/ })).toBeVisible()
     await page.getByRole("button", { name: /ถัดไป/ }).click()
     await page.getByRole("button", { name: /ยืนยันสั่งซื้อ/ }).click()
 
-    // ── Quote ──
+    // ── Quote: itemised, expected date, printable PDF ──
     await expect(page).toHaveURL(/\/quote$/)
-    await expect(page.getByRole("heading", { name: "Confirm Order" })).toBeVisible()
-    await expect(page.getByText("PETG").first()).toBeVisible()
-    await expect(page.getByText("black").first()).toBeVisible()
-    await expect(page.getByText(baht(p.totalPrice)).filter({ visible: true }).first()).toBeVisible()
-    const place = page.getByRole("button", { name: /Place Order/ }).filter({ visible: true }).first()
+    await expect(page.getByRole("heading", { name: "ใบเสนอราคา" })).toBeVisible()
+    const items = page.getByTestId("quote-items")
+    for (const t of ["ค่าพิมพ์ PETG", "ขัดผิว", "งานด่วน", "ค่าจัดส่ง"]) await expect(items).toContainText(t)
+    await expect(page.getByTestId("quote-total")).toHaveText(baht(q.total))
+    await expect(page.getByTestId("quote-sentence")).toContainText(`= ${q.total.toLocaleString()} บาท`)
+    await expect(page.getByTestId("quote-expected-date")).toContainText("คาดว่าได้รับ")
+    await expect(page.getByTestId("download-pdf")).toBeVisible()
+    await page.emulateMedia({ media: "print" })
+    await expect(page.getByTestId("printable-quote")).toBeVisible()
+    await expect(page.getByTestId("printable-quote")).toContainText("ใบเสนอราคา / Quotation")
+    await page.emulateMedia({ media: "screen" })
+    await expect(page.getByText("ดำ").filter({ visible: true }).first()).toBeVisible()
+
+    const place = page.getByRole("button", { name: /ส่งให้ร้านตรวจไฟล์/ }).filter({ visible: true }).first()
     await expect(place).toBeDisabled()
     await page.getByPlaceholder("John Doe").fill("ทดสอบ ระบบ")
     await page.getByPlaceholder("08x-xxx-xxxx").fill("0812345678")
-    await expect(place).toBeDisabled() // address still missing
-    await page.getByPlaceholder("john@example.com").fill("")
-    await page.getByPlaceholder("ช่วยให้เราจับคู่กับออเดอร์เดิมได้").fill("SPX-220101ABC")
-    await page.getByPlaceholder("123 Street, Bangkok 10xxx").fill("99/1 ถนนทดสอบ กรุงเทพฯ 10110")
+    await expect(place).toBeDisabled() // postal: address still missing
+    await page.getByPlaceholder(/บ้านเลขที่/).fill("99/1 ถนนทดสอบ กรุงเทพฯ 10110")
+    await page.getByPlaceholder("บอกร้านเพิ่มเติมได้ที่นี่").fill("ฐานสีดำทั้งหมด")
     await expect(place).toBeEnabled()
     await place.click()
 
-    // ── Checkout ──
+    // ── Status page: waiting for the shop to confirm the price ──
     await expect(page).toHaveURL(/\/checkout\/[0-9a-f-]{36}$/)
     const orderId = page.url().split("/").pop()!
-    await expect(page.getByText(`฿${p.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}`).first()).toBeVisible()
-    await expect(page.getByText("5981153600")).toBeVisible()
+    await expect(page.getByTestId("awaiting-review")).toBeVisible()
+    await expect(page.getByTestId("payment")).toHaveCount(0)
+    await expect(page.getByTestId("status-items")).toContainText("ขัดผิว")
+    await expect(page.getByTestId("status-expected-date")).toContainText("งานด่วน")
 
-    // order summary before paying: details + name + masked phone, never the full phone or address
+    // order summary: details + name + masked phone, never the full phone or address
     const summary = page.getByTestId("order-summary")
-    for (const t of ["ทดสอบ ระบบ", "081-xxx-5678", "cube60.stl", "PETG · black", "2 ชิ้น", "15% · 0.40 mm", "Shopee: SPX-220101ABC"])
+    for (const t of ["ทดสอบ ระบบ", "081-xxx-5678", "cube60.stl", "PETG · ดำ", "2 ชิ้น", "15% · 0.40 mm", "ขัดผิว", "จัดส่งพัสดุ"])
       await expect(summary).toContainText(t)
     await expect(summary).not.toContainText("0812345678")
     await expect(summary).not.toContainText("ถนนทดสอบ")
-    const confirm = page.getByRole("button", { name: "Confirm Payment" })
-    await expect(confirm).toBeDisabled()
 
     // the order row in the Google Sheet carries the real details
     const stored = sheetOrder(orderId)!
-    expect(stored["สถานะ"]).toBe("pending")
+    expect(stored["สถานะ"]).toBe("reviewing")
     expect(stored["ชื่อลูกค้า"]).toBe("ทดสอบ ระบบ")
     expect(stored["เบอร์โทร"]).toBe("0812345678")
     expect(stored["วัสดุ"]).toBe("PETG")
-    expect(stored["สี"]).toBe("black")
+    expect(stored["สี"]).toBe("ดำ")
     expect(stored["จำนวน"]).toBe(2)
-    expect(stored["หมายเหตุ"]).toContain("ส่งไปรษณีย์")
-    expect(stored["หมายเหตุ"]).toContain("Shopee: SPX-220101ABC")
+    expect(stored["หมายเหตุ"]).toContain("ฐานสีดำทั้งหมด")
     expect(stored["Layer (mm)"]).toBe(0.4)
-    expect(stored["ยอดรวม (บาท)"]).toBe(p.totalPrice)
+    expect(stored["ยอดรวม (บาท)"]).toBe(q.total)
+    expect(stored["ราคาประมาณการ (บาท)"]).toBe(q.total)
+    expect(stored["การรับสินค้า"]).toBe("postal")
+    expect(stored["งานด่วน"]).toBe(true)
+    expect(JSON.parse(stored["รายการราคา"]).map((i: any) => i.label)).toContain("ขัดผิว")
     expect(stored["สลิป (Drive file ID)"]).toBe("")
+
+    // ── the shop confirms the price → payment opens ──
+    confirmPriceInSheet(orderId)
+    await page.reload()
+    await expect(page.getByTestId("payment")).toBeVisible()
+    await expect(page.getByText(`฿${q.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`).first()).toBeVisible()
+    await expect(page.getByText("5981153600")).toBeVisible()
+    const confirm = page.getByRole("button", { name: "Confirm Payment" })
+    await expect(confirm).toBeDisabled()
 
     // too-large slip is rejected
     await page.getByTestId("slip-input").setInputFiles({ name: "big.png", mimeType: "image/png", buffer: Buffer.alloc(4 * 1024 * 1024 + 1) })
@@ -347,4 +387,90 @@ test.describe("Guards", () => {
     const withMesh = await request.post("/api/estimate", { data: { volumeCm3: 216, technology: "FDM", material: "PLA", infill: 25, layerHeight: 0.4, quantity: 1, meshVolumeCm3: 216, surfaceCm2: 216 } })
     expect((await withMesh.json()).totalPrice).toBe(price({ infill: 25 }).totalPrice)
   })
+})
+
+test.describe("No 3D file, LINE OA, file checks, multi-colour", () => {
+  test("home links to the no-file form and order tracking; LINE button floats there", async ({ page }) => {
+    await page.goto("/")
+    await expect(page.getByTestId("line-float")).toHaveAttribute("href", "https://lin.ee/R8Vd7q5")
+    await page.getByTestId("cta-no-file").click()
+    await expect(page).toHaveURL(/\/no-file$/)
+    await page.goto("/upload")
+    await expect(page.getByTestId("line-float")).toHaveCount(0) // the upload page has its own LINE link
+  })
+
+  test("no-file request: photos + description reach the sheet and the shop is e-mailed", async ({ page }) => {
+    // shop e-mail comes from the quote settings
+    const { emulatorPost } = await import("../../lib/sheetsEmulator")
+    const { EMULATOR_FILE, sentMail, sheetTabs } = await import("../helpers")
+    emulatorPost(EMULATOR_FILE, "s", { secret: "s", action: "settings.set", key: "quoteConfig", value: JSON.stringify({ contact: { shopEmail: "shop@example.com" } }) })
+
+    await page.goto("/no-file")
+    await page.getByTestId("nf-name").fill("คุณลูกค้า")
+    await page.getByTestId("nf-description").fill("ฝาครอบปุ่มรีโมทแตก อยากได้ชิ้นใหม่สีดำ")
+    await page.getByTestId("nf-submit").click()
+    await expect(page.getByText(/อย่างน้อยหนึ่งช่อง/).filter({ visible: true }).last()).toBeVisible() // no phone / LINE / e-mail
+    await page.getByTestId("nf-phone").fill("0812345678")
+    await page.getByTestId("nf-email").fill("cust@example.com")
+    await page.getByTestId("nf-photos").setInputFiles({ name: "remote.png", mimeType: "image/png", buffer: PNG_1PX })
+    await page.getByTestId("nf-submit").click()
+    await expect(page.getByTestId("no-file-done")).toBeVisible()
+
+    const tab = sheetTabs().NoFileRequests
+    expect(tab).toHaveLength(2)
+    const row = Object.fromEntries(tab[0].map((h: string, i: number) => [h, tab[1][i]]))
+    expect(row).toMatchObject({ "ชื่อ": "คุณลูกค้า", "เบอร์โทร": "0812345678", "ต้องการ": "ออกแบบให้" })
+    expect(String(row["รูป (Drive file IDs)"])).not.toBe("")
+    const mails = sentMail()
+    expect(mails.some(m => m.to === "shop@example.com" && /ไม่มีไฟล์/.test(m.subject))).toBe(true)
+    expect(mails.some(m => m.to === "cust@example.com")).toBe(true)
+  })
+
+  test("tiny model warns about inch units and converts with one click", async ({ page }) => {
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles({ name: "inch.stl", mimeType: "model/stl", buffer: boxStl(2, 2, 1) })
+    await expect(page.getByTestId("file-warning")).toContainText("หน่วยนิ้ว")
+    await page.getByTestId("convert-inch").click()
+    // 2 in → 50.8 mm in the size inputs
+    await expect(page.locator('input[type="number"]').first()).toHaveValue(/^50\.8/)
+  })
+
+  test("an open (non-watertight) mesh is flagged", async ({ page }) => {
+    // a box with its top two triangles missing
+    const full = boxStl(30, 30, 30)
+    const open = Buffer.concat([full.subarray(0, 84 + 2 * 50), full.subarray(84 + 4 * 50)])
+    open.writeUInt32LE(10, 80)
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles({ name: "open.stl", mimeType: "model/stl", buffer: open })
+    await expect(page.getByTestId("file-warning")).toContainText("ไม่ปิดสนิท")
+  })
+
+  test("several colours on one file add the multi-colour charge", async ({ page }) => {
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles(CUBE)
+    await expect(liveQuote(page)).toHaveText(baht(quoteFor({}).total))
+    await page.getByRole("button", { name: "cube60.stl สีแดง" }).click()
+    await page.getByRole("button", { name: "cube60.stl สีน้ำเงิน" }).click()
+    await expect(page.getByTestId("live-items")).toContainText("หลายสี")
+    await expect(liveQuote(page)).toHaveText(baht(quoteFor({ colors: 3 }).total))
+    await expect(page.getByTestId("file-colors")).toContainText("ขาว + แดง + น้ำเงิน")
+  })
+
+  test("rush is not offered for long prints", async ({ page }) => {
+    await page.goto("/upload")
+    await page.locator('input[type="file"]').setInputFiles({ name: "big.stl", mimeType: "model/stl", buffer: boxStl(200, 200, 200) })
+    await expect(page.getByTestId("rush-unavailable")).toBeVisible()
+    await expect(page.getByTestId("addon-rush")).toBeDisabled()
+  })
+})
+
+test("new pages fit a phone screen (no sideways scrolling)", async ({ page, request }) => {
+  await page.setViewportSize({ width: 360, height: 760 })
+  const id = await createOrder(request)
+  for (const url of ["/no-file", "/track", `/checkout/${id}`]) {
+    await page.goto(url)
+    await page.waitForLoadState("networkidle")
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    expect(overflow, url).toBeLessThanOrEqual(1)
+  }
 })

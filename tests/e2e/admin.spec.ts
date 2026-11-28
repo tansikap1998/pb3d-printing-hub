@@ -1,7 +1,7 @@
 import { test, expect, Page } from "@playwright/test"
 import {
   isolateNetwork, loginAsAdmin, ADMIN_EMAIL, resetDb, createOrder, submitSlip,
-  adminSetStatus, adminGetOrder, sheetTabs, EMULATOR_FILE,
+  adminSetStatus, adminGetOrder, sheetTabs, EMULATOR_FILE, sentMail, submitSlipRaw,
 } from "../helpers"
 
 const row = (page: Page, id: string) => page.locator("div.rounded-3xl", { has: page.getByText(`#${id.slice(-6).toUpperCase()}`) })
@@ -79,7 +79,7 @@ test.describe("Admin orders", () => {
   })
 
   test("full status workflow with tracking number and slip", async ({ page, request }) => {
-    const id = await createOrder(request)
+    const id = await createOrder(request, { shippingMethod: "postal" }) // parcels need a tracking number
     await submitSlip(request, id)
     await page.reload()
     const r = row(page, id)
@@ -367,6 +367,83 @@ test.describe("Admins tab in the Google Sheet", () => {
     await expect(page.getByText("Order Dashboard")).toBeVisible()
     // the session is a real admin session for the APIs too
     expect((await page.request.get("/api/admin/orders")).status()).toBe(200)
+  })
+})
+
+test.describe("Order review: shop confirms the price before payment", () => {
+  test("admin corrects the price, the customer is e-mailed and can then pay", async ({ page, request }) => {
+    const id = await createOrder(request, {
+      shippingMethod: "postal", customer: { name: "ลูกค้า ทดสอบ", phone: "0812345678", address: "Bangkok", email: "test@example.com" },
+    }, { review: true })
+    // the customer got a "received, under review" e-mail
+    expect(sentMail().some(m => m.to === "test@example.com" && /รอร้านตรวจไฟล์/.test(m.subject))).toBe(true)
+    // no payment before the price is confirmed
+    expect((await submitSlipRaw(request, id)).status()).toBe(409)
+    await page.goto(`/checkout/${id}`)
+    await expect(page.getByTestId("awaiting-review")).toBeVisible()
+    await expect(page.getByTestId("payment")).toHaveCount(0)
+
+    await loginAsAdmin(page)
+    await page.getByRole("button", { name: /รอตรวจไฟล์/ }).first().click()
+    const r = row(page, id)
+    await r.getByText("ลูกค้า ทดสอบ").click()
+    await r.getByTestId("review-price").fill("420")
+    await r.getByTestId("review-note").fill("ต้องใช้ support เยอะ")
+    await r.getByTestId("review-confirm").click()
+    await expect.poll(async () => (await adminGetOrder(page, id)).status).toBe("pending")
+    const o = await adminGetOrder(page, id)
+    expect(Number(o.total_price)).toBe(420)
+    expect(Number(o.estimate_price)).toBe(365)
+    expect(JSON.parse(o.price_items).at(-1)).toMatchObject({ key: "adjust", amount: 55 })
+    const mail = sentMail().find(m => /ยืนยันราคาแล้ว/.test(m.subject))!
+    expect(mail.to).toBe("test@example.com")
+    expect(mail.html).toContain("ต้องใช้ support เยอะ")
+    expect(mail.html).toContain(`/checkout/${id}`)
+
+    // customer sees the confirmed price and pays through Shopee
+    await page.goto(`/checkout/${id}`)
+    await expect(page.getByTestId("status-total")).toHaveText("฿420.00")
+    await expect(page.getByTestId("shop-note")).toContainText("ต้องใช้ support เยอะ")
+    await page.getByTestId("pay-shopee").click()
+    await expect(page.getByTestId("shopee-pay-units")).toHaveText("8 ชิ้น") // 420 / 59 = 7.1 → 8
+    await page.getByTestId("shopee-ref").fill("2611280ABCD")
+    await page.getByTestId("shopee-submit").click()
+    await expect(page).toHaveURL(new RegExp(`/checkout/${id}/success$`))
+    const paid = await adminGetOrder(page, id)
+    expect(paid).toMatchObject({ status: "awaiting_verification", payment_method: "shopee", shopee_ref: "2611280ABCD" })
+  })
+
+  test("order lookup by number + phone", async ({ page, request }) => {
+    const id = await createOrder(request)
+    await page.goto("/track")
+    await page.getByTestId("track-no").fill(id.slice(0, 8).toUpperCase())
+    await page.getByTestId("track-phone").fill("099-999-9999")
+    await page.getByTestId("track-submit").click()
+    await expect(page.getByText(/ไม่พบคำสั่งซื้อ/)).toBeVisible()
+    await page.getByTestId("track-phone").fill("081-234-5678")
+    await page.getByTestId("track-submit").click()
+    await expect(page).toHaveURL(new RegExp(`/checkout/${id}$`))
+    await expect(page.getByTestId("status-timeline")).toBeVisible()
+  })
+
+  test("quote settings: admin changes rates and turns off a colour; customers see it", async ({ page }) => {
+    await loginAsAdmin(page)
+    await page.getByRole("tab", { name: "ตั้งค่าราคาลูกค้า" }).click()
+    const qs = page.getByTestId("quote-settings")
+    await qs.getByTestId("qs-perg-PLA").fill("4")
+    await qs.getByTestId("qs-color-enabled-red").uncheck()
+    await qs.getByTestId("qs-promptpay").fill("0812345678")
+    await qs.getByTestId("qs-shop-email").fill("shop@example.com")
+    await qs.getByTestId("qs-save").click()
+    await expect(qs.getByRole("status")).toContainText("บันทึกแล้ว")
+    const saved = JSON.parse((sheetTabs().Settings ?? []).find(r => r[0] === "quoteConfig")?.[1] ?? "{}")
+    expect(saved.materials.find((m: any) => m.id === "PLA").perG).toBe(4)
+    expect(saved.colors.find((c: any) => c.id === "red").enabled).toBe(false)
+    // public config hides the shop's e-mail
+    const pub = await (await page.request.get("/api/quote-config")).json()
+    expect(pub.config.contact.shopEmail).toBe("")
+    expect(pub.config.materials.find((m: any) => m.id === "PLA").perG).toBe(4)
+    expect((await page.request.put("/api/admin/quote-config", { data: {} })).status()).toBe(200)
   })
 })
 

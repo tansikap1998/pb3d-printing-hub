@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { randomUUID } from "crypto"
 import { validateNewOrder } from "@/lib/orderInput"
 import { db, nowBangkok, backendErrorResponse } from "@/lib/sheetsDb"
+import { notifyCustomer, notifyShop, orderSummaryHtml, orderNo, requestOrigin } from "@/lib/notify"
 
 export const dynamic = "force-dynamic"
 
@@ -14,6 +15,11 @@ export async function POST(req: NextRequest) {
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 })
   try {
     const order = await db.orders.create({ ...(v.row as any), id: randomUUID(), created_at: nowBangkok() })
+    const origin = requestOrigin(req)
+    await Promise.all([
+      notifyCustomer(order, origin),
+      notifyShop(`ออเดอร์ใหม่ #${orderNo(order.id)} รอตรวจไฟล์`, orderSummaryHtml(order), { href: `${origin}/admin`, label: "เปิดหน้าแอดมิน" }),
+    ])
     return NextResponse.json({ id: order.id }, { status: 201 })
   } catch (e) {
     return backendErrorResponse(e, "create order")

@@ -444,7 +444,14 @@ export default function Home() {
               >
                 {t.hero.ctaSearch}
               </button>
+              <Link href="/no-file" data-testid="cta-no-file"
+                className="inline-flex items-center justify-center gap-3 px-8 py-4 border border-border rounded-xl font-medium text-lg hover:bg-muted transition-colors">
+                ไม่มีไฟล์ 3D
+              </Link>
             </motion.div>
+            <p className="-mt-12 mb-16 text-sm text-muted-foreground">
+              สั่งไปแล้ว? <Link href="/track" className="underline hover:text-foreground" data-testid="cta-track">เช็กสถานะงาน</Link>
+            </p>
 
             {/* Trust Stats */}
             <motion.div

@@ -3,7 +3,7 @@
 export type Technology  = "FDM"
 export type FDMMaterial = "PLA" | "PETG" | "ABS" | "ASA" | "TPU" | "CarbonFiber" | "Nylon"
 export type Material    = FDMMaterial
-export type InfillLevel = 10 | 15 | 25 | 50 | 80
+export type InfillLevel = number  // options come from the quote settings (15, 30, 50, 100 by default)
 export type LayerHeight = 0.08 | 0.16 | 0.24 | 0.4
 export type Shipping    = "pickup" | "postal"
 

@@ -21,6 +21,9 @@ export interface Order {
   volume_cm3: number | null; weight_g: number | null; print_time_min: number | null
   base_price: number | null; total_price: number | null
   tracking_number: string; slip_file_id: string
+  estimate_price: number | null; price_items: string; shop_note: string; expected_date: string
+  rush: boolean; addons: string; shipping_method: string; payment_method: string; shopee_ref: string
+  file_warnings: string
 }
 
 export interface ProductRow {
@@ -134,6 +137,13 @@ export const db = {
   },
   catalog: {
     save: (product: Record<string, unknown>) => rpc<{ updated: boolean }>("catalog.save", { product }).then(r => r.updated),
+  },
+  requests: {
+    create: (request: Record<string, unknown>, photos: { base64: string; mimeType: string; ext: string }[]) =>
+      rpc<{ request: Record<string, unknown> }>("requests.create", { request, photos }, { timeoutMs: 60000 }).then(r => r.request),
+  },
+  mail: {
+    send: (m: { to: string; subject: string; html: string; replyTo?: string }) => rpc("mail.send", m, { timeoutMs: 20000 }),
   },
   consent: {
     add: (entry: { necessary: boolean; analytics: boolean; marketing: boolean; user_agent: string }) =>

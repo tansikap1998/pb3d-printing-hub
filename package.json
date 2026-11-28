@@ -22,6 +22,7 @@
     "next-auth": "^4.24.7",
     "occt-import-js": "^0.0.23",
     "promptpay-qr": "^0.5.0",
+    "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "three": "^0.171.0",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/three": "^0.170.0",

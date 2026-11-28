@@ -119,6 +119,11 @@ export function fakeServices(state: State, secret?: string) {
       base64Encode: (b: Buffer) => Buffer.from(b).toString("base64"),
       newBlob: (bytes: Buffer, mimeType: string, name: string) => blob(Buffer.from(bytes), mimeType, name),
     },
+    // sent mail is kept in the emulator file so tests can read it
+    MailApp: {
+      sendEmail: (o: any) => { ((state as any).mail ||= []).push({ to: o.to, subject: o.subject, html: o.htmlBody, replyTo: o.replyTo }) },
+      getRemainingDailyQuota: () => 100,
+    },
     DriveApp: {
       createFolder: () => folder,
       getFolderById: () => folder,

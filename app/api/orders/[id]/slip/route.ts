@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isUuid, validateSlip } from "@/lib/orderInput"
 import { db, backendErrorResponse } from "@/lib/sheetsDb"
+import { notifyShop, orderNo, requestOrigin } from "@/lib/notify"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -24,6 +25,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const r = await db.orders.submitSlip(params.id, { base64, mimeType: file!.type, ext: v.ext })
     if (r.conflict) return NextResponse.json({ error: "คำสั่งซื้อนี้ไม่ได้รอการชำระเงินแล้ว" }, { status: 409 })
     if (!r.order) return NextResponse.json({ error: "Not found" }, { status: 404 })
+    const o = r.order
+    await notifyShop(`แจ้งชำระเงิน #${orderNo(o.id)} (สลิป)`, `<p>${o.customer_name} แนบสลิปยอด ฿${Number(o.total_price).toLocaleString()} กรุณาตรวจสอบ</p>`,
+      { href: `${requestOrigin(req)}/admin`, label: "ตรวจสลิป" })
     return NextResponse.json({ ok: true })
   } catch (e) {
     return backendErrorResponse(e, "submit slip")

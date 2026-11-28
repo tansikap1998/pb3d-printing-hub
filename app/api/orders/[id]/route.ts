@@ -23,6 +23,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         customer_name: o.customer_name, customer_phone_masked: maskPhone(o.customer_phone),
         file_name: o.file_name, material: o.material, color: o.color, quantity: o.quantity,
         infill: o.infill, layer_height: o.layer_height, notes: o.notes,
+        estimate_price: o.estimate_price, price_items: o.price_items, shop_note: o.shop_note,
+        expected_date: o.expected_date, rush: o.rush, addons: o.addons, shipping_method: o.shipping_method,
+        payment_method: o.payment_method, shopee_ref: o.shopee_ref, tracking_number: o.tracking_number,
+        updated_at: o.updated_at,
       } },
       { headers: { "Cache-Control": "no-store" } }
     )

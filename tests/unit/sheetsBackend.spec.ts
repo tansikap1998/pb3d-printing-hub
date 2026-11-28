@@ -179,7 +179,7 @@ test("setup() creates the secret once, the tabs and the slip folder", () => {
   const secret = ctx.setup()
   expect(secret).toMatch(/^[0-9a-f]{64}$/)
   expect(state.props.WEBHOOK_SECRET).toBe(secret)
-  expect(Object.keys(state.sheets).sort()).toEqual(["Admins", "Consent", "Orders", "Products"])
+  expect(Object.keys(state.sheets).sort()).toEqual(["Admins", "Consent", "NoFileRequests", "Orders", "Products"])
   expect(state.sheets.Orders[0][0]).toBe("Order ID")
   expect(state.props.SLIP_FOLDER_ID).toBeTruthy()
   expect(ctx.setup()).toBe(secret) // second run keeps the same secret
@@ -266,4 +266,22 @@ test("market prices: append only adds categories the tab doesn't have", () => {
   const list = s.call("market.list").rows
   expect(list.map((r: any) => r.category)).toEqual(["ขาตั้ง", "โคมไฟ"])
   expect(list[0].typical).toBe(555) // existing row untouched
+})
+
+test("no-file requests store photos privately; mail.send records the message", () => {
+  const s = sheet()
+  const r = s.call("requests.create", { request: { id: "r1", name: "ก", phone: "081", description: "ฝาครอบ" },
+    photos: [{ base64: Buffer.from("img").toString("base64"), mimeType: "image/png", ext: "png" }] })
+  expect(r.request.photo_ids).toBeTruthy()
+  expect(s.raw().sheets.NoFileRequests[1]).toContain("ฝาครอบ")
+  expect(s.call("mail.send", { to: "a@b.co", subject: "hi", html: "<b>x</b>" }).sent).toBe(true)
+  expect((s.raw() as any).mail).toEqual([{ to: "a@b.co", subject: "hi", html: "<b>x</b>" }])
+  expect(s.call("mail.send", { to: "nope", subject: "x" }).ok).toBe(false)
+})
+
+test("new statuses are accepted and the status rule is refreshed once", () => {
+  const s = sheet()
+  s.call("orders.create", { order: { id: "o1", status: "reviewing", created_at: "t" } })
+  expect(s.call("orders.update", { id: "o1", patch: { status: "finishing" } }).order.status).toBe("finishing")
+  expect(s.raw().props.STATUS_RULE_VERSION).toBe("2")
 })
